@@ -1,0 +1,1857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Springbank Links — League Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=DM+Sans:opsz,wght@9..40,300..700&family=JetBrains+Mono:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #091529;          /* page background (deep navy) */
+    --cream-deep: #142d5c;     /* slightly lifted navy (table headers) */
+    --paper: #142d5c;          /* card/panel surface */
+    --paper-2: #1a3563;        /* secondary surface */
+    --ink: #ffffff;            /* primary text — bright white */
+    --ink-soft: #ffffff;       /* secondary text — also bright white */
+    --muted: #ffffff;          /* labels/captions — also bright white */
+    --rule: rgba(255,255,255,0.22);
+    --rule-soft: rgba(255,255,255,0.10);
+    --green: #ffffff;          /* primary accent — bright white */
+    --green-soft: #ffffff;     /* secondary accent — bright white */
+    --brass: #ffffff;          /* tertiary accent — bright white */
+    --brass-light: #ffffff;
+    --birdie: #ff6b5e;         /* punchy red for dark bg */
+    --eagle: #b48dd9;          /* lifted purple for dark bg */
+    --bogey: #f59e0b;
+    --double: #020a1f;         /* very dark — contrasts the navy bg */
+    --up: #ff6b5e;
+    --down: #62d4a1;           /* green for improvements / under par */
+    --bar-low: #ffffff;        /* white for low-HC bars */
+    --bar-mid: #7eb8e8;        /* sky blue for mid-HC bars */
+    --bar-high: #ffffff;       /* white for high-HC bars */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    line-height: 1.5;
+    font-size: 15px;
+    background-image:
+      radial-gradient(circle at 10% 10%, rgba(212, 175, 55, 0.06) 0%, transparent 50%),
+      radial-gradient(circle at 90% 90%, rgba(126, 184, 232, 0.05) 0%, transparent 50%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  /* ===== HEADER ===== */
+  header.masthead {
+    border-bottom: 2px solid var(--ink);
+    padding: 36px 48px 28px;
+    background: var(--cream);
+    position: relative;
+  }
+  header.masthead::after {
+    content: ''; position: absolute;
+    left: 48px; right: 48px; bottom: -6px; height: 1px;
+    background: var(--ink);
+  }
+  .masthead-row {
+    display: flex; justify-content: space-between;
+    align-items: center; gap: 24px; flex-wrap: wrap;
+  }
+  .brand-block {
+    display: flex; align-items: center; gap: 22px;
+  }
+  .brand-logo {
+    height: 88px; width: auto;
+    border-radius: 4px;
+    display: block;
+    flex-shrink: 0;
+  }
+  .brand-title-1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(34px, 4.5vw, 52px);
+    font-weight: 400;
+    font-style: italic;
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+    color: #ffffff;
+    margin-bottom: 6px;
+  }
+  .brand-title-2 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #ffffff;
+    white-space: nowrap;
+  }
+  .meta { text-align: right; font-size: 13px; color: var(--ink-soft);
+    font-family: 'JetBrains Mono', monospace; }
+  .meta .row { display: flex; justify-content: flex-end; gap: 16px; margin-bottom: 4px; }
+  .meta .label { color: var(--muted); text-transform: uppercase;
+    font-size: 10px; letter-spacing: 0.15em; }
+  .meta strong { color: var(--ink); font-weight: 600; }
+
+  /* ===== WEEK SELECTOR ===== */
+  .week-bar {
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 48px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .week-bar-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .week-tabs { display: flex; gap: 2px; }
+  .week-tab {
+    padding: 8px 18px;
+    background: transparent;
+    border: 1px solid var(--rule);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+    transition: all 0.18s;
+    border-radius: 2px;
+  }
+  .week-tab:hover { color: var(--ink); border-color: var(--green); }
+  .week-tab.active {
+    background: #ffffff;
+    color: #091529;
+    border-color: #ffffff;
+    font-weight: 600;
+  }
+  .week-tab.ytd { font-style: italic; }
+  .week-tab.ytd.active { background: #ffffff; color: #091529; border-color: #ffffff; }
+
+  /* ===== MAIN ===== */
+  main { max-width: 1440px; margin: 0 auto; padding: 32px 48px 64px; }
+  section { margin-bottom: 48px; }
+  .section-head {
+    display: flex; align-items: baseline; gap: 16px;
+    margin-bottom: 20px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .section-head h2 {
+    font-family: 'Fraunces', serif; font-size: 26px; font-weight: 400;
+    font-style: italic; color: var(--ink); letter-spacing: -0.01em;
+  }
+  .section-head .num {
+    font-family: 'Fraunces', serif; font-size: 14px;
+    color: var(--brass); letter-spacing: 0.1em; font-weight: 500;
+  }
+  .section-head .sub {
+    margin-left: auto; font-size: 13px; color: #ffffff; font-style: italic; font-weight: 500;
+  }
+
+  /* ===== KPIs ===== */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .kpi { padding: 22px 24px; border-right: 1px solid var(--rule-soft); }
+  .kpi:last-child { border-right: none; }
+  .kpi-label {
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px; font-weight: 500;
+  }
+  .kpi-value {
+    font-family: 'Fraunces', serif; font-size: 40px; font-weight: 400;
+    color: var(--green); line-height: 1; margin-bottom: 6px;
+    letter-spacing: -0.02em;
+  }
+  .kpi-sub { font-size: 12px; color: #ffffff; font-style: italic; font-weight: 500; }
+
+  /* ===== BRACKET FILTER ===== */
+  .filter-bar {
+    display: flex; gap: 0; background: var(--paper);
+    border: 1px solid var(--rule); padding: 4px;
+    margin-bottom: 12px; width: fit-content; border-radius: 2px;
+  }
+  .filter-btn {
+    padding: 10px 22px; font-family: 'DM Sans', sans-serif; font-size: 13px;
+    font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+    background: transparent; border: none; color: var(--ink-soft);
+    cursor: pointer; transition: all 0.2s ease; border-radius: 2px;
+  }
+  .filter-btn:hover { color: var(--ink); }
+  .filter-btn.active { background: #ffffff; color: #091529; font-weight: 600; }
+  .filter-count {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    margin-left: 6px;
+  }
+  .filter-note { font-size: 12px; color: #ffffff; font-style: italic; font-weight: 500; margin-bottom: 24px; }
+
+  /* ===== PANELS ===== */
+  .panel {
+    background: var(--paper); border: 1px solid var(--rule);
+    padding: 28px 32px; border-radius: 2px;
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* ===== HOLE CHART ===== */
+  .chart-legend {
+    display: flex; gap: 20px; margin-bottom: 16px;
+    font-size: 12px; color: var(--ink-soft); flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 2px; }
+  .hole-chart {
+    width: 100%; height: 360px; position: relative; overflow-x: auto;
+  }
+  .hole-chart svg { width: 100%; height: 100%; min-width: 720px; }
+
+  /* ===== DISTRIBUTION ===== */
+  .dist-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 24px;
+  }
+  .dist-card-title {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 18px; margin-bottom: 4px; color: var(--ink);
+  }
+  .dist-card-sub {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em;
+    color: #ffffff; margin-bottom: 16px; font-weight: 500;
+  }
+  .dist-bar {
+    display: flex; height: 36px; border-radius: 2px;
+    overflow: hidden; margin-bottom: 12px; border: 1px solid var(--rule);
+  }
+  .dist-seg {
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600; min-width: 0; overflow: hidden;
+  }
+  .dist-seg.eagle { background: #b48dd9; }
+  .dist-seg.birdie { background: #ff6b5e; }
+  .dist-seg.par { background: #62d4a1; color: #0a1f44; }
+  .dist-seg.bogey { background: #f59e0b; color: #0a1f44; }
+  .dist-seg.double { background: #4a2628; color: #ffffff; }
+  .dist-legend {
+    display: flex; justify-content: center; flex-wrap: wrap;
+    gap: 12px; font-size: 11px; color: var(--ink-soft); margin-top: 20px;
+  }
+  .dist-legend-item { display: flex; align-items: center; gap: 5px; }
+  .dist-legend-swatch { width: 10px; height: 10px; border-radius: 1px; }
+
+  /* ===== FRONT/BACK ===== */
+  .fb-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+    border: 1px solid var(--rule); background: var(--paper);
+  }
+  @media (max-width: 800px) { .fb-grid { grid-template-columns: 1fr; } }
+  .fb-cell { padding: 24px; border-right: 1px solid var(--rule-soft); text-align: center; }
+  .fb-cell:last-child { border-right: none; }
+  .fb-cell-bracket {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 16px; margin-bottom: 16px; color: var(--brass);
+  }
+  .fb-split {
+    display: flex; justify-content: space-around;
+    align-items: flex-end; margin-bottom: 12px;
+  }
+  .fb-side .num {
+    font-family: 'Fraunces', serif; font-size: 36px; line-height: 1; color: var(--ink);
+  }
+  .fb-side .vs-par {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--birdie); margin-top: 4px;
+  }
+  .fb-side .label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .fb-arrow { align-self: center; font-size: 20px; color: var(--brass); }
+  .fb-insight {
+    font-size: 12px; color: #ffffff; font-style: italic; font-weight: 500;
+    padding-top: 12px; border-top: 1px solid var(--rule-soft);
+  }
+
+  /* ===== HARDEST/EASIEST ===== */
+  .holes-table-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  @media (max-width: 900px) { .holes-table-wrap { grid-template-columns: 1fr; } }
+  .holes-table { width: 100%; border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+  .holes-table th {
+    text-align: left; padding: 10px 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); font-weight: 500;
+    border-bottom: 1px solid var(--rule);
+  }
+  .holes-table td { padding: 12px; border-bottom: 1px solid var(--rule-soft); }
+  .holes-table tr:hover td { background: var(--cream); }
+  .hole-num {
+    font-family: 'Fraunces', serif; font-size: 18px;
+    color: var(--green); width: 50px;
+  }
+  .hole-par-si { font-size: 11px; color: var(--muted); }
+  .hole-avg { font-weight: 600; color: var(--ink); }
+  .hole-delta { font-weight: 600; color: var(--birdie); }
+  .hole-delta.under { color: var(--down); }
+
+  /* ===== W-o-W MOVERS ===== */
+  .movers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 800px) { .movers-grid { grid-template-columns: 1fr; } }
+  .movers-card {
+    background: var(--paper); border: 1px solid var(--rule);
+    padding: 24px 28px; border-radius: 2px;
+  }
+  .movers-card h3 {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 18px; margin-bottom: 16px; color: var(--ink);
+    padding-bottom: 8px; border-bottom: 1px solid var(--rule-soft);
+  }
+  .movers-list { list-style: none; }
+  .movers-list li {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px dashed var(--rule-soft); gap: 12px;
+  }
+  .movers-list li:last-child { border-bottom: none; }
+  .mover-name {
+    font-family: 'DM Sans', sans-serif; font-weight: 500;
+    color: var(--ink); flex: 1;
+  }
+  .mover-detail {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--muted);
+  }
+  .mover-delta {
+    font-family: 'JetBrains Mono', monospace; font-weight: 600;
+    font-size: 14px; min-width: 48px; text-align: right;
+  }
+  .mover-delta.improved { color: var(--green); }
+  .mover-delta.regressed { color: var(--birdie); }
+
+  /* ===== PLAYER TABLE ===== */
+  .player-controls {
+    display: flex; gap: 12px; margin-bottom: 16px;
+    align-items: center; flex-wrap: wrap;
+  }
+  .search-input {
+    flex: 1; min-width: 200px; max-width: 320px;
+    padding: 10px 14px; border: 1px solid var(--rule);
+    background: var(--paper); font-family: 'DM Sans', sans-serif;
+    font-size: 13px; border-radius: 2px; color: var(--ink);
+  }
+  .search-input:focus { outline: none; border-color: var(--green); }
+  .player-table-wrap {
+    background: var(--paper); border: 1px solid var(--rule);
+    overflow-x: auto; border-radius: 2px;
+  }
+  .player-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .player-table thead {
+    background: var(--cream-deep); border-bottom: 2px solid var(--ink);
+  }
+  .player-table th {
+    padding: 12px 10px; text-align: right;
+    font-family: 'DM Sans', sans-serif; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--ink); font-weight: 600; cursor: pointer;
+    user-select: none; white-space: nowrap;
+    border-right: 1px solid var(--rule-soft);
+  }
+  .player-table th:last-child { border-right: none; }
+  .player-table th.left { text-align: left; }
+  .player-table th:hover { color: var(--green); }
+  .player-table th.sorted { color: var(--brass); }
+  .player-table th .arrow {
+    display: inline-block; width: 10px; color: var(--brass);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .player-table td {
+    padding: 10px 10px; border-bottom: 1px solid var(--rule-soft);
+    text-align: right; font-family: 'JetBrains Mono', monospace;
+    border-right: 1px solid var(--rule-soft);
+  }
+  .player-table td:last-child { border-right: none; }
+  .player-table tr { cursor: pointer; transition: background 0.15s; }
+  .player-table tr:hover td { background: var(--cream); }
+  .player-table td.name {
+    text-align: left; font-family: 'DM Sans', sans-serif;
+    font-weight: 500; color: var(--ink);
+  }
+  .bracket-tag {
+    display: inline-block; font-size: 9px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 2px 6px; margin-right: 8px; border-radius: 2px;
+    font-family: 'DM Sans', sans-serif; font-weight: 600;
+  }
+  .bracket-tag.low { background: #ffffff; color: #091529; }
+  .bracket-tag.mid { background: #7eb8e8; color: #0a1f44; }
+  .bracket-tag.high { background: transparent; color: #ffffff; box-shadow: inset 0 0 0 1px #ffffff; }
+  .trend-cell {
+    font-family: 'JetBrains Mono', monospace; font-weight: 600;
+  }
+  .trend-cell.up { color: var(--birdie); }
+  .trend-cell.down { color: var(--green); }
+
+  /* ===== SCORECARD MODAL ===== */
+  .scorecard-wrap {
+    display: none; margin-top: 16px;
+    background: var(--paper); border: 1px solid var(--rule);
+    padding: 24px 28px; border-radius: 2px;
+    animation: slideDown 0.25s ease;
+  }
+  .scorecard-wrap.open { display: block; }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .scorecard-head {
+    display: flex; justify-content: space-between;
+    align-items: baseline; margin-bottom: 18px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--rule);
+  }
+  .scorecard-name {
+    font-family: 'Fraunces', serif; font-size: 24px; color: var(--ink);
+  }
+  .scorecard-name .hc {
+    font-size: 14px; color: var(--brass); margin-left: 12px; font-style: italic;
+  }
+  .scorecard-close {
+    background: none; border: 1px solid var(--rule);
+    padding: 6px 14px; font-size: 12px; cursor: pointer;
+    color: var(--ink-soft); border-radius: 2px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .scorecard-close:hover { background: var(--cream); }
+  .scorecard-grid { overflow-x: auto; padding-bottom: 4px; }
+  .scorecard-table {
+    border-collapse: collapse; font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; width: 100%; min-width: 760px;
+  }
+  .scorecard-table th, .scorecard-table td {
+    padding: 8px 6px; text-align: center;
+    border: 1px solid var(--rule-soft); min-width: 34px;
+  }
+  .scorecard-table th {
+    background: var(--cream-deep); font-size: 11px;
+    font-weight: 600; color: var(--ink);
+  }
+  .scorecard-table td.label, .scorecard-table th.label {
+    text-align: right; background: var(--paper);
+    border-right: 2px solid var(--ink); color: var(--muted);
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    font-family: 'DM Sans', sans-serif; min-width: 80px;
+  }
+  .scorecard-table th.total, .scorecard-table td.total {
+    background: var(--green); color: var(--cream);
+    border-left: 2px solid var(--ink); font-weight: 600;
+  }
+  .score-cell { position: relative; font-weight: 600; }
+  .score-cell.eagle {
+    background: #b48dd9; color: #0a1f44; border-radius: 50%;
+  }
+  .score-cell.birdie { background: #ff6b5e; color: #ffffff; border-radius: 50%; }
+  .score-cell.bogey {
+    background: rgba(255,255,255,0.06); color: #ffffff;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45);
+  }
+  .score-cell.double { background: #4a2628; color: #ffffff; }
+  .scorecard-summary {
+    margin-top: 16px; padding-top: 16px;
+    border-top: 1px solid var(--rule);
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 16px; font-size: 12px;
+  }
+  .summary-item .lbl {
+    font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--muted); margin-bottom: 2px;
+  }
+  .summary-item .val {
+    font-family: 'Fraunces', serif; font-size: 22px; color: var(--green);
+  }
+
+  /* ===== INSIGHTS ===== */
+  .insights-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .insight-card {
+    background: var(--paper); border-left: 3px solid var(--brass);
+    padding: 18px 22px; border-radius: 2px;
+  }
+  .insight-card.green { border-left-color: var(--down); }
+  .insight-card.red { border-left-color: var(--birdie); }
+  .insight-title {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 15px; color: var(--brass); margin-bottom: 8px;
+  }
+  .insight-card.green .insight-title { color: var(--down); }
+  .insight-card.red .insight-title { color: var(--birdie); }
+  .insight-body { font-size: 13px; color: var(--ink); line-height: 1.55; }
+  .insight-body strong { font-weight: 600; color: var(--ink); }
+
+  /* ===== ADD-WEEK HELP ===== */
+  details.help {
+    background: var(--paper); border: 1px solid var(--rule);
+    border-radius: 2px; margin-top: 32px; padding: 0;
+  }
+  details.help summary {
+    padding: 12px 20px; cursor: pointer; font-size: 12px;
+    color: var(--brass); font-weight: 500; letter-spacing: 0.05em;
+    text-transform: uppercase; user-select: none;
+  }
+  details.help summary:hover { background: var(--cream); }
+  details.help[open] summary { border-bottom: 1px solid var(--rule); }
+  details.help pre {
+    margin: 0; padding: 16px 20px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    background: #051329; color: #ffffff; overflow-x: auto;
+    line-height: 1.5;
+  }
+  details.help .helpBody { padding: 16px 20px; font-size: 13px; line-height: 1.55; }
+  details.help .helpBody code {
+    background: var(--cream-deep); padding: 1px 5px;
+    border-radius: 2px; font-size: 12px;
+  }
+
+  footer {
+    text-align: center; padding: 32px 48px; font-size: 12px;
+    color: var(--muted); border-top: 1px solid var(--rule); font-style: italic;
+  }
+
+  @media (max-width: 700px) {
+    header.masthead, .week-bar { padding-left: 20px; padding-right: 20px; }
+    main { padding: 24px 20px 48px; }
+    .meta { text-align: left; margin-top: 16px; }
+    .meta .row { justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-row">
+    <div class="brand-block">
+      <img class="brand-logo" alt="Springbank Links Golf Club"
+           src="data:image/jpeg;base64,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">
+      <div class="brand">
+        <div class="brand-title-1">Men's Night</div>
+        <div class="brand-title-2">2026 Season Dashboard</div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="row"><span class="label">Course Par</span> <strong>71</strong> <span>(36 / 35)</span></div>
+      <div class="row"><span class="label">Weeks tracked</span> <strong id="weekCount">2</strong></div>
+      <div class="row"><span class="label">Unique players</span> <strong id="uniquePlayers">—</strong></div>
+    </div>
+  </div>
+</header>
+
+<div class="week-bar">
+  <span class="week-bar-label">View</span>
+  <div class="week-tabs" id="weekTabs"></div>
+</div>
+
+<main>
+
+<section>
+  <div class="kpis" id="kpis"></div>
+</section>
+
+<section>
+  <div class="section-head">
+    <span class="num">No. 01</span>
+    <h2>Field Filter</h2>
+    <span class="sub">Slice all charts and tables by handicap bracket</span>
+  </div>
+  <div class="filter-bar" id="filterBar">
+    <button class="filter-btn active" data-bracket="all">All <span class="filter-count" id="ct-all">(0)</span></button>
+    <button class="filter-btn" data-bracket="low">Low · 0–7 <span class="filter-count" id="ct-low">(0)</span></button>
+    <button class="filter-btn" data-bracket="mid">Mid · 8–15 <span class="filter-count" id="ct-mid">(0)</span></button>
+    <button class="filter-btn" data-bracket="high">High · 16+ <span class="filter-count" id="ct-high">(0)</span></button>
+  </div>
+  <div class="filter-note">Tip: tap any player row to expand a full hole-by-hole scorecard.</div>
+</section>
+
+<section>
+  <div class="section-head">
+    <span class="num">No. 02</span>
+    <h2>Headlines</h2>
+    <span class="sub">What the data is telling us</span>
+  </div>
+  <div class="insights-grid" id="insights"></div>
+</section>
+
+<section id="moversSection">
+  <div class="section-head">
+    <span class="num">No. 03</span>
+    <h2>Week-over-Week Movers</h2>
+    <span class="sub">Only players who appeared in both selected weeks</span>
+  </div>
+  <div class="movers-grid" id="moversGrid"></div>
+</section>
+
+<section>
+  <div class="section-head">
+    <span class="num">No. 04</span>
+    <h2>Hole by Hole — Average vs Par</h2>
+    <span class="sub">Bars show strokes <em>over par</em> by bracket</span>
+  </div>
+  <div class="panel">
+    <div class="chart-legend">
+      <div class="legend-item"><span class="legend-swatch" style="background:#ffffff"></span> Low (0–7)</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#7eb8e8"></span> Mid (8–15)</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:1px solid #ffffff"></span> High (16+)</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--ink)"></span> Par line</div>
+    </div>
+    <div class="hole-chart"><svg id="holeChart" viewBox="0 0 900 360" preserveAspectRatio="xMidYMid meet"></svg></div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <span class="num">No. 05</span>
+    <h2>How They Made Their Score</h2>
+    <span class="sub">Share of holes played as eagle / birdie / par / bogey / double+</span>
+  </div>
+  <div class="panel">
+    <div class="dist-grid" id="distGrid"></div>
+    <div class="dist-legend">
+      <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#b48dd9"></span> Eagle / Deuce</div>
+      <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#ff6b5e"></span> Birdie</div>
+      <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#62d4a1"></span> Par</div>
+      <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#f59e0b"></span> Bogey</div>
+      <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#4a2628"></span> Double+</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <span class="num">No. 06</span>
+    <h2>Front Nine vs Back Nine</h2>
+    <span class="sub">Where do the wheels come off?</span>
+  </div>
+  <div class="fb-grid" id="fbGrid"></div>
+</section>
+
+<section>
+  <div class="section-head">
+    <span class="num">No. 07</span>
+    <h2>The Course Speaks</h2>
+    <span class="sub">Ranked by field-average strokes over par</span>
+  </div>
+  <div class="panel">
+    <div class="holes-table-wrap">
+      <div>
+        <div class="dist-card-title" style="margin-bottom:12px;">Where strokes were lost</div>
+        <table class="holes-table" id="hardestTable"></table>
+      </div>
+      <div>
+        <div class="dist-card-title" style="margin-bottom:12px;">Where strokes were saved</div>
+        <table class="holes-table" id="easiestTable"></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <span class="num">No. 08</span>
+    <h2 id="standingsHeading">Player Standings</h2>
+    <span class="sub" id="standingsSub">Click any column to sort · tap a row for the scorecard</span>
+  </div>
+  <div class="player-controls">
+    <input type="text" class="search-input" id="search" placeholder="Search player…">
+  </div>
+  <div class="player-table-wrap">
+    <table class="player-table" id="playerTable">
+      <thead id="playerTableHead"></thead>
+      <tbody id="playerTableBody"></tbody>
+    </table>
+  </div>
+  <div class="scorecard-wrap" id="scorecardWrap"></div>
+</section>
+
+<section style="margin-top:48px;">
+  <div class="section-head">
+    <span class="num">No. 09</span>
+    <h2>Add a New Week</h2>
+    <span class="sub">Paste in the SmartGolf format — same as Week 1</span>
+  </div>
+
+  <div id="storedWeeksWrap" class="panel" style="display:none;margin-bottom:16px;">
+    <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;margin-bottom:12px;">Weeks added in this browser</div>
+    <div id="storedWeeksList"></div>
+    <div style="font-size:11px;color:#fff;margin-top:10px;font-style:italic;">
+      These are saved in your browser only (localStorage). To make them permanent in the file (so others see them when you share), use the JS snippet button below after parsing.
+    </div>
+  </div>
+
+  <div class="panel">
+    <div style="margin-bottom:14px;">
+      <div style="font-size:12px;letter-spacing:0.05em;line-height:1.6;">
+        Paste the exact format SmartGolf gives you: <strong>handicap, name, 18 hole scores (one per line), then a totals line</strong> (Gross / Net / Gross Pts / Net Pts) for each player. Header rows are auto-skipped.
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+      <input type="text" id="newWeekLabel" placeholder="e.g. Week 3" style="flex:1;min-width:140px;padding:10px 14px;background:#0a1f44;border:1px solid var(--rule);color:#fff;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:13px;">
+      <input type="text" id="newWeekDate" placeholder="e.g. May 19, 2026" style="flex:1;min-width:140px;padding:10px 14px;background:#0a1f44;border:1px solid var(--rule);color:#fff;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:13px;">
+    </div>
+
+    <textarea id="newWeekPaste" placeholder="Paste week data here…" spellcheck="false" style="width:100%;min-height:200px;padding:14px;background:#051329;border:1px solid var(--rule);color:#fff;border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;resize:vertical;"></textarea>
+
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center;">
+      <button id="parseAddBtn" style="padding:10px 24px;background:#ffffff;color:#0a1f44;border:none;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;letter-spacing:0.05em;font-size:13px;text-transform:uppercase;">Parse &amp; Add Week</button>
+      <button id="parseClearBtn" style="padding:10px 18px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;">Clear</button>
+      <button id="showSnippetBtn" style="padding:10px 18px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;display:none;">Copy JS snippet (for permanent paste into file)</button>
+    </div>
+
+    <div id="parseResult" style="margin-top:16px;"></div>
+    <pre id="parseSnippet" style="display:none;margin-top:14px;background:#051329;color:#fff;padding:16px 20px;border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:12px;overflow-x:auto;border:1px solid var(--rule);max-height:300px;overflow-y:auto;"></pre>
+  </div>
+</section>
+
+<details class="help">
+  <summary>+ Alternative: edit the file directly</summary>
+  <div class="helpBody">
+    <p>If you'd rather not use the paste UI, open this HTML file in any text editor, find the <code>WEEKS</code> array near the top of the <code>&lt;script&gt;</code> block, and append a new object:</p>
+  </div>
+  <pre>{
+  id: 3,
+  label: "Week 3",
+  date: "May 19, 2026",
+  players: [
+    // Format: [name, hc, [18 hole scores], gross, net, grossPoints, netPoints]
+    ["Player Name", 5, [4,4,5,4,3,4,4,3,5, 3,4,4,4,4,4,3,5,4], 71, 66, 36, 41],
+    // ...add the rest
+  ]
+}</pre>
+</details>
+
+</main>
+
+<footer>
+  Springbank Links League Dashboard · Par 71 · Multi-week tracker · Built for SmartGolf data
+</footer>
+
+<script>
+// =================================================================
+// COURSE DATA — Springbank Links
+// =================================================================
+const COURSE = {
+  name: "Springbank Links",
+  par: [4,4,5,4,3,4,4,3,5, 3,4,4,4,4,4,3,5,4], // 36 + 35 = 71
+  si:  [11,7,3,15,13,1,5,17,9, 18,4,8,12,2,14,16,6,10],
+};
+
+// =================================================================
+// WEEKLY RESULTS
+// Append new weeks to this array — page recomputes everything.
+// Format per player: [name, hc, scoresArray18, gross, net, grossPts, netPts]
+// =================================================================
+const WEEKS = [
+  {
+    id: 1, label: "Week 1", date: "May 5, 2026",
+    players: [
+      ["Brendan Weiland", 0, [3,5,5,4,4,4,3,3,5,3,3,3,4,4,4,3,5,5], 70, 71, 37, 36],
+      ["Mark Yetman", 0, [4,4,5,4,2,4,3,3,5,4,5,3,4,4,4,3,4,5], 70, 69, 37, 38],
+      ["Ryan Powell", 10, [4,5,5,6,6,6,3,3,5,3,4,5,3,4,5,3,4,4], 78, 71, 30, 37],
+      ["Robert Laycock", 6, [4,4,5,4,4,4,4,4,6,3,4,4,5,4,5,4,5,5], 78, 72, 29, 35],
+      ["David Alberti", 0, [4,5,5,3,3,5,4,4,6,3,6,4,5,4,4,4,5,4], 78, 78, 29, 29],
+      ["Jared Fletcher", 14, [5,4,7,4,3,5,4,3,5,3,4,4,6,5,5,3,5,4], 79, 75, 28, 32],
+      ["Adam Smith", 8, [4,5,5,4,3,6,4,3,5,4,5,4,4,4,4,5,5,5], 79, 73, 28, 34],
+      ["Kevin Stinson", 10, [5,4,6,4,3,4,6,3,5,3,5,4,5,5,4,3,6,5], 80, 74, 27, 33],
+      ["Jon Yumol", 4, [5,4,5,5,6,5,4,3,6,4,5,3,4,4,4,4,5,4], 80, 81, 28, 27],
+      ["Kelly Lang", 11, [4,5,5,4,3,6,4,3,5,4,5,5,5,5,4,5,5,5], 82, 75, 25, 32],
+      ["Parry Roy", 18, [6,7,4,4,4,5,5,4,5,4,5,5,3,3,4,4,5,7], 84, 65, 25, 42],
+      ["Kevin Polischuk", 15, [5,5,6,5,3,6,4,4,5,4,5,4,4,4,5,4,6,5], 84, 77, 23, 30],
+      ["Jeff Weiland", 15, [3,5,6,5,4,7,4,3,5,4,6,5,5,5,5,2,7,5], 86, 72, 22, 35],
+      ["Karson Kull", 14, [5,7,6,5,3,4,3,4,7,4,4,5,4,5,5,5,5,5], 86, 78, 22, 29],
+      ["Ron Laycock", 15, [4,4,5,5,4,4,5,5,6,4,5,4,5,5,5,4,7,5], 86, 70, 21, 37],
+      ["Brent Kozubska", 16, [4,7,8,4,4,4,4,4,5,3,4,5,5,5,6,3,5,6], 86, 74, 23, 33],
+      ["Dave Leeflang", 15, [5,5,6,4,3,7,5,3,6,4,4,5,5,5,5,5,5,5], 87, 74, 21, 33],
+      ["Bob Bucci", 14, [6,5,7,4,4,6,5,3,5,4,5,5,5,4,4,5,6,5], 88, 76, 19, 31],
+      ["Sandro Nigg", 21, [6,5,6,4,4,5,4,3,6,3,5,5,7,5,5,4,6,6], 89, 75, 19, 32],
+      ["Dan Simons", 12, [7,5,6,4,3,6,7,3,7,3,4,4,5,5,5,4,6,5], 89, 74, 20, 33],
+      ["Richard Langridge", 16, [5,5,7,6,5,5,5,4,7,5,4,5,5,5,5,3,6,4], 91, 79, 16, 28],
+      ["Michael Speca", 21, [5,5,6,6,5,5,5,4,6,4,6,5,5,5,5,4,5,6], 92, 80, 15, 27],
+      ["Don Silot", 20, [6,7,5,4,3,8,3,6,8,4,5,5,3,5,6,6,6,7], 97, 79, 17, 29],
+      ["Kevin Murray", 27, [3,6,8,6,3,8,6,3,9,5,4,5,6,5,6,5,8,6], 102, 84, 11, 25],
+    ]
+  },
+  {
+    id: 2, label: "Week 2", date: "May 12, 2026",
+    players: [
+      ["David Alberti", 0, [4,4,4,4,3,4,2,3,4,4,5,4,3,4,4,4,5,3], 68, 68, 39, 39],
+      ["Brendan Weiland", 0, [4,4,5,3,3,5,3,3,4,3,6,3,4,4,4,4,4,3], 69, 71, 38, 36],
+      ["Aidan Geiger", -1, [4,4,4,4,3,4,4,2,5,3,3,4,5,4,4,3,4,5], 69, 71, 38, 36],
+      ["Jeff Ogden", 1, [4,4,5,5,3,4,4,3,4,3,4,4,4,4,3,3,6,4], 71, 68, 36, 39],
+      ["Blind Ghost1", 3, [4,4,5,4,3,4,4,3,5,3,4,4,4,4,4,3,5,4], 71, 72, 36, 35],
+      ["Mark Yetman", 0, [5,5,4,4,3,5,4,3,5,4,4,4,4,4,4,3,4,5], 74, 75, 33, 32],
+      ["Robert Laycock", 6, [4,5,5,4,3,6,2,3,5,3,5,5,4,5,4,3,4,4], 74, 68, 33, 39],
+      ["Rob Vinje", 3, [5,5,5,4,3,5,4,3,4,3,4,4,5,4,4,3,5,4], 74, 68, 33, 39],
+      ["Kale Wright", 4, [4,4,4,4,3,4,5,4,5,3,5,5,7,4,4,4,4,4], 77, 74, 31, 34],
+      ["Cory Ryan", 6, [4,4,6,5,4,5,5,3,4,5,4,4,4,4,5,3,4,4], 77, 72, 30, 35],
+      ["Troy Schwab", 4, [5,3,5,4,3,5,4,3,5,3,6,5,5,4,4,4,5,5], 78, 77, 29, 30],
+      ["Doug Adair", 6, [5,3,7,5,3,6,4,4,5,3,6,5,4,5,5,2,5,4], 81, 77, 26, 30],
+      ["Adam Smith", 8, [4,5,6,5,2,5,5,4,6,4,5,4,4,4,4,3,5,4], 79, 72, 28, 35],
+      ["Tony Stirling", 13, [5,5,5,3,4,6,3,4,6,3,5,5,4,4,4,5,5,5], 81, 73, 26, 34],
+      ["Jake Stegerman", 14, [5,4,7,5,4,4,4,3,5,4,5,4,5,4,4,4,5,5], 81, 66, 26, 41],
+      ["Ty VanSlooten", 10, [4,5,7,5,5,4,4,4,6,4,4,5,4,4,4,4,6,4], 83, 72, 24, 35],
+      ["Mike VanSlooten", 14, [5,5,6,5,3,6,5,3,7,4,4,5,3,5,4,5,4,4], 83, 73, 24, 34],
+      ["Karson Kull", 14, [3,4,5,5,5,5,5,4,5,5,6,5,4,4,5,4,4,6], 84, 70, 23, 37],
+      ["Travis MacKenzie", 11, [4,4,7,5,5,5,4,3,6,3,6,6,6,4,5,3,5,4], 85, 81, 22, 26],
+      ["Kevin Polischuk", 15, [5,5,6,4,3,4,5,4,7,3,5,5,5,5,5,4,6,4], 85, 77, 22, 30],
+      ["Phil Warsaba", 14, [5,4,7,6,3,6,4,5,4,3,5,4,5,5,5,4,6,4], 85, 75, 22, 32],
+      ["Ned Mazur", 12, [5,6,6,4,4,5,6,3,6,4,5,4,4,5,3,6,4,6], 86, 76, 21, 31],
+      ["Peter Voelk", 12, [6,4,6,5,3,4,4,6,5,4,6,5,5,4,4,5,5,5], 86, 75, 22, 33],
+      ["Hal Carmichael", 15, [4,6,6,4,4,5,5,3,6,4,5,5,5,5,5,4,6,4], 86, 78, 21, 29],
+      ["Bob Bucci", 14, [4,5,7,4,5,6,5,4,3,5,5,5,5,5,5,4,5,4], 86, 74, 21, 33],
+      ["Dave Leeflang", 15, [4,5,6,5,3,6,5,4,5,5,5,4,5,6,4,4,5,5], 86, 72, 21, 35],
+      ["Kelly Lang", 11, [4,5,6,4,3,4,4,5,3,6,5,4,4,4,4,3,4,4], 76, 66, 31, 41],
+      ["Dan Simons", 12, [4,4,7,7,4,4,4,4,6,4,6,4,6,5,5,4,5,5], 88, 80, 20, 28],
+      ["David Zerr", 12, [5,5,5,5,5,6,4,5,7,4,5,5,6,4,4,4,6,5], 90, 80, 17, 27],
+      ["Patrick Cook", 12, [6,5,7,4,5,5,5,3,6,5,5,6,6,4,5,4,5,5], 91, 81, 16, 26],
+      ["Kevin Stinson", 10, [5,5,7,5,4,6,4,5,6,3,5,5,6,4,5,5,6,6], 92, 84, 15, 23],
+      ["Steve Barker", 14, [5,7,4,4,3,5,4,5,8,5,7,4,6,8,4,4,5,5], 93, 81, 19, 27],
+      ["Gordon Kraft", 11, [6,6,5,5,5,6,4,4,6,5,6,5,6,6,6,3,6,6], 96, 87, 11, 20],
+      ["Scott Estabrooks", 15, [6,6,7,4,6,8,5,4,4,3,5,4,4,5,6,4,6,4], 91, 78, 19, 30],
+      ["Ron Laycock", 15, [5,4,6,4,5,7,6,4,8,4,5,5,5,5,5,3,5,5], 91, 78, 18, 29],
+      ["Jeff Weiland", 15, [6,6,8,7,4,5,6,4,6,5,5,5,4,5,5,4,5,7], 97, 84, 13, 24],
+      ["George Starkewski", 17, [4,4,5,5,4,5,4,3,6,5,5,5,5,5,4,5,5,4], 83, 68, 24, 39],
+      ["Ken Chiang", 17, [5,6,6,6,4,5,4,4,5,3,5,6,6,5,4,4,5,5], 88, 75, 19, 32],
+      ["Mike Craigie", 17, [7,5,6,5,3,5,5,5,6,5,5,4,5,4,5,5,4,4], 88, 72, 20, 35],
+      ["Timothy Mazur", 16, [4,5,7,4,4,4,6,3,7,4,4,7,5,7,4,5,5,4], 89, 75, 20, 32],
+      ["Hugo Frederiksen", 22, [5,6,6,5,4,5,3,5,4,5,6,6,5,5,4,4,7,5], 90, 79, 17, 28],
+      ["Don Silot", 20, [5,4,5,6,4,6,4,4,5,4,5,5,6,5,5,6,5,6], 90, 71, 18, 36],
+      ["Richard Langridge", 16, [6,6,6,6,4,4,4,4,6,5,6,5,5,5,5,3,7,4], 91, 80, 16, 27],
+      ["Brent Kozubska", 16, [5,4,8,3,4,6,4,6,5,5,5,4,7,5,6,6,5,4], 92, 80, 19, 29],
+      ["Parry Roy", 18, [5,6,5,6,5,7,6,4,7,5,5,3,5,5,7,5,5,6], 97, 80, 12, 27],
+      ["Darren Degagne", 16, [5,7,7,6,4,3,5,6,7,4,6,5,6,5,5,3,8,6], 98, 84, 12, 24],
+      ["Kevin Murray", 27, [8,6,5,3,4,8,5,3,8,5,8,6,5,5,5,5,5,4], 98, 73, 16, 36],
+      ["David Nordin", 16, [4,4,8,4,3,8,7,5,7,3,4,5,7,6,5,6,6,6], 98, 86, 15, 23],
+      ["John Looyis", 29, [4,7,7,4,4,8,4,5,7,4,5,5,4,7,5,6,7,6], 99, 83, 13, 25],
+    ]
+  },
+];
+
+// =================================================================
+// NORMALIZE — turn array tuples into objects with derived fields
+// =================================================================
+function normalizeRound(arr) {
+  const [name, , scores, gross, net, gp, np] = arr;
+  const hc = gross - net;  // WEEKLY HC = Gross - Net (whole number by construction)
+  const front = scores.slice(0,9).reduce((a,b)=>a+b,0);
+  const back  = scores.slice(9).reduce((a,b)=>a+b,0);
+  let e=0,b=0,p=0,bo=0,d=0;
+  scores.forEach((s,i) => {
+    const dd = s - COURSE.par[i];
+    if (dd <= -2) e++;
+    else if (dd === -1) b++;
+    else if (dd === 0) p++;
+    else if (dd === 1) bo++;
+    else d++;
+  });
+  return {
+    name, hc, scores, gross, net, gp, np, front, back,
+    eagles: e, birdies: b, pars: p, bogeys: bo, doubles: d,
+    bracket: hc <= 7 ? 'low' : hc <= 15 ? 'mid' : 'high'
+  };
+}
+WEEKS.forEach(w => { w.rounds = w.players.map(normalizeRound); });
+
+// =================================================================
+// YTD AGGREGATION
+// =================================================================
+function buildYTD() {
+  const byName = new Map();
+  WEEKS.forEach(w => {
+    w.rounds.forEach(r => {
+      if (!byName.has(r.name)) {
+        byName.set(r.name, {
+          name: r.name, weeks: [], hc: r.hc,
+          totalGross: 0, totalNet: 0, totalGp: 0, totalNp: 0,
+          totalEagles: 0, totalBirdies: 0, totalPars: 0,
+          totalBogeys: 0, totalDoubles: 0,
+          totalFront: 0, totalBack: 0,
+          aggregatedScores: new Array(18).fill(0),
+          aggregatedHoles: new Array(18).fill(0),
+        });
+      }
+      const a = byName.get(r.name);
+      a.weeks.push({ id: w.id, label: w.label, round: r });
+      a.totalGross += r.gross;
+      a.totalNet += r.net;
+      a.totalGp += r.gp;
+      a.totalNp += r.np;
+      a.totalEagles += r.eagles;
+      a.totalBirdies += r.birdies;
+      a.totalPars += r.pars;
+      a.totalBogeys += r.bogeys;
+      a.totalDoubles += r.doubles;
+      a.totalFront += r.front;
+      a.totalBack += r.back;
+      r.scores.forEach((s,i) => {
+        a.aggregatedScores[i] += s;
+        a.aggregatedHoles[i] += 1;
+      });
+    });
+  });
+  byName.forEach(a => {
+    a.rounds = a.weeks.length;
+    a.avgGross = a.totalGross / a.rounds;
+    a.avgNet = a.totalNet / a.rounds;
+    a.avgFront = a.totalFront / a.rounds;
+    a.avgBack = a.totalBack / a.rounds;
+    // YTD HC = rounded average of weekly handicaps (whole number)
+    a.hc = Math.round((a.totalGross - a.totalNet) / a.rounds);
+    a.bracket = a.hc <= 7 ? 'low' : a.hc <= 15 ? 'mid' : 'high';
+    a.holeAvgs = a.aggregatedScores.map((s,i) => s / a.aggregatedHoles[i]);
+  });
+  return Array.from(byName.values());
+}
+let YTD = buildYTD();
+
+// =================================================================
+// STATE
+// =================================================================
+let ALL_VIEWS = WEEKS.map(w => ({ kind: 'week', id: w.id, label: w.label, date: w.date }))
+  .concat([{ kind: 'ytd', id: 'ytd', label: 'Year to Date' }]);
+
+const state = {
+  view: ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0], // default to latest week
+  bracket: 'all',
+  sortKey: 'gross',
+  sortDir: 1,
+  search: '',
+};
+
+// =================================================================
+// SELECTORS — return rounds (per-week) or aggregates (YTD)
+// =================================================================
+function currentRounds() {
+  if (state.view.kind === 'week') {
+    const w = WEEKS.find(x => x.id === state.view.id);
+    return w.rounds;
+  }
+  return YTD; // YTD aggregated objects (rounds-like but with totals)
+}
+function filterByBracket(items) {
+  if (state.bracket === 'all') return items;
+  return items.filter(p => p.bracket === state.bracket);
+}
+function ytdMode() { return state.view.kind === 'ytd'; }
+
+// =================================================================
+// WEEK TABS
+// =================================================================
+function renderWeekTabs() {
+  const html = ALL_VIEWS.map(v => {
+    const active = v.id === state.view.id ? ' active' : '';
+    const ytdCls = v.kind === 'ytd' ? ' ytd' : '';
+    const sub = v.date ? `<span style="font-size:10px;margin-left:6px;">${v.date.split(',')[0]}</span>` : '';
+    return `<button class="week-tab${active}${ytdCls}" data-id="${v.id}">${v.label}${sub}</button>`;
+  }).join('');
+  document.getElementById('weekTabs').innerHTML = html;
+  document.querySelectorAll('.week-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = isNaN(parseInt(btn.dataset.id)) ? btn.dataset.id : parseInt(btn.dataset.id);
+      state.view = ALL_VIEWS.find(v => v.id === id) || ALL_VIEWS.find(v => String(v.id) === String(id));
+      state.search = '';
+      document.getElementById('search').value = '';
+      closeScorecard();
+      renderAll();
+    });
+  });
+  document.getElementById('weekCount').textContent = WEEKS.length;
+  document.getElementById('uniquePlayers').textContent = YTD.length;
+}
+
+// =================================================================
+// BRACKET FILTER
+// =================================================================
+function renderBracketCounts() {
+  const items = currentRounds();
+  const counts = { all: items.length, low: 0, mid: 0, high: 0 };
+  items.forEach(p => counts[p.bracket]++);
+  Object.keys(counts).forEach(k => {
+    const el = document.getElementById('ct-' + k);
+    if (el) el.textContent = `(${counts[k]})`;
+  });
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.bracket === state.bracket);
+  });
+}
+document.getElementById('filterBar').addEventListener('click', e => {
+  if (e.target.matches('.filter-btn') || e.target.closest('.filter-btn')) {
+    const btn = e.target.closest('.filter-btn');
+    state.bracket = btn.dataset.bracket;
+    renderAll();
+  }
+});
+
+// =================================================================
+// HELPERS — averages, distributions
+// =================================================================
+function holeAverage(items, holeIdx) {
+  if (!items.length) return COURSE.par[holeIdx];
+  if (ytdMode()) {
+    return items.reduce((s,a) => s + a.holeAvgs[holeIdx], 0) / items.length;
+  }
+  return items.reduce((s,r) => s + r.scores[holeIdx], 0) / items.length;
+}
+function distribution(items) {
+  let e=0,b=0,p=0,bo=0,d=0;
+  if (ytdMode()) {
+    items.forEach(a => { e+=a.totalEagles; b+=a.totalBirdies; p+=a.totalPars; bo+=a.totalBogeys; d+=a.totalDoubles; });
+    const total = items.reduce((s,a)=>s+a.rounds*18, 0);
+    return { eagles:e, birdies:b, pars:p, bogeys:bo, doubles:d, total };
+  }
+  items.forEach(r => { e+=r.eagles; b+=r.birdies; p+=r.pars; bo+=r.bogeys; d+=r.doubles; });
+  return { eagles:e, birdies:b, pars:p, bogeys:bo, doubles:d, total: items.length * 18 };
+}
+function frontBackStats(items) {
+  if (!items.length) return null;
+  if (ytdMode()) {
+    const f = items.reduce((s,a)=>s+a.avgFront, 0) / items.length;
+    const b = items.reduce((s,a)=>s+a.avgBack, 0) / items.length;
+    return { front: f, back: b, fVsPar: f - 36, bVsPar: b - 35 };
+  }
+  const f = items.reduce((s,r)=>s+r.front, 0) / items.length;
+  const b = items.reduce((s,r)=>s+r.back, 0) / items.length;
+  return { front: f, back: b, fVsPar: f - 36, bVsPar: b - 35 };
+}
+function getGross(p) { return ytdMode() ? p.avgGross : p.gross; }
+function getNet(p)   { return ytdMode() ? p.avgNet   : p.net; }
+
+// =================================================================
+// KPIs
+// =================================================================
+function renderKpis() {
+  const items = filterByBracket(currentRounds());
+  if (!items.length) {
+    document.getElementById('kpis').innerHTML =
+      `<div class="kpi"><div class="kpi-label">No players</div><div class="kpi-sub">in this bracket for this view</div></div>`;
+    return;
+  }
+  const avg = items.reduce((s,p)=>s+getGross(p), 0) / items.length;
+  const lowGross = items.reduce((a,b)=>getGross(b)<getGross(a)?b:a);
+  const lowNet   = items.reduce((a,b)=>getNet(b)<getNet(a)?b:a);
+  const dist = distribution(items);
+  const totalBirdies = dist.eagles + dist.birdies;
+  const parPct = (dist.pars + totalBirdies) / dist.total * 100;
+  const dblPct = dist.doubles / dist.total * 100;
+  const isYtd = ytdMode();
+
+  const bracketLabel = { all: 'Field', low: 'Low (0–7)', mid: 'Mid (8–15)', high: 'High (16+)' }[state.bracket];
+
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi">
+      <div class="kpi-label">${bracketLabel} ${isYtd ? 'Avg Gross' : 'Avg'}</div>
+      <div class="kpi-value">${avg.toFixed(1)}</div>
+      <div class="kpi-sub">+${(avg-71).toFixed(1)} vs par${isYtd ? ' · per round' : ''}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Lowest ${isYtd ? 'Avg' : ''} Gross</div>
+      <div class="kpi-value">${getGross(lowGross).toFixed(isYtd ? 1 : 0)}</div>
+      <div class="kpi-sub">${lowGross.name}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Lowest ${isYtd ? 'Avg' : ''} Net</div>
+      <div class="kpi-value">${getNet(lowNet).toFixed(isYtd ? 1 : 0)}</div>
+      <div class="kpi-sub">${lowNet.name} (HC ${lowNet.hc})</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Birdies + Eagles</div>
+      <div class="kpi-value">${totalBirdies}</div>
+      <div class="kpi-sub">${(totalBirdies/dist.total*100).toFixed(1)}% of holes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Pars or Better</div>
+      <div class="kpi-value">${parPct.toFixed(0)}<span style="font-size:24px;color:var(--muted)">%</span></div>
+      <div class="kpi-sub">of holes played</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Doubles+</div>
+      <div class="kpi-value">${dist.doubles}</div>
+      <div class="kpi-sub">${dblPct.toFixed(1)}% of holes</div>
+    </div>
+  `;
+}
+
+// =================================================================
+// INSIGHTS
+// =================================================================
+function renderInsights() {
+  const items = filterByBracket(currentRounds());
+  if (!items.length) {
+    document.getElementById('insights').innerHTML = '';
+    return;
+  }
+  const lowPl  = currentRounds().filter(p => p.bracket === 'low');
+  const midPl  = currentRounds().filter(p => p.bracket === 'mid');
+  const highPl = currentRounds().filter(p => p.bracket === 'high');
+
+  const holeAvgs = COURSE.par.map((p,i) => ({
+    hole: i+1, par: p, si: COURSE.si[i],
+    avg: holeAverage(items, i),
+    delta: holeAverage(items, i) - p,
+  }));
+  const hardest = [...holeAvgs].sort((a,b) => b.delta - a.delta)[0];
+  const easiest = [...holeAvgs].sort((a,b) => a.delta - b.delta)[0];
+  const biggestGap = COURSE.par.map((p,i) => ({
+    hole: i+1, par: p,
+    gap: holeAverage(highPl, i) - holeAverage(lowPl, i),
+  })).sort((a,b)=>b.gap-a.gap)[0];
+
+  const bestNet = [...currentRounds()].sort((a,b) => getNet(a) - getNet(b))[0];
+  const totalDoubles = currentRounds().reduce((s,r) => s + (ytdMode() ? r.totalDoubles : r.doubles), 0);
+  const totalHoles = ytdMode()
+    ? currentRounds().reduce((s,a)=>s+a.rounds*18, 0)
+    : currentRounds().length * 18;
+  const dblPct = (totalDoubles / totalHoles * 100).toFixed(1);
+
+  const items_ = [
+    { cls: 'red', title: 'Hardest hole',
+      body: `<strong>Hole ${hardest.hole}</strong> (par ${hardest.par}, SI ${hardest.si}) played to <strong>${hardest.avg.toFixed(2)}</strong> — <strong>+${hardest.delta.toFixed(2)} over par</strong>.` },
+    { cls: 'green', title: 'Easiest hole',
+      body: `<strong>Hole ${easiest.hole}</strong> (par ${easiest.par}, SI ${easiest.si}) averaged <strong>${easiest.avg.toFixed(2)}</strong>, only <strong>+${easiest.delta.toFixed(2)}</strong>.` },
+    { cls: '', title: 'Biggest skill gap',
+      body: `On <strong>Hole ${biggestGap.hole}</strong> (par ${biggestGap.par}), high handicaps average <strong>${biggestGap.gap.toFixed(2)} more strokes</strong> than low. The widest spread on the card.` },
+    { cls: 'green', title: ytdMode() ? 'Top YTD net (avg)' : 'Round of the day (net)',
+      body: ytdMode()
+        ? `<strong>${bestNet.name}</strong> (HC ${bestNet.hc}) sits on an avg net <strong>${bestNet.avgNet.toFixed(1)}</strong> across ${bestNet.rounds} round${bestNet.rounds===1?'':'s'}.`
+        : `<strong>${bestNet.name}</strong> (HC ${bestNet.hc}) shot net <strong>${bestNet.net}</strong> — gross ${bestNet.gross} — for ${bestNet.np} net points.` },
+    { cls: 'red', title: 'Blow-up holes',
+      body: `<strong>${totalDoubles}</strong> doubles-or-worse in this view (${dblPct}% of holes). High bracket owns <strong>${highPl.length ? Math.round(highPl.reduce((s,r)=>s+(ytdMode()?r.totalDoubles:r.doubles),0) / totalDoubles * 100) : 0}%</strong> of them.` },
+  ];
+
+  document.getElementById('insights').innerHTML = items_.map(it =>
+    `<div class="insight-card ${it.cls}"><div class="insight-title">${it.title}</div><div class="insight-body">${it.body}</div></div>`
+  ).join('');
+}
+
+// =================================================================
+// W-o-W MOVERS  (always shows the latest two consecutive weeks)
+// =================================================================
+function renderMovers() {
+  const section = document.getElementById('moversSection');
+  if (WEEKS.length < 2) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  // Compare current week selection vs the previous week (or last two if YTD)
+  let curWeek, prevWeek;
+  if (state.view.kind === 'week') {
+    curWeek = WEEKS.find(w => w.id === state.view.id);
+    const idx = WEEKS.indexOf(curWeek);
+    prevWeek = idx > 0 ? WEEKS[idx - 1] : null;
+    if (!prevWeek) {
+      // first week selected — show forward delta instead
+      prevWeek = curWeek;
+      curWeek = WEEKS[idx + 1];
+      if (!curWeek) { section.style.display = 'none'; return; }
+    }
+  } else {
+    // YTD: compare latest two
+    curWeek = WEEKS[WEEKS.length - 1];
+    prevWeek = WEEKS[WEEKS.length - 2];
+  }
+
+  document.querySelector('#moversSection .section-head .sub').innerHTML =
+    `${prevWeek.label} → ${curWeek.label} · ${state.bracket === 'all' ? 'all brackets' : state.bracket + ' bracket only'}`;
+
+  const prevByName = new Map(prevWeek.rounds.map(r => [r.name, r]));
+  const both = curWeek.rounds.filter(r => prevByName.has(r.name));
+  const filtered = state.bracket === 'all' ? both : both.filter(r => r.bracket === state.bracket);
+
+  const deltas = filtered.map(r => {
+    const prev = prevByName.get(r.name);
+    return {
+      name: r.name,
+      hc: r.hc,
+      bracket: r.bracket,
+      prevGross: prev.gross,
+      curGross: r.gross,
+      grossDelta: r.gross - prev.gross,
+      prevNet: prev.net,
+      curNet: r.net,
+      netDelta: r.net - prev.net,
+    };
+  });
+
+  const improvedGross = [...deltas].sort((a,b) => a.grossDelta - b.grossDelta).slice(0, 5);
+  const regressedGross = [...deltas].sort((a,b) => b.grossDelta - a.grossDelta).slice(0, 5);
+
+  function renderList(arr, mode) {
+    if (!arr.length) return '<li style="color:var(--muted);font-style:italic">No players in this bracket appeared in both weeks.</li>';
+    return arr.map(d => {
+      const delta = d.grossDelta;
+      const sign = delta > 0 ? '+' : '';
+      const cls = delta < 0 ? 'improved' : delta > 0 ? 'regressed' : '';
+      return `<li>
+        <span class="mover-name">${d.name}</span>
+        <span class="mover-detail">${d.prevGross} → ${d.curGross}</span>
+        <span class="mover-delta ${cls}">${sign}${delta}</span>
+      </li>`;
+    }).join('');
+  }
+
+  document.getElementById('moversGrid').innerHTML = `
+    <div class="movers-card">
+      <h3>Most improved (gross)</h3>
+      <ul class="movers-list">${renderList(improvedGross)}</ul>
+    </div>
+    <div class="movers-card">
+      <h3>Biggest regression (gross)</h3>
+      <ul class="movers-list">${renderList(regressedGross)}</ul>
+    </div>
+  `;
+}
+
+// =================================================================
+// HOLE BY HOLE CHART
+// =================================================================
+function renderHoleChart() {
+  const svg = document.getElementById('holeChart');
+  const W = 900, H = 360;
+  const pad = { l: 44, r: 16, t: 32, b: 64 };
+  const chartW = W - pad.l - pad.r;
+  const chartH = H - pad.t - pad.b;
+  const items = currentRounds();
+  const lowAvgs  = COURSE.par.map((_,i) => holeAverage(items.filter(p=>p.bracket==='low'), i));
+  const midAvgs  = COURSE.par.map((_,i) => holeAverage(items.filter(p=>p.bracket==='mid'), i));
+  const highAvgs = COURSE.par.map((_,i) => holeAverage(items.filter(p=>p.bracket==='high'), i));
+  const lowOver  = lowAvgs.map((v,i) => v - COURSE.par[i]);
+  const midOver  = midAvgs.map((v,i) => v - COURSE.par[i]);
+  const highOver = highAvgs.map((v,i) => v - COURSE.par[i]);
+  const maxOver = Math.max(...lowOver, ...midOver, ...highOver, 1.5) * 1.1;
+
+  const showLow  = state.bracket === 'all' || state.bracket === 'low';
+  const showMid  = state.bracket === 'all' || state.bracket === 'mid';
+  const showHigh = state.bracket === 'all' || state.bracket === 'high';
+  const numActive = [showLow, showMid, showHigh].filter(Boolean).length;
+
+  const holeW = chartW / 18;
+  const barGroupW = holeW * 0.78;
+  const barW = barGroupW / numActive;
+  const barGap = (holeW - barGroupW) / 2;
+
+  let html = '';
+  // gridlines
+  for (let v = 0; v <= maxOver; v += 0.5) {
+    const y = pad.t + chartH - (v / maxOver) * chartH;
+    const isZero = v === 0;
+    html += `<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="${isZero?'#ffffff':'rgba(255,255,255,0.12)'}" stroke-width="${isZero?1.5:1}" ${isZero?'stroke-dasharray="4 4"':''} opacity="${isZero?0.85:1}"/>`;
+    html += `<text x="${pad.l - 6}" y="${y + 3}" text-anchor="end" font-family="JetBrains Mono" font-size="10" fill="#ffffff">+${v.toFixed(1)}</text>`;
+  }
+  // bars
+  for (let i = 0; i < 18; i++) {
+    const x = pad.l + i * holeW + barGap;
+    let off = 0;
+    const drawBar = (val, cls, avg) => {
+      const h = Math.max(0, (val / maxOver) * chartH);
+      const y = pad.t + chartH - h;
+      const tooltip = `Hole ${i+1} · ${cls} avg ${avg.toFixed(2)} (${val>=0?'+':''}${val.toFixed(2)})`;
+      // Low = solid white, Mid = solid sky blue, High = outlined white (no fill)
+      const isHigh = cls === 'High';
+      const fill   = cls === 'Low' ? '#ffffff' : cls === 'Mid' ? '#7eb8e8' : 'none';
+      const stroke = isHigh ? '#ffffff' : 'none';
+      const sw     = isHigh ? 1.25 : 0;
+      html += `<rect x="${x + off}" y="${y}" width="${barW - 1}" height="${h}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" rx="1">
+                 <title>${tooltip}</title></rect>`;
+      off += barW;
+    };
+    if (showLow)  drawBar(lowOver[i], 'Low', lowAvgs[i]);
+    if (showMid)  drawBar(midOver[i], 'Mid', midAvgs[i]);
+    if (showHigh) drawBar(highOver[i], 'High', highAvgs[i]);
+    const cx = pad.l + i * holeW + holeW/2;
+    html += `<text x="${cx}" y="${H - pad.b + 18}" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="600" fill="#ffffff">${i+1}</text>`;
+    html += `<text x="${cx}" y="${H - pad.b + 32}" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#ffffff">P${COURSE.par[i]}·SI${COURSE.si[i]}</text>`;
+  }
+  // F/B divider
+  const divX = pad.l + 9 * holeW;
+  html += `<line x1="${divX}" y1="${pad.t}" x2="${divX}" y2="${H-pad.b}" stroke="#ffffff" stroke-width="1" stroke-dasharray="2 4" opacity="0.6"/>`;
+  html += `<text x="${pad.l + 4.5*holeW}" y="${pad.t - 12}" text-anchor="middle" font-family="DM Sans" font-size="10" font-weight="600" letter-spacing="0.15em" fill="#ffffff">FRONT</text>`;
+  html += `<text x="${pad.l + 13.5*holeW}" y="${pad.t - 12}" text-anchor="middle" font-family="DM Sans" font-size="10" font-weight="600" letter-spacing="0.15em" fill="#ffffff">BACK</text>`;
+  svg.innerHTML = html;
+}
+
+// =================================================================
+// DISTRIBUTION
+// =================================================================
+function renderDistribution() {
+  const brackets = ['all','low','mid','high'];
+  const labels = { all: 'Field', low: 'Low (0–7)', mid: 'Mid (8–15)', high: 'High (16+)' };
+  document.getElementById('distGrid').innerHTML = brackets.map(b => {
+    const items = b === 'all' ? currentRounds() : currentRounds().filter(p => p.bracket === b);
+    if (!items.length) {
+      return `<div class="dist-card"><div class="dist-card-title">${labels[b]}</div><div class="dist-card-sub" style="margin-bottom:0">No players</div></div>`;
+    }
+    const d = distribution(items);
+    const pct = n => (n / d.total * 100);
+    return `
+      <div class="dist-card">
+        <div class="dist-card-title">${labels[b]}</div>
+        <div class="dist-card-sub">${items.length} player${items.length===1?'':'s'} · ${d.total} holes</div>
+        <div class="dist-bar">
+          ${d.eagles ? `<div class="dist-seg eagle" style="width:${pct(d.eagles)}%" title="Eagles: ${d.eagles}">${d.eagles}</div>` : ''}
+          ${d.birdies ? `<div class="dist-seg birdie" style="width:${pct(d.birdies)}%" title="Birdies: ${d.birdies}">${d.birdies}</div>` : ''}
+          ${d.pars ? `<div class="dist-seg par" style="width:${pct(d.pars)}%" title="Pars: ${d.pars}">${d.pars}</div>` : ''}
+          ${d.bogeys ? `<div class="dist-seg bogey" style="width:${pct(d.bogeys)}%" title="Bogeys: ${d.bogeys}">${d.bogeys}</div>` : ''}
+          ${d.doubles ? `<div class="dist-seg double" style="width:${pct(d.doubles)}%" title="Double+: ${d.doubles}">${d.doubles}</div>` : ''}
+        </div>
+        <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ink-soft);">
+          <span style="color:#b48dd9">${pct(d.eagles).toFixed(1)}</span> ·
+          <span style="color:#ff6b5e">${pct(d.birdies).toFixed(1)}</span> ·
+          <span style="color:#62d4a1">${pct(d.pars).toFixed(1)}</span> ·
+          <span style="color:#f59e0b">${pct(d.bogeys).toFixed(1)}</span> ·
+          <span style="color:#ff6b5e">${pct(d.doubles).toFixed(1)}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// =================================================================
+// FRONT / BACK
+// =================================================================
+function renderFrontBack() {
+  const brackets = ['low','mid','high'];
+  const labels = { low: 'Low (0–7)', mid: 'Mid (8–15)', high: 'High (16+)' };
+  document.getElementById('fbGrid').innerHTML = brackets.map(b => {
+    const items = currentRounds().filter(p => p.bracket === b);
+    const fb = frontBackStats(items);
+    if (!fb) return `<div class="fb-cell"><div class="fb-cell-bracket">${labels[b]}</div><div style="color:var(--muted);font-size:13px">No players</div></div>`;
+    const diff = fb.back - fb.front - (-1); // back is par 35 vs front 36, normalize
+    const realDiff = (fb.bVsPar) - (fb.fVsPar); // strokes-over-par diff
+    const harder = Math.abs(realDiff) < 0.3 ? 'Front and back played similarly' :
+                   realDiff > 0 ? `Back ${realDiff.toFixed(1)} strokes harder vs par` :
+                   `Front ${(-realDiff).toFixed(1)} strokes harder vs par`;
+    const arrow = Math.abs(realDiff) < 0.3 ? '≈' : realDiff > 0 ? '→' : '←';
+    return `
+      <div class="fb-cell">
+        <div class="fb-cell-bracket">${labels[b]} · ${items.length} player${items.length===1?'':'s'}</div>
+        <div class="fb-split">
+          <div class="fb-side">
+            <div class="label">Front 9 (Par 36)</div>
+            <div class="num">${fb.front.toFixed(1)}</div>
+            <div class="vs-par">+${fb.fVsPar.toFixed(1)}</div>
+          </div>
+          <div class="fb-arrow">${arrow}</div>
+          <div class="fb-side">
+            <div class="label">Back 9 (Par 35)</div>
+            <div class="num">${fb.back.toFixed(1)}</div>
+            <div class="vs-par">+${fb.bVsPar.toFixed(1)}</div>
+          </div>
+        </div>
+        <div class="fb-insight">${harder}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// =================================================================
+// HARDEST / EASIEST
+// =================================================================
+function renderHolesTables() {
+  const items = filterByBracket(currentRounds());
+  if (!items.length) {
+    document.getElementById('hardestTable').innerHTML = '<tbody><tr><td style="color:var(--muted);font-style:italic;padding:24px;text-align:center">No players in this view</td></tr></tbody>';
+    document.getElementById('easiestTable').innerHTML = '';
+    return;
+  }
+  const holes = COURSE.par.map((p,i) => ({
+    hole: i+1, par: p, si: COURSE.si[i],
+    avg: holeAverage(items, i),
+    delta: holeAverage(items, i) - p,
+    doubles: items.reduce((s,pp) => {
+      if (ytdMode()) return s + 0; // skip for YTD detail
+      return s + (pp.scores[i] >= p+2 ? 1 : 0);
+    }, 0),
+  }));
+  const hardest = [...holes].sort((a,b) => b.delta - a.delta).slice(0, 9);
+  const easiest = [...holes].sort((a,b) => a.delta - b.delta).slice(0, 9);
+
+  const head = `<thead><tr><th>Hole</th><th>Par·SI</th><th>Avg</th><th>+/-</th>${ytdMode() ? '' : '<th>Dbl+</th>'}</tr></thead>`;
+  const row = h => `<tr>
+    <td class="hole-num">${h.hole}</td>
+    <td class="hole-par-si">P${h.par} · SI${h.si}</td>
+    <td class="hole-avg">${h.avg.toFixed(2)}</td>
+    <td class="hole-delta ${h.delta < 0 ? 'under' : ''}">${h.delta>=0?'+':''}${h.delta.toFixed(2)}</td>
+    ${ytdMode() ? '' : `<td>${h.doubles}</td>`}
+  </tr>`;
+
+  document.getElementById('hardestTable').innerHTML = head + '<tbody>' + hardest.map(row).join('') + '</tbody>';
+  document.getElementById('easiestTable').innerHTML = head + '<tbody>' + easiest.map(row).join('') + '</tbody>';
+}
+
+// =================================================================
+// PLAYER TABLE
+// =================================================================
+function renderPlayerTableHead() {
+  const ytd = ytdMode();
+  document.getElementById('standingsHeading').textContent = ytd ? 'Year to Date Standings' : 'Player Standings';
+  document.getElementById('standingsSub').textContent = ytd
+    ? 'Cumulative totals across all weeks · click to sort · tap for scorecards'
+    : 'Click any column to sort · tap a row for the scorecard';
+
+  const cols = ytd ? [
+    { key: 'name', label: 'Player', left: true },
+    { key: 'hc', label: 'HC' },
+    { key: 'rounds', label: 'Rds' },
+    { key: 'avgGross', label: 'Avg G' },
+    { key: 'avgNet', label: 'Avg N' },
+    { key: 'totalGp', label: 'Σ Gross Pts' },
+    { key: 'totalNp', label: 'Σ Net Pts' },
+    { key: 'totalBirdies', label: 'Birds' },
+    { key: 'totalDoubles', label: 'Dbl+' },
+  ] : [
+    { key: 'name', label: 'Player', left: true },
+    { key: 'hc', label: 'HC' },
+    { key: 'gross', label: 'Gross' },
+    { key: 'net', label: 'Net' },
+    { key: 'front', label: 'Front' },
+    { key: 'back', label: 'Back' },
+    { key: 'gp', label: 'G Pts' },
+    { key: 'np', label: 'N Pts' },
+    { key: 'birdies', label: 'Birds' },
+    { key: 'doubles', label: 'Dbl+' },
+  ];
+
+  document.getElementById('playerTableHead').innerHTML = '<tr>' +
+    cols.map(c => `<th data-sort="${c.key}" class="${c.left ? 'left' : ''}${c.key === state.sortKey ? ' sorted' : ''}">${c.label}${c.key === state.sortKey ? ' <span class="arrow">' + (state.sortDir===1?'↑':'↓') + '</span>' : ''}</th>`).join('') +
+    '</tr>';
+
+  document.querySelectorAll('#playerTableHead th').forEach(th => {
+    th.addEventListener('click', () => {
+      const k = th.dataset.sort;
+      if (state.sortKey === k) state.sortDir *= -1;
+      else { state.sortKey = k; state.sortDir = (k === 'gross' || k === 'net' || k === 'avgGross' || k === 'avgNet' || k === 'doubles' || k === 'name') ? 1 : -1; }
+      renderPlayerTable();
+    });
+  });
+}
+
+function renderPlayerTable() {
+  renderPlayerTableHead();
+  let rows = filterByBracket(currentRounds());
+  if (state.search) {
+    const s = state.search.toLowerCase();
+    rows = rows.filter(p => p.name.toLowerCase().includes(s));
+  }
+  // Pick correct birdie field
+  const birdieKey = ytdMode() ? 'totalBirdies' : 'birdies';
+  const eagleKey  = ytdMode() ? 'totalEagles' : 'eagles';
+  const doubleKey = ytdMode() ? 'totalDoubles' : 'doubles';
+
+  rows = [...rows].sort((a,b) => {
+    let av, bv;
+    if (state.sortKey === 'name') return state.sortDir * a.name.localeCompare(b.name);
+    if (state.sortKey === 'birdies') { av = a[birdieKey] + a[eagleKey]; bv = b[birdieKey] + b[eagleKey]; }
+    else if (state.sortKey === 'doubles') { av = a[doubleKey]; bv = b[doubleKey]; }
+    else { av = a[state.sortKey]; bv = b[state.sortKey]; }
+    return state.sortDir * (av - bv);
+  });
+
+  const ytd = ytdMode();
+  document.getElementById('playerTableBody').innerHTML = rows.map(p => {
+    if (ytd) {
+      return `<tr data-name="${p.name}">
+        <td class="name"><span class="bracket-tag ${p.bracket}">${p.bracket}</span>${p.name}</td>
+        <td>${p.hc}</td>
+        <td>${p.rounds}</td>
+        <td><strong>${p.avgGross.toFixed(1)}</strong></td>
+        <td>${p.avgNet.toFixed(1)}</td>
+        <td>${p.totalGp}</td>
+        <td>${p.totalNp}</td>
+        <td>${p.totalBirdies + p.totalEagles}</td>
+        <td>${p.totalDoubles}</td>
+      </tr>`;
+    }
+    return `<tr data-name="${p.name}">
+      <td class="name"><span class="bracket-tag ${p.bracket}">${p.bracket}</span>${p.name}</td>
+      <td>${p.hc}</td>
+      <td><strong>${p.gross}</strong></td>
+      <td>${p.net}</td>
+      <td>${p.front}</td>
+      <td>${p.back}</td>
+      <td>${p.gp}</td>
+      <td>${p.np}</td>
+      <td>${p.birdies + p.eagles}</td>
+      <td>${p.doubles}</td>
+    </tr>`;
+  }).join('');
+
+  document.querySelectorAll('#playerTableBody tr').forEach(tr => {
+    tr.addEventListener('click', () => openScorecard(tr.dataset.name));
+  });
+}
+
+document.getElementById('search').addEventListener('input', e => {
+  state.search = e.target.value;
+  renderPlayerTable();
+});
+
+// =================================================================
+// SCORECARD VIEW
+// =================================================================
+function scoreClass(s, par) {
+  const d = s - par;
+  if (d <= -2) return 'eagle';
+  if (d === -1) return 'birdie';
+  if (d === 0) return '';
+  if (d === 1) return 'bogey';
+  return 'double';
+}
+
+function openScorecard(name) {
+  const wrap = document.getElementById('scorecardWrap');
+  // Collect every round this player has played
+  const rounds = [];
+  WEEKS.forEach(w => {
+    const r = w.rounds.find(rr => rr.name === name);
+    if (r) rounds.push({ week: w, round: r });
+  });
+  if (!rounds.length) return;
+
+  const player = rounds[rounds.length - 1].round;
+  const ytdAgg = YTD.find(y => y.name === name);
+
+  let body = `
+    <div class="scorecard-head">
+      <div class="scorecard-name">${player.name} <span class="hc">HC ${player.hc} · ${player.bracket.toUpperCase()}</span></div>
+      <button class="scorecard-close" id="scorecardClose">Close ✕</button>
+    </div>
+  `;
+
+  // For each round, render a scorecard table
+  rounds.forEach(({ week, round }) => {
+    let front = 0, back = 0;
+    const cells = round.scores.map((s,i) => {
+      const cls = scoreClass(s, COURSE.par[i]);
+      return `<td class="score-cell ${cls}" title="Hole ${i+1} · Par ${COURSE.par[i]}">${s}</td>`;
+    });
+    const frontCells = cells.slice(0,9).join('');
+    const backCells = cells.slice(9).join('');
+
+    body += `
+      <div style="margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+          <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;color:var(--brass);">${week.label} · ${week.date}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);">
+            Gross <strong style="color:var(--ink)">${round.gross}</strong> ·
+            Net <strong style="color:var(--ink)">${round.net}</strong> ·
+            G.Pts ${round.gp} · N.Pts ${round.np}
+          </div>
+        </div>
+        <div class="scorecard-grid">
+          <table class="scorecard-table">
+            <thead>
+              <tr>
+                <th class="label">Hole</th>
+                ${[...Array(9)].map((_,i)=>`<th>${i+1}</th>`).join('')}
+                <th class="total">Out</th>
+                ${[...Array(9)].map((_,i)=>`<th>${i+10}</th>`).join('')}
+                <th class="total">In</th>
+                <th class="total">Tot</th>
+              </tr>
+              <tr>
+                <th class="label">Par</th>
+                ${COURSE.par.slice(0,9).map(p=>`<th>${p}</th>`).join('')}
+                <th class="total">36</th>
+                ${COURSE.par.slice(9).map(p=>`<th>${p}</th>`).join('')}
+                <th class="total">35</th>
+                <th class="total">71</th>
+              </tr>
+              <tr>
+                <th class="label">SI</th>
+                ${COURSE.si.slice(0,9).map(p=>`<th style="color:var(--muted);font-weight:400;">${p}</th>`).join('')}
+                <th class="total">—</th>
+                ${COURSE.si.slice(9).map(p=>`<th style="color:var(--muted);font-weight:400;">${p}</th>`).join('')}
+                <th class="total">—</th>
+                <th class="total">—</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="label">Score</td>
+                ${frontCells}
+                <td class="total">${round.front}</td>
+                ${backCells}
+                <td class="total">${round.back}</td>
+                <td class="total">${round.gross}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scorecard-summary">
+          <div class="summary-item"><div class="lbl">Eagles</div><div class="val" style="color:var(--eagle)">${round.eagles}</div></div>
+          <div class="summary-item"><div class="lbl">Birdies</div><div class="val" style="color:var(--birdie)">${round.birdies}</div></div>
+          <div class="summary-item"><div class="lbl">Pars</div><div class="val">${round.pars}</div></div>
+          <div class="summary-item"><div class="lbl">Bogeys</div><div class="val" style="color:var(--brass)">${round.bogeys}</div></div>
+          <div class="summary-item"><div class="lbl">Doubles+</div><div class="val" style="color:var(--birdie)">${round.doubles}</div></div>
+        </div>
+      </div>
+    `;
+  });
+
+  // YTD summary if multiple rounds
+  if (rounds.length > 1 && ytdAgg) {
+    body += `
+      <div style="margin-top:24px;padding-top:20px;border-top:2px solid var(--ink);">
+        <div style="font-family:'Fraunces',serif;font-style:italic;font-size:18px;margin-bottom:12px;color:var(--green);">Season Aggregate · ${ytdAgg.rounds} rounds</div>
+        <div class="scorecard-summary">
+          <div class="summary-item"><div class="lbl">Avg Gross</div><div class="val">${ytdAgg.avgGross.toFixed(1)}</div></div>
+          <div class="summary-item"><div class="lbl">Avg Net</div><div class="val">${ytdAgg.avgNet.toFixed(1)}</div></div>
+          <div class="summary-item"><div class="lbl">Σ Gross Pts</div><div class="val">${ytdAgg.totalGp}</div></div>
+          <div class="summary-item"><div class="lbl">Σ Net Pts</div><div class="val">${ytdAgg.totalNp}</div></div>
+          <div class="summary-item"><div class="lbl">Total Birdies+</div><div class="val" style="color:var(--birdie)">${ytdAgg.totalBirdies + ytdAgg.totalEagles}</div></div>
+          <div class="summary-item"><div class="lbl">Total Doubles+</div><div class="val" style="color:var(--birdie)">${ytdAgg.totalDoubles}</div></div>
+        </div>
+      </div>
+    `;
+  }
+
+  wrap.innerHTML = body;
+  wrap.classList.add('open');
+  document.getElementById('scorecardClose').addEventListener('click', closeScorecard);
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeScorecard() {
+  const wrap = document.getElementById('scorecardWrap');
+  wrap.classList.remove('open');
+  wrap.innerHTML = '';
+}
+
+// =================================================================
+// RENDER ALL
+// =================================================================
+function renderAll() {
+  renderWeekTabs();
+  renderBracketCounts();
+  renderKpis();
+  renderInsights();
+  renderMovers();
+  renderHoleChart();
+  renderDistribution();
+  renderFrontBack();
+  renderHolesTables();
+  renderPlayerTable();
+}
+
+// =================================================================
+// ADD-A-WEEK: parser + localStorage + UI handlers
+// =================================================================
+const STORAGE_KEY = 'springbankWeeks_v1';
+
+function parseSmartGolfPaste(raw) {
+  const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  const players = [];
+  const errors = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (/gross\s+score/i.test(lines[i]) || /^1\s+2\s+3\s+4/.test(lines[i])) { i++; continue; }
+    if (i + 20 >= lines.length) {
+      if (lines.length - i > 1) errors.push(`Incomplete record at end (${lines.length - i} remaining, need 21).`);
+      break;
+    }
+    const hcLine = lines[i];
+    if (!/^-?\d+$/.test(hcLine)) {
+      errors.push(`Line ${i+1}: expected handicap integer, got "${hcLine}". Skipping.`);
+      i++; continue;
+    }
+    const hc = parseInt(hcLine, 10);
+    const name = lines[i + 1];
+    if (!name || /^-?\d+$/.test(name)) {
+      errors.push(`After HC ${hc}: expected player name, got "${name}". Skipping.`);
+      i++; continue;
+    }
+    const scores = [];
+    let scoreErr = null;
+    for (let j = 0; j < 18; j++) {
+      const v = lines[i + 2 + j];
+      if (!/^\d+$/.test(v)) { scoreErr = `${name}: invalid score at hole ${j+1}: "${v}"`; break; }
+      scores.push(parseInt(v, 10));
+    }
+    if (scoreErr) { errors.push(scoreErr); i++; continue; }
+    const totalsLine = lines[i + 20];
+    const totals = totalsLine.split(/\s+/).filter(s => s.length > 0).map(s => parseInt(s, 10));
+    if (totals.length < 4 || totals.some(n => isNaN(n))) {
+      errors.push(`${name}: invalid totals line "${totalsLine}"`);
+      i++; continue;
+    }
+    const [gross, net, gp, np] = totals;
+    const sumScores = scores.reduce((a,b) => a+b, 0);
+    if (sumScores !== gross) {
+      errors.push(`⚠ ${name}: scores sum to ${sumScores} but Gross says ${gross}. Saved anyway — check your paste.`);
+    }
+    players.push([name, hc, scores, gross, net, gp, np]);
+    i += 21;
+  }
+  return { players, errors };
+}
+
+function loadStoredWeeks() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) { return []; }
+}
+function saveStoredWeeks(weeks) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(weeks)); return true; }
+  catch (e) { return false; }
+}
+function getStoredWeeks() {
+  const hardcodedIds = new Set([1, 2]);
+  return WEEKS.filter(w => !hardcodedIds.has(w.id));
+}
+function nextWeekId() { return WEEKS.reduce((m,w) => Math.max(m, w.id), 0) + 1; }
+
+function refreshAllData() {
+  WEEKS.forEach(w => { w.rounds = w.players.map(normalizeRound); });
+  YTD = buildYTD();
+  ALL_VIEWS = WEEKS.map(w => ({ kind: 'week', id: w.id, label: w.label, date: w.date }))
+    .concat([{ kind: 'ytd', id: 'ytd', label: 'Year to Date' }]);
+}
+
+function renderStoredWeeks() {
+  const stored = getStoredWeeks();
+  const wrap = document.getElementById('storedWeeksWrap');
+  if (!stored.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  document.getElementById('storedWeeksList').innerHTML = stored.map(w => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--rule-soft);">
+      <span><strong>${w.label}</strong> · ${w.date} · ${w.players.length} players</span>
+      <button data-remove="${w.id}" style="padding:6px 14px;background:transparent;color:#ff6b5e;border:1px solid #ff6b5e;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">Remove</button>
+    </div>
+  `).join('');
+  document.querySelectorAll('[data-remove]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.remove, 10);
+      const idx = WEEKS.findIndex(w => w.id === id);
+      if (idx >= 0) WEEKS.splice(idx, 1);
+      saveStoredWeeks(getStoredWeeks());
+      refreshAllData();
+      if (state.view.kind === 'week' && state.view.id === id) {
+        state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
+      }
+      renderAll();
+      renderStoredWeeks();
+    });
+  });
+}
+
+function showParseResult(msg, kind) {
+  const el = document.getElementById('parseResult');
+  const color = kind === 'success' ? '#62d4a1' : kind === 'warn' ? '#f59e0b' : '#ff6b5e';
+  el.innerHTML = `<div style="padding:12px 14px;background:rgba(255,255,255,0.04);border-left:3px solid ${color};border-radius:2px;font-size:13px;line-height:1.55;">${msg}</div>`;
+}
+
+function buildSnippet(week) {
+  const playerLines = week.players.map(p => {
+    const [n, h, s, g, ne, gp, np] = p;
+    return `      ["${n}", ${h}, [${s.join(',')}], ${g}, ${ne}, ${gp}, ${np}],`;
+  }).join('\n');
+  return `  {
+    id: ${week.id}, label: "${week.label}", date: "${week.date}",
+    players: [
+${playerLines}
+    ]
+  },`;
+}
+
+document.getElementById('parseAddBtn').addEventListener('click', () => {
+  const raw = document.getElementById('newWeekPaste').value;
+  const labelInput = document.getElementById('newWeekLabel').value.trim();
+  const dateInput = document.getElementById('newWeekDate').value.trim();
+  if (!raw.trim()) { showParseResult('Paste box is empty.', 'error'); return; }
+  const newId = nextWeekId();
+  const label = labelInput || `Week ${newId}`;
+  const date = dateInput || new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  const { players, errors } = parseSmartGolfPaste(raw);
+  if (!players.length) {
+    showParseResult(`<strong>No players parsed.</strong><br>${errors.join('<br>') || 'Check the paste format.'}`, 'error');
+    return;
+  }
+
+  const newWeek = { id: newId, label, date, players };
+  WEEKS.push(newWeek);
+  WEEKS.sort((a,b) => a.id - b.id);
+  saveStoredWeeks(getStoredWeeks());
+
+  refreshAllData();
+  state.view = ALL_VIEWS.find(v => v.id === newId) || state.view;
+  renderAll();
+  renderStoredWeeks();
+
+  const errorMsg = errors.length ? `<br><br><em>Warnings (${errors.length}):</em><br>${errors.join('<br>')}` : '';
+  const verb = errors.length ? 'parsed with warnings' : 'parsed cleanly';
+  showParseResult(`<strong>${players.length} player${players.length===1?'':'s'} ${verb}.</strong><br>Added as <strong>${label}</strong> (${date}). View switched to this week.${errorMsg}`, errors.length ? 'warn' : 'success');
+  document.getElementById('showSnippetBtn').style.display = '';
+  document.getElementById('showSnippetBtn').dataset.weekId = newId;
+});
+
+document.getElementById('parseClearBtn').addEventListener('click', () => {
+  document.getElementById('newWeekPaste').value = '';
+  document.getElementById('newWeekLabel').value = '';
+  document.getElementById('newWeekDate').value = '';
+  document.getElementById('parseResult').innerHTML = '';
+  document.getElementById('parseSnippet').style.display = 'none';
+  document.getElementById('showSnippetBtn').style.display = 'none';
+});
+
+document.getElementById('showSnippetBtn').addEventListener('click', () => {
+  const id = parseInt(document.getElementById('showSnippetBtn').dataset.weekId, 10);
+  const week = WEEKS.find(w => w.id === id);
+  if (!week) return;
+  const snippet = buildSnippet(week);
+  const pre = document.getElementById('parseSnippet');
+  pre.textContent = snippet;
+  pre.style.display = '';
+  try {
+    navigator.clipboard.writeText(snippet).then(() => {
+      showParseResult(`<strong>Snippet copied to clipboard.</strong> To make this week permanent (so it travels with the file when you share it), paste it inside the <code>WEEKS = [ ... ]</code> array near the top of the &lt;script&gt; block.`, 'success');
+    }, () => {
+      showParseResult(`Snippet shown below — select all and copy manually.`, 'warn');
+    });
+  } catch (e) {
+    showParseResult(`Snippet shown below — select all and copy manually.`, 'warn');
+  }
+});
+
+// =================================================================
+// INIT
+// =================================================================
+(function init() {
+  const stored = loadStoredWeeks();
+  stored.forEach(w => {
+    if (!WEEKS.find(ww => ww.id === w.id)) WEEKS.push(w);
+  });
+  WEEKS.sort((a,b) => a.id - b.id);
+  refreshAllData();
+  state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
+  renderAll();
+  renderStoredWeeks();
+})();
+</script>
+</body>
+</html>
