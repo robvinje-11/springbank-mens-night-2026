@@ -6,6 +6,16 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v3.3   KPI strip Row 1 reworked: removed Lowest Gross and Lowest Net,
+         added Low / Mid / High Cap Avg cards (each with vs-par below)
+         alongside Field Avg. These four cards always show the full
+         field and ignore the Field Filter; the distribution row
+         (Albatross–Double+) still respects it.
+  v3.2   Hole by Hole chart: "All" now shows one accumulated bar per
+         hole for the whole field; Low / Mid / High became a true
+         multi-select so any combination can be shown as grouped bars.
+  v3.1   Hole by Hole chart legend is now interactive — click All /
+         Low / Mid / High to filter the chart.
   v3.0   CLOUD DATA + LIVE SYNC. All league data now lives in Firebase
          Firestore instead of being hardcoded in this file. Overwrite,
          Add and Delete write straight to the cloud — a save is live
@@ -100,7 +110,7 @@
   v1.14  Distribution row "% of holes" sub-text bumped to 22px
          (70% of the value above it) for easier reading.
   v1.13  KPI strip restructured into 2 consistent rows:
-         Row 1: Field Avg · Lowest Gross · Lowest Net
+         Row 1: Field Avg · Low / Mid / High Cap Avg
          Row 2: Albatross · Eagle · Birdie · Par · Bogey · Double+
          (% of holes sums to 100.0% across row 2).
          Albatross (3+ under par) now split out from Eagle (-2 only).
@@ -364,7 +374,7 @@
     display: grid;
   }
   .kpis-summary {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     margin-bottom: 12px;
   }
   .kpis-distribution {
@@ -395,6 +405,10 @@
     .kpis-distribution .kpi { border-bottom: 1px solid var(--rule-soft); }
     .kpis-distribution .kpi:nth-child(3n) { border-right: none; }
     .kpis-distribution .kpi:nth-last-child(-n+3) { border-bottom: none; }
+    .kpis-summary { grid-template-columns: repeat(2, 1fr); }
+    .kpis-summary .kpi { border-bottom: 1px solid var(--rule-soft); }
+    .kpis-summary .kpi:nth-child(2n) { border-right: none; }
+    .kpis-summary .kpi:nth-last-child(-n+2) { border-bottom: none; }
   }
   @media (max-width: 720px) {
     .kpis-summary { grid-template-columns: 1fr; }
@@ -963,7 +977,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v3.0</div>
+    <div class="splash-version">v3.3</div>
   </div>
 </div>
 
@@ -987,7 +1001,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v3.0</div>
+  <div class="masthead-version">v3.3</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1798,40 +1812,57 @@ function getNet(p)   { return ytdMode() ? p.avgNet   : p.net; }
 // KPIs
 // =================================================================
 function renderKpis() {
-  const items = filterByBracket(currentRounds());
+  const items = filterByBracket(currentRounds());  // distribution row (filtered)
+  const allItems = currentRounds();                // Row-1 cards (ignore filter)
   const summaryEl = document.getElementById('kpiSummary');
   const distEl = document.getElementById('kpiDistribution');
-  if (!items.length) {
-    summaryEl.innerHTML = `<div class="kpi"><div class="kpi-label">No players</div><div class="kpi-sub">in this bracket for this view</div></div>`;
+  if (!allItems.length) {
+    summaryEl.innerHTML = `<div class="kpi"><div class="kpi-label">No players</div><div class="kpi-sub">in this view</div></div>`;
     distEl.innerHTML = '';
     return;
   }
-  const avg = items.reduce((s,p)=>s+getGross(p), 0) / items.length;
-  const lowGross = items.reduce((a,b)=>getGross(b)<getGross(a)?b:a);
-  const lowNet   = items.reduce((a,b)=>getNet(b)<getNet(a)?b:a);
-  const dist = distribution(items);
+  const fieldAvg = allItems.reduce((s,p)=>s+getGross(p), 0) / allItems.length;
   const isYtd = ytdMode();
-  const bracketLabel = { all: 'Field', low: 'Low (0–7)', mid: 'Mid (8–15)', high: 'High (16+)' }[state.bracket];
-  const pct = n => (n / dist.total * 100).toFixed(1);
 
-  // Row 1: summary cards
+  // Per-bracket average gross. Always drawn from the full field for the
+  // current view (week / YTD) — the field filter does NOT affect these.
+  function bracketCard(label, bracketKey) {
+    const group = allItems.filter(p => p.bracket === bracketKey);
+    if (!group.length) {
+      return `<div class="kpi">
+        <div class="kpi-label">${label}</div>
+        <div class="kpi-value" style="opacity:0.4">—</div>
+        <div class="kpi-sub">no players</div>
+      </div>`;
+    }
+    const ba = group.reduce((s,p)=>s+getGross(p), 0) / group.length;
+    return `<div class="kpi">
+      <div class="kpi-label">${label}</div>
+      <div class="kpi-value">${ba.toFixed(1)}</div>
+      <div class="kpi-sub">+${(ba-71).toFixed(1)} vs par${isYtd ? ' · per round' : ''}</div>
+    </div>`;
+  }
+
+  // Row 1: Field Avg + the three handicap-bracket averages (unfiltered)
   summaryEl.innerHTML = `
     <div class="kpi">
-      <div class="kpi-label">${bracketLabel} ${isYtd ? 'Avg Gross' : 'Avg'}</div>
-      <div class="kpi-value">${avg.toFixed(1)}</div>
-      <div class="kpi-sub">+${(avg-71).toFixed(1)} vs par${isYtd ? ' · per round' : ''}</div>
+      <div class="kpi-label">Field ${isYtd ? 'Avg Gross' : 'Avg'}</div>
+      <div class="kpi-value">${fieldAvg.toFixed(1)}</div>
+      <div class="kpi-sub">+${(fieldAvg-71).toFixed(1)} vs par${isYtd ? ' · per round' : ''}</div>
     </div>
-    <div class="kpi">
-      <div class="kpi-label">Lowest ${isYtd ? 'Avg ' : ''}Gross</div>
-      <div class="kpi-value">${getGross(lowGross).toFixed(isYtd ? 1 : 0)}</div>
-      <div class="kpi-sub">${lowGross.name}</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Lowest ${isYtd ? 'Avg ' : ''}Net</div>
-      <div class="kpi-value">${getNet(lowNet).toFixed(isYtd ? 1 : 0)}</div>
-      <div class="kpi-sub">${lowNet.name} (HC ${lowNet.hc})</div>
-    </div>
+    ${bracketCard('Low Cap Avg',  'low')}
+    ${bracketCard('Mid Cap Avg',  'mid')}
+    ${bracketCard('High Cap Avg', 'high')}
   `;
+
+  // Distribution row reflects the field filter. If the filter leaves
+  // nobody, show a note instead of an empty strip.
+  if (!items.length) {
+    distEl.innerHTML = `<div class="kpi"><div class="kpi-label">No players</div><div class="kpi-sub">in this bracket for this view</div></div>`;
+    return;
+  }
+  const dist = distribution(items);
+  const pct = n => (n / dist.total * 100).toFixed(1);
 
   // Row 2: score distribution (% of holes — sums to 100.0%)
   distEl.innerHTML = `
