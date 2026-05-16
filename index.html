@@ -6,6 +6,13 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v1.14  Distribution row "% of holes" sub-text bumped to 22px
+         (70% of the value above it) for easier reading.
+  v1.13  KPI strip restructured into 2 consistent rows:
+         Row 1: Field Avg · Lowest Gross · Lowest Net
+         Row 2: Albatross · Eagle · Birdie · Par · Bogey · Double+
+         (% of holes sums to 100.0% across row 2).
+         Albatross (3+ under par) now split out from Eagle (-2 only).
   v1.12  Admin code locked to user's private value — preserved on all
          future iterations (no more placeholder resets).
   v1.11  Bigger Field Filter bar — full-width, larger buttons,
@@ -191,14 +198,23 @@
 
   /* ===== KPIs ===== */
   .kpis {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     background: var(--paper);
     border: 1px solid var(--rule);
     border-radius: 2px;
     overflow: hidden;
+    display: grid;
   }
-  .kpi { padding: 22px 24px; border-right: 1px solid var(--rule-soft); }
+  .kpis-summary {
+    grid-template-columns: repeat(3, 1fr);
+    margin-bottom: 12px;
+  }
+  .kpis-distribution {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .kpi {
+    padding: 22px 24px;
+    border-right: 1px solid var(--rule-soft);
+  }
   .kpi:last-child { border-right: none; }
   .kpi-label {
     font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
@@ -210,6 +226,26 @@
     letter-spacing: -0.02em;
   }
   .kpi-sub { font-size: 12px; color: #ffffff; font-style: italic; font-weight: 500; }
+  /* Distribution cards: tighter padding since 6 cards in a row */
+  .kpis-distribution .kpi { padding: 18px 16px; }
+  .kpis-distribution .kpi-value { font-size: 32px; }
+  .kpis-distribution .kpi-sub { font-size: 22px; line-height: 1.2; margin-top: 2px; }
+  /* Responsive: distribution wraps before summary because it's tighter */
+  @media (max-width: 1200px) {
+    .kpis-distribution { grid-template-columns: repeat(3, 1fr); }
+    .kpis-distribution .kpi { border-bottom: 1px solid var(--rule-soft); }
+    .kpis-distribution .kpi:nth-child(3n) { border-right: none; }
+    .kpis-distribution .kpi:nth-last-child(-n+3) { border-bottom: none; }
+  }
+  @media (max-width: 720px) {
+    .kpis-summary { grid-template-columns: 1fr; }
+    .kpis-summary .kpi { border-right: none; border-bottom: 1px solid var(--rule-soft); }
+    .kpis-summary .kpi:last-child { border-bottom: none; }
+    .kpis-distribution { grid-template-columns: repeat(2, 1fr); }
+    .kpis-distribution .kpi:nth-child(2n) { border-right: none; }
+    .kpis-distribution .kpi:nth-child(odd) { border-right: 1px solid var(--rule-soft); }
+    .kpis-distribution .kpi:nth-last-child(-n+2) { border-bottom: none; }
+  }
 
   /* ===== BRACKET FILTER ===== */
   .filter-bar {
@@ -529,6 +565,10 @@
     box-shadow: 0 0 4px rgba(245, 158, 11, 0.6);
     pointer-events: none;
   }
+  .score-cell.albatross {
+    background: #facc15; color: #091529; border-radius: 50%;
+    box-shadow: 0 0 6px rgba(250, 204, 21, 0.55);
+  }
   .score-cell.eagle {
     background: #b48dd9; color: #0a1f44; border-radius: 50%;
   }
@@ -731,7 +771,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v1.12</div>
+    <div class="splash-version">v1.14</div>
   </div>
 </div>
 
@@ -780,7 +820,8 @@
 <main>
 
 <section>
-  <div class="kpis" id="kpis"></div>
+  <div class="kpis kpis-summary" id="kpiSummary"></div>
+  <div class="kpis kpis-distribution" id="kpiDistribution"></div>
 </section>
 
 <section>
@@ -842,7 +883,8 @@
   <div class="panel">
     <div class="dist-grid" id="distGrid"></div>
     <div class="dist-legend">
-      <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#b48dd9"></span> Eagle / Deuce</div>
+      <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#facc15"></span> Albatross</div>
+      <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#b48dd9"></span> Eagle</div>
       <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#ff6b5e"></span> Birdie</div>
       <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#62d4a1"></span> Par</div>
       <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#f59e0b"></span> Bogey</div>
@@ -1124,18 +1166,19 @@ function normalizeRound(arr) {
   const hc = gross - net;  // WEEKLY HC = Gross - Net (whole number by construction)
   const front = scores.slice(0,9).reduce((a,b)=>a+b,0);
   const back  = scores.slice(9).reduce((a,b)=>a+b,0);
-  let e=0,b=0,p=0,bo=0,d=0;
+  let a=0,e=0,b=0,p=0,bo=0,d=0;
   scores.forEach((s,i) => {
     const dd = s - COURSE.par[i];
-    if (dd <= -2) e++;
-    else if (dd === -1) b++;
-    else if (dd === 0) p++;
-    else if (dd === 1) bo++;
-    else d++;
+    if (dd <= -3) a++;            // albatross (3+ under par)
+    else if (dd === -2) e++;      // eagle (exactly 2 under)
+    else if (dd === -1) b++;      // birdie
+    else if (dd === 0) p++;       // par
+    else if (dd === 1) bo++;      // bogey
+    else d++;                     // double or worse
   });
   return {
     name, hc, scores, gross, net, gp, np, front, back,
-    eagles: e, birdies: b, pars: p, bogeys: bo, doubles: d,
+    albatrosses: a, eagles: e, birdies: b, pars: p, bogeys: bo, doubles: d,
     bracket: hc <= 7 ? 'low' : hc <= 15 ? 'mid' : 'high'
   };
 }
@@ -1153,7 +1196,7 @@ function buildYTD() {
           name: r.name, weeks: [], hc: r.hc,
           totalGross: 0, totalNet: 0, totalGp: 0, totalNp: 0,
           totalEagles: 0, totalBirdies: 0, totalPars: 0,
-          totalBogeys: 0, totalDoubles: 0,
+          totalBogeys: 0, totalDoubles: 0, totalAlbatrosses: 0,
           totalFront: 0, totalBack: 0,
           aggregatedScores: new Array(18).fill(0),
           aggregatedHoles: new Array(18).fill(0),
@@ -1165,6 +1208,7 @@ function buildYTD() {
       a.totalNet += r.net;
       a.totalGp += r.gp;
       a.totalNp += r.np;
+      a.totalAlbatrosses += r.albatrosses;
       a.totalEagles += r.eagles;
       a.totalBirdies += r.birdies;
       a.totalPars += r.pars;
@@ -1282,14 +1326,14 @@ function holeAverage(items, holeIdx) {
   return items.reduce((s,r) => s + r.scores[holeIdx], 0) / items.length;
 }
 function distribution(items) {
-  let e=0,b=0,p=0,bo=0,d=0;
+  let a=0,e=0,b=0,p=0,bo=0,d=0;
   if (ytdMode()) {
-    items.forEach(a => { e+=a.totalEagles; b+=a.totalBirdies; p+=a.totalPars; bo+=a.totalBogeys; d+=a.totalDoubles; });
-    const total = items.reduce((s,a)=>s+a.rounds*18, 0);
-    return { eagles:e, birdies:b, pars:p, bogeys:bo, doubles:d, total };
+    items.forEach(x => { a+=x.totalAlbatrosses; e+=x.totalEagles; b+=x.totalBirdies; p+=x.totalPars; bo+=x.totalBogeys; d+=x.totalDoubles; });
+    const total = items.reduce((s,x)=>s+x.rounds*18, 0);
+    return { albatrosses:a, eagles:e, birdies:b, pars:p, bogeys:bo, doubles:d, total };
   }
-  items.forEach(r => { e+=r.eagles; b+=r.birdies; p+=r.pars; bo+=r.bogeys; d+=r.doubles; });
-  return { eagles:e, birdies:b, pars:p, bogeys:bo, doubles:d, total: items.length * 18 };
+  items.forEach(r => { a+=r.albatrosses; e+=r.eagles; b+=r.birdies; p+=r.pars; bo+=r.bogeys; d+=r.doubles; });
+  return { albatrosses:a, eagles:e, birdies:b, pars:p, bogeys:bo, doubles:d, total: items.length * 18 };
 }
 function frontBackStats(items) {
   if (!items.length) return null;
@@ -1310,52 +1354,71 @@ function getNet(p)   { return ytdMode() ? p.avgNet   : p.net; }
 // =================================================================
 function renderKpis() {
   const items = filterByBracket(currentRounds());
+  const summaryEl = document.getElementById('kpiSummary');
+  const distEl = document.getElementById('kpiDistribution');
   if (!items.length) {
-    document.getElementById('kpis').innerHTML =
-      `<div class="kpi"><div class="kpi-label">No players</div><div class="kpi-sub">in this bracket for this view</div></div>`;
+    summaryEl.innerHTML = `<div class="kpi"><div class="kpi-label">No players</div><div class="kpi-sub">in this bracket for this view</div></div>`;
+    distEl.innerHTML = '';
     return;
   }
   const avg = items.reduce((s,p)=>s+getGross(p), 0) / items.length;
   const lowGross = items.reduce((a,b)=>getGross(b)<getGross(a)?b:a);
   const lowNet   = items.reduce((a,b)=>getNet(b)<getNet(a)?b:a);
   const dist = distribution(items);
-  const totalBirdies = dist.eagles + dist.birdies;
-  const parPct = (dist.pars + totalBirdies) / dist.total * 100;
-  const dblPct = dist.doubles / dist.total * 100;
   const isYtd = ytdMode();
-
   const bracketLabel = { all: 'Field', low: 'Low (0–7)', mid: 'Mid (8–15)', high: 'High (16+)' }[state.bracket];
+  const pct = n => (n / dist.total * 100).toFixed(1);
 
-  document.getElementById('kpis').innerHTML = `
+  // Row 1: summary cards
+  summaryEl.innerHTML = `
     <div class="kpi">
       <div class="kpi-label">${bracketLabel} ${isYtd ? 'Avg Gross' : 'Avg'}</div>
       <div class="kpi-value">${avg.toFixed(1)}</div>
       <div class="kpi-sub">+${(avg-71).toFixed(1)} vs par${isYtd ? ' · per round' : ''}</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Lowest ${isYtd ? 'Avg' : ''} Gross</div>
+      <div class="kpi-label">Lowest ${isYtd ? 'Avg ' : ''}Gross</div>
       <div class="kpi-value">${getGross(lowGross).toFixed(isYtd ? 1 : 0)}</div>
       <div class="kpi-sub">${lowGross.name}</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Lowest ${isYtd ? 'Avg' : ''} Net</div>
+      <div class="kpi-label">Lowest ${isYtd ? 'Avg ' : ''}Net</div>
       <div class="kpi-value">${getNet(lowNet).toFixed(isYtd ? 1 : 0)}</div>
       <div class="kpi-sub">${lowNet.name} (HC ${lowNet.hc})</div>
     </div>
+  `;
+
+  // Row 2: score distribution (% of holes — sums to 100.0%)
+  distEl.innerHTML = `
     <div class="kpi">
-      <div class="kpi-label">Birdies + Eagles</div>
-      <div class="kpi-value">${totalBirdies}</div>
-      <div class="kpi-sub">${(totalBirdies/dist.total*100).toFixed(1)}% of holes</div>
+      <div class="kpi-label">Albatross</div>
+      <div class="kpi-value" style="color:#facc15">${dist.albatrosses}</div>
+      <div class="kpi-sub">${pct(dist.albatrosses)}% of holes</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Pars or Better</div>
-      <div class="kpi-value">${parPct.toFixed(0)}<span style="font-size:24px;color:var(--muted)">%</span></div>
-      <div class="kpi-sub">of holes played</div>
+      <div class="kpi-label">Eagle</div>
+      <div class="kpi-value" style="color:#b48dd9">${dist.eagles}</div>
+      <div class="kpi-sub">${pct(dist.eagles)}% of holes</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Doubles+</div>
-      <div class="kpi-value">${dist.doubles}</div>
-      <div class="kpi-sub">${dblPct.toFixed(1)}% of holes</div>
+      <div class="kpi-label">Birdie</div>
+      <div class="kpi-value" style="color:#ff6b5e">${dist.birdies}</div>
+      <div class="kpi-sub">${pct(dist.birdies)}% of holes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Par</div>
+      <div class="kpi-value" style="color:#62d4a1">${dist.pars}</div>
+      <div class="kpi-sub">${pct(dist.pars)}% of holes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Bogey</div>
+      <div class="kpi-value" style="color:#f59e0b">${dist.bogeys}</div>
+      <div class="kpi-sub">${pct(dist.bogeys)}% of holes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Double+</div>
+      <div class="kpi-value" style="color:#ff8e84">${dist.doubles}</div>
+      <div class="kpi-sub">${pct(dist.doubles)}% of holes</div>
     </div>
   `;
 }
@@ -1575,6 +1638,7 @@ function renderDistribution() {
         <div class="dist-card-title">${labels[b]}</div>
         <div class="dist-card-sub">${items.length} player${items.length===1?'':'s'} · ${d.total} holes</div>
         <div class="dist-bar">
+          ${d.albatrosses ? `<div class="dist-seg albatross" style="width:${pct(d.albatrosses)}%;background:#facc15;color:#091529;" title="Albatross: ${d.albatrosses}">${d.albatrosses}</div>` : ''}
           ${d.eagles ? `<div class="dist-seg eagle" style="width:${pct(d.eagles)}%" title="Eagles: ${d.eagles}">${d.eagles}</div>` : ''}
           ${d.birdies ? `<div class="dist-seg birdie" style="width:${pct(d.birdies)}%" title="Birdies: ${d.birdies}">${d.birdies}</div>` : ''}
           ${d.pars ? `<div class="dist-seg par" style="width:${pct(d.pars)}%" title="Pars: ${d.pars}">${d.pars}</div>` : ''}
@@ -1582,11 +1646,11 @@ function renderDistribution() {
           ${d.doubles ? `<div class="dist-seg double" style="width:${pct(d.doubles)}%" title="Double+: ${d.doubles}">${d.doubles}</div>` : ''}
         </div>
         <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ink-soft);">
-          <span style="color:#b48dd9">${pct(d.eagles).toFixed(1)}</span> ·
+          ${d.albatrosses ? `<span style="color:#facc15">${pct(d.albatrosses).toFixed(1)}</span> · ` : ''}<span style="color:#b48dd9">${pct(d.eagles).toFixed(1)}</span> ·
           <span style="color:#ff6b5e">${pct(d.birdies).toFixed(1)}</span> ·
           <span style="color:#62d4a1">${pct(d.pars).toFixed(1)}</span> ·
           <span style="color:#f59e0b">${pct(d.bogeys).toFixed(1)}</span> ·
-          <span style="color:#ff6b5e">${pct(d.doubles).toFixed(1)}</span>
+          <span style="color:#ff8e84">${pct(d.doubles).toFixed(1)}</span>
         </div>
       </div>
     `;
@@ -1745,7 +1809,7 @@ function renderPlayerTable() {
         <td>${p.avgNet.toFixed(1)}</td>
         <td>${p.totalGp}</td>
         <td>${p.totalNp}</td>
-        <td>${p.totalBirdies + p.totalEagles}</td>
+        <td>${p.totalBirdies + p.totalEagles + p.totalAlbatrosses}</td>
         <td>${p.totalDoubles}</td>
       </tr>`;
     }
@@ -1758,7 +1822,7 @@ function renderPlayerTable() {
       <td>${p.back}</td>
       <td>${p.gp}</td>
       <td>${p.np}</td>
-      <td>${p.birdies + p.eagles}</td>
+      <td>${p.birdies + p.eagles + p.albatrosses}</td>
       <td>${p.doubles}</td>
     </tr>`;
   }).join('');
@@ -1778,7 +1842,8 @@ document.getElementById('search').addEventListener('input', e => {
 // =================================================================
 function scoreClass(s, par) {
   const d = s - par;
-  if (d <= -2) return 'eagle';
+  if (d <= -3) return 'albatross';
+  if (d === -2) return 'eagle';
   if (d === -1) return 'birdie';
   if (d === 0) return '';
   if (d === 1) return 'bogey';
@@ -1918,6 +1983,7 @@ function openScorecard(name) {
           </table>
         </div>
         <div class="scorecard-summary">
+          ${round.albatrosses ? `<div class="summary-item"><div class="lbl">Albatross</div><div class="val" style="color:#facc15">${round.albatrosses}</div></div>` : ''}
           <div class="summary-item"><div class="lbl">Eagles</div><div class="val" style="color:var(--eagle)">${round.eagles}</div></div>
           <div class="summary-item"><div class="lbl">Birdies</div><div class="val" style="color:var(--birdie)">${round.birdies}</div></div>
           <div class="summary-item"><div class="lbl">Pars</div><div class="val">${round.pars}</div></div>
@@ -1938,7 +2004,7 @@ function openScorecard(name) {
           <div class="summary-item"><div class="lbl">Avg Net</div><div class="val">${ytdAgg.avgNet.toFixed(1)}</div></div>
           <div class="summary-item"><div class="lbl">Σ Gross Pts</div><div class="val">${ytdAgg.totalGp}</div></div>
           <div class="summary-item"><div class="lbl">Σ Net Pts</div><div class="val">${ytdAgg.totalNp}</div></div>
-          <div class="summary-item"><div class="lbl">Total Birdies+</div><div class="val" style="color:var(--birdie)">${ytdAgg.totalBirdies + ytdAgg.totalEagles}</div></div>
+          <div class="summary-item"><div class="lbl">Total Birdies+</div><div class="val" style="color:var(--birdie)">${ytdAgg.totalBirdies + ytdAgg.totalEagles + ytdAgg.totalAlbatrosses}</div></div>
           <div class="summary-item"><div class="lbl">Total Doubles+</div><div class="val" style="color:var(--birdie)">${ytdAgg.totalDoubles}</div></div>
         </div>
       </div>
