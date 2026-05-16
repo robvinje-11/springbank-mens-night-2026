@@ -6,6 +6,19 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v3.0   CLOUD DATA + LIVE SYNC. All league data now lives in Firebase
+         Firestore instead of being hardcoded in this file. Overwrite,
+         Add and Delete write straight to the cloud — a save is live
+         for every viewer instantly, with no file edit or re-deploy.
+         A real-time listener pushes any change to all open browsers.
+         Admin access is now a Firebase email/password login (the old
+         "76220" code is gone). The built-in week data now serves only
+         as one-time seed data for the cloud on first run. Removed the
+         "Copy JS snippet" workflow — it is no longer needed.
+  v2.2   Clearer messaging that admin paste edits are saved in the
+         current browser only (localStorage) — the Manage entries
+         panel and the parse-success message now both spell out that
+         "Copy JS snippet" → file → re-deploy is the permanent path.
   v2.1   Manage entries now timestamps each added/corrected week with
          the date + time it was pasted (e.g. "Added May 16, 2026,
          3:42 PM"). Makes it easy to tell entries apart — especially
@@ -941,7 +954,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v2.1</div>
+    <div class="splash-version">v3.0</div>
   </div>
 </div>
 
@@ -965,7 +978,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v2.1</div>
+  <div class="masthead-version">v3.0</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1133,7 +1146,7 @@
   <div id="storedWeeksWrap" class="panel" style="display:none;margin-bottom:16px;">
     <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;margin-bottom:4px;">Manage entries</div>
     <div style="font-size:11px;color:#fff;margin-bottom:12px;font-style:italic;">
-      Overwrite fixes a bad paste; Remove deletes an added entry; Revert restores an original week to its built-in data.
+      Overwrite redoes a bad paste; Delete removes an entry. Every change saves to the cloud and is live for everyone instantly.
     </div>
     <div id="storedWeeksList"></div>
   </div>
@@ -1160,43 +1173,11 @@
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center;">
       <button id="parseAddBtn" style="padding:10px 24px;background:#ffffff;color:#0a1f44;border:none;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;letter-spacing:0.05em;font-size:13px;text-transform:uppercase;">Parse &amp; Add Week</button>
       <button id="parseClearBtn" style="padding:10px 18px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;">Clear</button>
-      <button id="showSnippetBtn" style="padding:10px 18px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;display:none;">Copy JS snippet (for permanent paste into file)</button>
     </div>
 
     <div id="parseResult" style="margin-top:16px;"></div>
-    <pre id="parseSnippet" style="display:none;margin-top:14px;background:#051329;color:#fff;padding:16px 20px;border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:12px;overflow-x:auto;border:1px solid var(--rule);max-height:300px;overflow-y:auto;"></pre>
   </div>
 </section>
-
-<details class="help admin-only" id="adminHelpBlock" style="display:none;">
-  <summary>+ Alternative: edit the file directly</summary>
-  <div class="helpBody">
-    <p>If you'd rather not use the paste UI, open this HTML file in any text editor, find the active event's <code>baseWeeks</code> array inside the <code>EVENTS</code> object near the top of the <code>&lt;script&gt;</code> block, and append a new object:</p>
-  </div>
-  <pre>// Men's Night — last two values are quota points:
-{
-  id: 3,
-  label: "Week 3",
-  date: "May 19, 2026",
-  players: [
-    // [name, hc, [18 hole scores], gross, net, grossPts, netPts]
-    ["Player Name", 5, [4,4,5,4,3,4,4,3,5, 3,4,4,4,4,4,3,5,4], 71, 66, 36, 41],
-    // ...add the rest
-  ]
-}
-
-// Weekend Snips — last two values are vs-par (gross-71, net-71):
-{
-  id: 3,
-  label: "Sat · May 16",
-  date: "May 16, 2026",
-  players: [
-    // [name, hc, [18 hole scores], gross, net, vsParGross, vsParNet]
-    ["Player Name", 5, [4,4,5,4,3,4,4,3,5, 3,4,4,4,4,4,3,5,4], 74, 67, 3, -4],
-    // ...add the rest
-  ]
-}</pre>
-</details>
 
 </main>
 
@@ -1207,26 +1188,50 @@
   </div>
 </footer>
 
+<!-- Admin login modal -->
+<div id="loginModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(5,12,28,0.85);align-items:center;justify-content:center;">
+  <div style="background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:32px;width:340px;max-width:90vw;font-family:'DM Sans',sans-serif;">
+    <div style="font-family:'Fraunces',serif;font-style:italic;font-size:22px;color:#fff;margin-bottom:6px;">Admin sign in</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Use your league Firebase login.</div>
+    <input type="email" id="loginEmail" placeholder="Email" autocomplete="username"
+      style="width:100%;padding:11px 14px;margin-bottom:10px;background:#0a1f44;border:1px solid var(--rule);color:#fff;border-radius:3px;font-family:'DM Sans',sans-serif;font-size:14px;box-sizing:border-box;">
+    <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password"
+      style="width:100%;padding:11px 14px;margin-bottom:6px;background:#0a1f44;border:1px solid var(--rule);color:#fff;border-radius:3px;font-family:'DM Sans',sans-serif;font-size:14px;box-sizing:border-box;">
+    <div id="loginError" style="font-size:12px;color:#ff6b5e;min-height:18px;margin-bottom:14px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button id="loginSubmitBtn" style="flex:1;padding:11px;background:#fff;color:#091529;border:none;border-radius:3px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;">Sign In</button>
+      <button id="loginCancelBtn" style="padding:11px 16px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:3px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK (compat build — provides the global `firebase` object) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <script>
 // =================================================================
-// ADMIN AUTH
-// To change the code: edit ADMIN_CODE below to whatever you want,
-// save the file, push to GitHub. Anyone with the new code (you)
-// gets access to the "Add a New Week" panel; everyone else just
-// sees the dashboard.
-//
-// Note: this is client-side gating, not real security. Someone who
-// "view source"s the page can see the code. Good enough for a golf
-// league; do not use this pattern for anything actually sensitive.
+// FIREBASE — cloud data + admin authentication
+// Data lives in Firestore so a save is instantly live for everyone.
+// Admin access is a real Firebase email/password login.
 // =================================================================
-const ADMIN_CODE = "76220";             // user's private admin code — preserve across iterations
-const ADMIN_STORAGE_KEY = "mn_admin_v1";
+const firebaseConfig = {
+  apiKey: "AIzaSyBOxsUfwt95DyBWuM29QSacZB9zKwMswlU",
+  authDomain: "sbl-mens-night-snips-league.firebaseapp.com",
+  projectId: "sbl-mens-night-snips-league",
+  storageBucket: "sbl-mens-night-snips-league.firebasestorage.app",
+  messagingSenderId: "1023222025167",
+  appId: "1:1023222025167:web:3eda0f17e6624b566fa0ba"
+};
 
-function isAdmin() { return localStorage.getItem(ADMIN_STORAGE_KEY) === "1"; }
-function setAdmin(flag) {
-  if (flag) localStorage.setItem(ADMIN_STORAGE_KEY, "1");
-  else localStorage.removeItem(ADMIN_STORAGE_KEY);
-}
+let db = null, auth = null;          // Firestore + Auth handles
+let currentUser = null;              // signed-in admin (or null)
+const CLOUD = { mensNight: null, snips: null };  // weeks arrays from Firestore
+
+// ----- Admin state -------------------------------------------------
+function isAdmin() { return !!currentUser; }
+
 function applyAdminUI() {
   const admin = isAdmin();
   document.querySelectorAll('.admin-only').forEach(el => {
@@ -1239,23 +1244,39 @@ function applyAdminUI() {
     btn.style.opacity = admin ? '1' : '0.65';
   }
 }
-function promptAdminLogin() {
-  const code = window.prompt('Enter admin code:');
-  if (code === null) return;       // user cancelled
-  if (code === ADMIN_CODE) {
-    setAdmin(true);
-    applyAdminUI();
-    // bring the new admin UI into view
-    const sect = document.getElementById('adminSection');
-    if (sect) sect.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } else {
-    window.alert('Incorrect code.');
+
+// Login modal — opened from the footer "Admin" button
+function openLoginModal() {
+  const m = document.getElementById('loginModal');
+  if (!m) return;
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginError').textContent = '';
+  m.style.display = 'flex';
+  document.getElementById('loginEmail').focus();
+}
+function closeLoginModal() {
+  const m = document.getElementById('loginModal');
+  if (m) m.style.display = 'none';
+}
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  if (!email || !pass) { errEl.textContent = 'Enter your email and password.'; return; }
+  if (!auth) { errEl.textContent = 'Still connecting — try again in a moment.'; return; }
+  errEl.textContent = 'Signing in…';
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+    closeLoginModal();
+    // onAuthStateChanged handles the rest
+  } catch (e) {
+    errEl.textContent = 'Sign-in failed — check your email and password.';
   }
 }
-function adminSignOut() {
+async function adminSignOut() {
   if (!window.confirm('Sign out of admin?')) return;
-  setAdmin(false);
-  applyAdminUI();
+  if (auth) { try { await auth.signOut(); } catch (e) {} }
 }
 
 // =================================================================
@@ -1464,17 +1485,16 @@ function buildWeekRounds(players) {
     .map(normalizeRound);
 }
 
-// Rebuild WEEKS for the active event: the event's baseWeeks merged with
-// any admin-stored weeks. A stored week with the same id as a base week
-// OVERRIDES it (this is how "overwrite incorrect data" works); a stored
-// week with a new id is appended. Every week gets its rounds normalized.
+// Rebuild WEEKS for the active event from the Firestore-backed CLOUD cache.
+// Before Firestore has loaded, falls back to the event's baseWeeks (seed
+// data) so the dashboard still renders something.
 function rebuildWeeks() {
   const ev = currentEvent();
-  const stored = loadStoredWeeks();          // admin additions + corrections
-  const byId = new Map();
-  ev.baseWeeks.forEach(w => byId.set(w.id, { id: w.id, label: w.label, date: w.date, players: w.players }));
-  stored.forEach(w => byId.set(w.id, w));    // override base, or add new
-  WEEKS = [...byId.values()].sort((a,b) => a.id - b.id);
+  const cloud = CLOUD[ev.id];
+  const source = Array.isArray(cloud) ? cloud : ev.baseWeeks;
+  WEEKS = source
+    .map(w => ({ id: w.id, label: w.label, date: w.date, players: w.players, savedAt: w.savedAt }))
+    .sort((a,b) => a.id - b.id);
   WEEKS.forEach(w => { w.rounds = buildWeekRounds(w.players); });
 }
 
@@ -2537,10 +2557,8 @@ function renderAll() {
 }
 
 // =================================================================
-// ADD-A-WEEK: parser + localStorage + UI handlers
+// ADD / OVERWRITE / DELETE: parser + Firestore handlers
 // =================================================================
-const STORAGE_KEY_BASE = 'springbankWeeks_v2';
-function storageKey() { return `${STORAGE_KEY_BASE}_${state.eventId}`; }
 
 function parseSmartGolfPaste(raw, scoring) {
   // scoring: 'quota'  → totals line is [gross, net, grossPts, netPts]
@@ -2603,26 +2621,23 @@ function parseSmartGolfPaste(raw, scoring) {
   return { players, errors };
 }
 
-function loadStoredWeeks() {
-  try {
-    const raw = localStorage.getItem(storageKey());
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) { return []; }
-}
-function saveStoredWeeks(weeks) {
-  try { localStorage.setItem(storageKey(), JSON.stringify(weeks)); return true; }
-  catch (e) { return false; }
-}
-// Admin-managed weeks for the active event = whatever is in localStorage.
-// These are additions AND corrections (a stored week whose id matches a
-// base week overrides it). getStoredWeeks() is just the raw stored list.
-function getStoredWeeks() { return loadStoredWeeks(); }
+// =================================================================
+// CLOUD DATA — read/write the active event's weeks to Firestore
+// =================================================================
 
-// True if a week id corresponds to one of the event's hardcoded base weeks.
-function isBaseWeek(id) {
-  return currentEvent().baseWeeks.some(w => w.id === id);
+// The current weeks list for an event (cloud cache, or seed if not loaded)
+function eventWeeks(eventId) {
+  const c = CLOUD[eventId];
+  return Array.isArray(c) ? c : EVENTS[eventId].baseWeeks;
+}
+
+// Write a full weeks array for an event to Firestore. Stored as a JSON
+// string in one field (Firestore can't hold arrays-of-arrays directly).
+// The onSnapshot listener will fire and re-render for everyone, live.
+async function saveEventWeeks(eventId, weeks) {
+  if (!db) throw new Error('Not connected to the database yet.');
+  await db.collection('events').doc(eventId)
+    .set({ data: JSON.stringify(weeks), updatedAt: Date.now() });
 }
 
 function nextWeekId() { return WEEKS.reduce((m,w) => Math.max(m, w.id), 0) + 1; }
@@ -2644,38 +2659,23 @@ function renderStoredWeeks() {
   const wrap = document.getElementById('storedWeeksWrap');
   const list = document.getElementById('storedWeeksList');
   if (!wrap || !list) return;
-  const storedIds = new Set(loadStoredWeeks().map(w => w.id));
   if (!WEEKS.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = '';
 
   list.innerHTML = WEEKS.map(w => {
-    const isStored = storedIds.has(w.id);
-    const isBase = isBaseWeek(w.id);
     const count = w.players.filter(p => !isExcludedPlayer(p[0])).length;
-    let tag, tagColor;
-    if (isStored && isBase)      { tag = 'corrected'; tagColor = '#f59e0b'; }
-    else if (isStored && !isBase){ tag = 'added';     tagColor = '#62d4a1'; }
-    else                         { tag = 'original';  tagColor = 'var(--muted)'; }
-    const tagHtml = `<span style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;border:1px solid ${tagColor};color:${tagColor};padding:2px 7px;border-radius:2px;margin-left:8px;">${tag}</span>`;
-    // Timestamp — only stored (added/corrected) weeks carry savedAt
-    let stampHtml = '';
-    if (isStored && w.savedAt) {
-      const verb = tag === 'corrected' ? 'Corrected' : 'Added';
-      stampHtml = `<div style="font-size:10px;color:var(--muted);font-style:italic;margin-top:3px;">${verb} ${formatSavedAt(w.savedAt)}</div>`;
-    }
-    // Remove (added) / Revert (corrected base) — only for stored entries
-    const removeHtml = isStored
-      ? `<button data-revert="${w.id}" style="padding:6px 12px;background:transparent;color:#ff6b5e;border:1px solid #ff6b5e;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">${isBase ? 'Revert' : 'Remove'}</button>`
+    const stamp = w.savedAt
+      ? `<div style="font-size:10px;color:var(--muted);font-style:italic;margin-top:3px;">Last updated ${formatSavedAt(w.savedAt)}</div>`
       : '';
     return `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--rule-soft);">
         <span style="display:flex;flex-direction:column;gap:0;">
-          <span><strong>${viewDisplayName(w, {full:true})}</strong> · ${count} players${tagHtml}</span>
-          ${stampHtml}
+          <span><strong>${viewDisplayName(w, {full:true})}</strong> · ${count} players</span>
+          ${stamp}
         </span>
         <span style="display:flex;gap:6px;">
           <button data-overwrite="${w.id}" style="padding:6px 12px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">Overwrite</button>
-          ${removeHtml}
+          <button data-delete="${w.id}" style="padding:6px 12px;background:transparent;color:#ff6b5e;border:1px solid #ff6b5e;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">Delete</button>
         </span>
       </div>`;
   }).join('');
@@ -2683,23 +2683,33 @@ function renderStoredWeeks() {
   list.querySelectorAll('[data-overwrite]').forEach(btn => {
     btn.addEventListener('click', () => enterOverwriteMode(parseInt(btn.dataset.overwrite, 10)));
   });
-  list.querySelectorAll('[data-revert]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = parseInt(btn.dataset.revert, 10);
-      const wasBase = isBaseWeek(id);
-      saveStoredWeeks(loadStoredWeeks().filter(w => w.id !== id));
-      if (adminOverwriteId === id) exitOverwriteMode();
-      recomputeAll();
-      if (!WEEKS.find(w => w.id === id) && state.view.kind === 'week' && state.view.id === id) {
-        state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
-      }
-      renderAll();
-      renderStoredWeeks();
-      showParseResult(wasBase
-        ? `Reverted to the built-in data for that entry.`
-        : `Entry removed.`, 'success');
-    });
+  list.querySelectorAll('[data-delete]').forEach(btn => {
+    btn.addEventListener('click', () => deleteWeek(parseInt(btn.dataset.delete, 10)));
   });
+}
+
+// Delete a week from the active event — writes straight to Firestore,
+// so it disappears for every viewer immediately.
+async function deleteWeek(id) {
+  const w = WEEKS.find(x => x.id === id);
+  if (!w) return;
+  if (!window.confirm(`Delete "${viewDisplayName(w, {full:true})}"? This removes it for everyone, immediately.`)) return;
+  const eventId = state.eventId;
+  const weeks = eventWeeks(eventId).filter(x => x.id !== id);
+  try {
+    await saveEventWeeks(eventId, weeks);
+    CLOUD[eventId] = weeks;
+    if (adminOverwriteId === id) exitOverwriteMode();
+    recomputeAll();
+    if (state.view.kind === 'week' && state.view.id === id) {
+      state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
+    }
+    renderAll();
+    renderStoredWeeks();
+    showParseResult('Entry deleted — live for everyone.', 'success');
+  } catch (e) {
+    showParseResult('Delete failed: ' + (e.message || e), 'error');
+  }
 }
 
 // ----- Overwrite mode ---------------------------------------------------
@@ -2711,8 +2721,6 @@ function enterOverwriteMode(id) {
   document.getElementById('newWeekLabel').value = w.label;
   document.getElementById('newWeekDate').value = w.date;
   document.getElementById('newWeekPaste').value = '';
-  document.getElementById('parseSnippet').style.display = 'none';
-  document.getElementById('showSnippetBtn').style.display = 'none';
   document.getElementById('parseResult').innerHTML = '';
   syncAdminMode();
   document.getElementById('adminSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2744,24 +2752,13 @@ function showParseResult(msg, kind) {
   el.innerHTML = `<div style="padding:12px 14px;background:rgba(255,255,255,0.04);border-left:3px solid ${color};border-radius:2px;font-size:13px;line-height:1.55;">${msg}</div>`;
 }
 
-function buildSnippet(week) {
-  const playerLines = week.players.map(p => {
-    const [n, h, s, g, ne, gp, np] = p;
-    return `      ["${n}", ${h}, [${s.join(',')}], ${g}, ${ne}, ${gp}, ${np}],`;
-  }).join('\n');
-  return `  {
-    id: ${week.id}, label: "${week.label}", date: "${week.date}",
-    players: [
-${playerLines}
-    ]
-  },`;
-}
-
-document.getElementById('parseAddBtn').addEventListener('click', () => {
+// Parse & Save — writes the week straight to Firestore (live for everyone)
+document.getElementById('parseAddBtn').addEventListener('click', async () => {
   const raw = document.getElementById('newWeekPaste').value;
   const labelInput = document.getElementById('newWeekLabel').value.trim();
   const dateInput = document.getElementById('newWeekDate').value.trim();
   if (!raw.trim()) { showParseResult('Paste box is empty.', 'error'); return; }
+  if (!isAdmin()) { showParseResult('Please sign in as admin first.', 'error'); return; }
 
   const overwriting = adminOverwriteId != null;
   const targetId = overwriting ? adminOverwriteId : nextWeekId();
@@ -2776,31 +2773,36 @@ document.getElementById('parseAddBtn').addEventListener('click', () => {
     return;
   }
 
-  // Save into the per-event stored list. A stored entry whose id matches a
-  // base week overrides it (= overwrite); a new id is an addition.
-  // savedAt records when this paste happened, shown in Manage entries.
-  const stored = loadStoredWeeks();
+  // Build the new weeks list for this event (overwrite by id, or append)
+  const eventId = state.eventId;
   const entry = { id: targetId, label, date, players, savedAt: Date.now() };
-  const existingIdx = stored.findIndex(w => w.id === targetId);
-  if (existingIdx >= 0) stored[existingIdx] = entry;
-  else stored.push(entry);
-  saveStoredWeeks(stored);
+  const weeks = eventWeeks(eventId).map(w => ({ ...w }));
+  const existingIdx = weeks.findIndex(w => w.id === targetId);
+  if (existingIdx >= 0) weeks[existingIdx] = entry;
+  else weeks.push(entry);
+  weeks.sort((a,b) => a.id - b.id);
 
-  recomputeAll();
-  state.view = ALL_VIEWS.find(v => v.id === targetId) || state.view;
-  exitOverwriteMode();
-  renderAll();
-  renderStoredWeeks();
+  showParseResult('Saving to the cloud…', 'warn');
+  try {
+    await saveEventWeeks(eventId, weeks);   // → Firestore → live for everyone
+    CLOUD[eventId] = weeks;                 // optimistic local update
+    recomputeAll();
+    state.view = ALL_VIEWS.find(v => v.id === targetId) || state.view;
+    exitOverwriteMode();
+    renderAll();
+    renderStoredWeeks();
+  } catch (e) {
+    showParseResult('Save failed: ' + (e.message || e) + '<br>Make sure you are signed in as admin.', 'error');
+    return;
+  }
 
   const errorMsg = errors.length ? `<br><br><em>Warnings (${errors.length}):</em><br>${errors.join('<br>')}` : '';
   const verb = errors.length ? 'parsed with warnings' : 'parsed cleanly';
   const evName = currentEvent().name;
   const action = overwriting
-    ? `Overwrote <strong>${label}</strong> in <strong>${evName}</strong> (${date}) with the corrected data.`
-    : `Added to <strong>${evName}</strong> as <strong>${label}</strong> (${date}). View switched to this ${unit}.`;
-  showParseResult(`<strong>${players.length} player${players.length===1?'':'s'} ${verb}.</strong><br>${action}${errorMsg}`, errors.length ? 'warn' : 'success');
-  document.getElementById('showSnippetBtn').style.display = '';
-  document.getElementById('showSnippetBtn').dataset.weekId = targetId;
+    ? `Overwrote <strong>${label}</strong> in <strong>${evName}</strong> (${date}).`
+    : `Added <strong>${label}</strong> to <strong>${evName}</strong> (${date}).`;
+  showParseResult(`<strong>${players.length} player${players.length===1?'':'s'} ${verb}.</strong><br>${action} <strong>Live for everyone now.</strong>${errorMsg}`, errors.length ? 'warn' : 'success');
 });
 
 document.getElementById('adminCancelOverwriteBtn').addEventListener('click', () => {
@@ -2818,55 +2820,119 @@ document.getElementById('parseClearBtn').addEventListener('click', () => {
   document.getElementById('newWeekLabel').value = '';
   document.getElementById('newWeekDate').value = '';
   document.getElementById('parseResult').innerHTML = '';
-  document.getElementById('parseSnippet').style.display = 'none';
-  document.getElementById('showSnippetBtn').style.display = 'none';
   exitOverwriteMode();
 });
 
-document.getElementById('showSnippetBtn').addEventListener('click', () => {
-  const id = parseInt(document.getElementById('showSnippetBtn').dataset.weekId, 10);
-  const week = WEEKS.find(w => w.id === id);
-  if (!week) return;
-  const snippet = buildSnippet(week);
-  const pre = document.getElementById('parseSnippet');
-  pre.textContent = snippet;
-  pre.style.display = '';
-  try {
-    navigator.clipboard.writeText(snippet).then(() => {
-      showParseResult(`<strong>Snippet copied to clipboard.</strong> To make this permanent (so it travels with the file when you share it), paste it inside the active event's <code>baseWeeks: [ ... ]</code> array near the top of the &lt;script&gt; block — replacing the matching entry if you overwrote one.`, 'success');
-    }, () => {
-      showParseResult(`Snippet shown below — select all and copy manually.`, 'warn');
-    });
-  } catch (e) {
-    showParseResult(`Snippet shown below — select all and copy manually.`, 'warn');
+// =================================================================
+// FIREBASE — connect, seed, and listen for live updates
+// =================================================================
+let firstCloudRender = false;
+
+function onCloudUpdate() {
+  recomputeAll();
+  // Guard: if the current week view was deleted remotely, fall back
+  if (state.view.kind === 'week' && !ALL_VIEWS.some(v => v.id === state.view.id)) {
+    state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
   }
-});
+  if (!firstCloudRender) {
+    state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
+    firstCloudRender = true;
+  }
+  applyEventChrome();
+  renderAll();
+  renderStoredWeeks();
+}
+
+async function initFirebase() {
+  if (typeof firebase === 'undefined') {
+    console.error('Firebase SDK failed to load.');
+    return;
+  }
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+  } catch (e) {
+    console.error('Firebase init failed', e);
+    return;
+  }
+
+  // Admin auth state — show/hide the admin panel as the user signs in/out
+  auth.onAuthStateChanged(user => {
+    currentUser = user || null;
+    applyAdminUI();
+    renderStoredWeeks();
+    if (currentUser) {
+      const sect = document.getElementById('adminSection');
+      if (sect) setTimeout(() => sect.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
+  });
+
+  // Seed each event's document from the built-in data if it doesn't exist yet
+  for (const evId of ['mensNight', 'snips']) {
+    try {
+      const ref = db.collection('events').doc(evId);
+      const snap = await ref.get();
+      if (!snap.exists) {
+        await ref.set({ data: JSON.stringify(EVENTS[evId].baseWeeks), updatedAt: Date.now() });
+      }
+    } catch (e) { console.error('Seed check failed for ' + evId, e); }
+  }
+
+  // Live listeners — any change to the data re-renders for every viewer
+  ['mensNight', 'snips'].forEach(evId => {
+    db.collection('events').doc(evId).onSnapshot(snap => {
+      try {
+        const d = snap.data();
+        CLOUD[evId] = (d && d.data) ? JSON.parse(d.data) : EVENTS[evId].baseWeeks;
+      } catch (e) {
+        CLOUD[evId] = EVENTS[evId].baseWeeks;
+      }
+      onCloudUpdate();
+    }, err => {
+      console.error('Firestore listener error for ' + evId, err);
+    });
+  });
+}
 
 // =================================================================
 // INIT
 // =================================================================
 (function init() {
-  // Admin toggle wiring (works whether you're logged in or not)
+  // Admin button → open login modal, or sign out
   const adminBtn = document.getElementById('adminToggleBtn');
   if (adminBtn) {
     adminBtn.addEventListener('click', () => {
-      isAdmin() ? adminSignOut() : promptAdminLogin();
+      isAdmin() ? adminSignOut() : openLoginModal();
     });
   }
+  // Login modal wiring
+  document.getElementById('loginSubmitBtn').addEventListener('click', doLogin);
+  document.getElementById('loginCancelBtn').addEventListener('click', closeLoginModal);
+  document.getElementById('loginPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('loginModal').addEventListener('click', e => {
+    if (e.target.id === 'loginModal') closeLoginModal();
+  });
   applyAdminUI();
 
-  // Event switcher wiring (Men's Night vs Snips)
+  // Event switcher wiring (Men's Night vs Weekend Snips)
   document.querySelectorAll('.event-btn').forEach(btn => {
     btn.addEventListener('click', () => switchEvent(btn.dataset.event));
   });
 
-  // Build the active event's data (base weeks + any stored corrections/adds)
+  // Render once with built-in seed data so the page isn't blank while
+  // we connect to Firebase; cloud data replaces it the moment it loads.
   recomputeAll();
   state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
   applyEventChrome();
   syncAdminMode();
   renderAll();
   renderStoredWeeks();
+
+  // Connect to the cloud
+  initFirebase();
 })();
 </script>
 </body>
