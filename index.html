@@ -6,6 +6,17 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v3.6   Player count on the top KPI cards is now a large number,
+         same size as the score, aligned right on the same line —
+         with a "Players" label above it.
+  v3.5   Top KPI cards (Field / Low / Mid / High Cap Avg) now show the
+         player count for each segment on the vs-par line.
+  v3.4   Removed the standalone "Field Filter" section. Each filterable
+         section (Headlines, Movers, score distribution, The Course
+         Speaks, Player Standings) now has its own independent bracket
+         filter — All / Low / Mid / High — placed right by that
+         section, with consistent styling. Filtering one section no
+         longer affects the others. Frees up vertical space.
   v3.3   KPI strip Row 1 reworked: removed Lowest Gross and Lowest Net,
          added Low / Mid / High Cap Avg cards (each with vs-par below)
          alongside Field Avg. These four cards always show the full
@@ -395,6 +406,18 @@
     letter-spacing: -0.02em;
   }
   .kpi-sub { font-size: 12px; color: #ffffff; font-style: italic; font-weight: 500; }
+  /* Summary cards: label + big value sit in rows so the player count
+     can align right, on the same baseline as the score. */
+  .kpi-label-row { display: flex; justify-content: space-between; gap: 12px; }
+  .kpi-value-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 12px; margin-bottom: 6px;
+  }
+  .kpi-value-row .kpi-value { margin-bottom: 0; }
+  .kpi-count {
+    font-family: 'Fraunces', serif; font-size: 40px; font-weight: 400;
+    color: var(--green); line-height: 1; letter-spacing: -0.02em;
+  }
   /* Distribution cards: tighter padding since 6 cards in a row */
   .kpis-distribution .kpi { padding: 18px 16px; }
   .kpis-distribution .kpi-value { font-size: 32px; }
@@ -421,33 +444,26 @@
   }
 
   /* ===== BRACKET FILTER ===== */
-  .filter-bar {
-    display: flex; gap: 0; background: var(--paper);
-    border: 1px solid var(--rule); padding: 6px;
-    margin-bottom: 14px; width: 100%;
-    border-radius: 4px; flex-wrap: wrap;
+  /* Reusable per-section bracket filter — sits just under a section head */
+  .section-filter {
+    display: flex; align-items: center; gap: 5px;
+    margin-bottom: 18px; flex-wrap: wrap;
   }
-  .filter-btn {
-    flex: 1 1 140px;
-    padding: 20px 20px; font-family: 'DM Sans', sans-serif; font-size: 17px;
-    font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
-    background: transparent; border: none; color: var(--ink-soft);
-    cursor: pointer; transition: all 0.2s ease; border-radius: 3px;
-    text-align: center;
+  .sf-label {
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500; margin-right: 6px;
   }
-  .filter-btn:hover { color: var(--ink); background: rgba(255,255,255,0.04); }
-  .filter-btn.active { background: #ffffff; color: #091529; font-weight: 600; }
-  .filter-count {
-    font-family: 'JetBrains Mono', monospace; font-size: 14px;
-    margin-left: 10px; font-weight: 500;
+  .sf-btn {
+    padding: 7px 16px; font-family: 'DM Sans', sans-serif; font-size: 12px;
+    font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+    background: var(--paper); border: 1px solid var(--rule); color: var(--ink-soft);
+    cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+    border-radius: 3px;
   }
-  .filter-note { font-size: 13px; color: #ffffff; font-style: italic; font-weight: 500; margin-bottom: 24px; }
+  .sf-btn:hover { color: var(--ink); background: rgba(255,255,255,0.05); }
+  .sf-btn.active { background: #ffffff; color: #091529; font-weight: 600; border-color: #ffffff; }
   @media (max-width: 640px) {
-    .filter-btn {
-      flex: 1 1 calc(50% - 4px);
-      padding: 14px 10px; font-size: 13px; letter-spacing: 0.04em;
-    }
-    .filter-count { font-size: 12px; margin-left: 6px; }
+    .sf-btn { padding: 6px 12px; font-size: 11px; }
   }
 
   /* ===== PANELS ===== */
@@ -977,7 +993,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v3.3</div>
+    <div class="splash-version">v3.6</div>
   </div>
 </div>
 
@@ -1001,7 +1017,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v3.3</div>
+  <div class="masthead-version">v3.6</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1034,45 +1050,51 @@
 
 <section>
   <div class="kpis kpis-summary" id="kpiSummary"></div>
+  <div class="section-filter" data-section="dist">
+    <span class="sf-label">Bracket</span>
+    <button class="sf-btn active" data-bracket="all">All</button>
+    <button class="sf-btn" data-bracket="low">Low</button>
+    <button class="sf-btn" data-bracket="mid">Mid</button>
+    <button class="sf-btn" data-bracket="high">High</button>
+  </div>
   <div class="kpis kpis-distribution" id="kpiDistribution"></div>
 </section>
 
 <section>
   <div class="section-head">
     <span class="num">No. 01</span>
-    <h2>Field Filter</h2>
-    <span class="sub">Slice all charts and tables by handicap bracket</span>
-  </div>
-  <div class="filter-bar" id="filterBar">
-    <button class="filter-btn active" data-bracket="all">All <span class="filter-count" id="ct-all">(0)</span></button>
-    <button class="filter-btn" data-bracket="low">Low · 0–7 <span class="filter-count" id="ct-low">(0)</span></button>
-    <button class="filter-btn" data-bracket="mid">Mid · 8–15 <span class="filter-count" id="ct-mid">(0)</span></button>
-    <button class="filter-btn" data-bracket="high">High · 16+ <span class="filter-count" id="ct-high">(0)</span></button>
-  </div>
-  <div class="filter-note">Tip: tap any player row to expand a full hole-by-hole scorecard.</div>
-</section>
-
-<section>
-  <div class="section-head">
-    <span class="num">No. 02</span>
     <h2>Headlines</h2>
     <span class="sub">What the data is telling us</span>
+  </div>
+  <div class="section-filter" data-section="insights">
+    <span class="sf-label">Bracket</span>
+    <button class="sf-btn active" data-bracket="all">All</button>
+    <button class="sf-btn" data-bracket="low">Low</button>
+    <button class="sf-btn" data-bracket="mid">Mid</button>
+    <button class="sf-btn" data-bracket="high">High</button>
   </div>
   <div class="insights-grid" id="insights"></div>
 </section>
 
 <section id="moversSection">
   <div class="section-head">
-    <span class="num">No. 03</span>
+    <span class="num">No. 02</span>
     <h2>Week-over-Week Movers</h2>
     <span class="sub">Only players who appeared in both selected weeks</span>
+  </div>
+  <div class="section-filter" data-section="movers">
+    <span class="sf-label">Bracket</span>
+    <button class="sf-btn active" data-bracket="all">All</button>
+    <button class="sf-btn" data-bracket="low">Low</button>
+    <button class="sf-btn" data-bracket="mid">Mid</button>
+    <button class="sf-btn" data-bracket="high">High</button>
   </div>
   <div class="movers-grid" id="moversGrid"></div>
 </section>
 
 <section>
   <div class="section-head">
-    <span class="num">No. 04</span>
+    <span class="num">No. 03</span>
     <h2>Hole by Hole — Average vs Par</h2>
     <span class="sub">Click the legend — <em>All</em> shows the whole field; Low/Mid/High are multi-select</span>
   </div>
@@ -1090,7 +1112,7 @@
 
 <section>
   <div class="section-head">
-    <span class="num">No. 05</span>
+    <span class="num">No. 04</span>
     <h2>How They Made Their Score</h2>
     <span class="sub">Share of holes played as eagle / birdie / par / bogey / double+</span>
   </div>
@@ -1109,7 +1131,7 @@
 
 <section>
   <div class="section-head">
-    <span class="num">No. 06</span>
+    <span class="num">No. 05</span>
     <h2>Front Nine vs Back Nine</h2>
     <span class="sub">Where do the wheels come off?</span>
   </div>
@@ -1118,9 +1140,16 @@
 
 <section>
   <div class="section-head">
-    <span class="num">No. 07</span>
+    <span class="num">No. 06</span>
     <h2>The Course Speaks</h2>
     <span class="sub">Ranked by field-average strokes over par</span>
+  </div>
+  <div class="section-filter" data-section="holes">
+    <span class="sf-label">Bracket</span>
+    <button class="sf-btn active" data-bracket="all">All</button>
+    <button class="sf-btn" data-bracket="low">Low</button>
+    <button class="sf-btn" data-bracket="mid">Mid</button>
+    <button class="sf-btn" data-bracket="high">High</button>
   </div>
   <div class="panel">
     <div class="holes-table-wrap">
@@ -1138,9 +1167,16 @@
 
 <section>
   <div class="section-head">
-    <span class="num">No. 08</span>
+    <span class="num">No. 07</span>
     <h2 id="standingsHeading">Player Standings</h2>
     <span class="sub" id="standingsSub">Click any column to sort · tap a row for the scorecard</span>
+  </div>
+  <div class="section-filter" data-section="standings">
+    <span class="sf-label">Bracket</span>
+    <button class="sf-btn active" data-bracket="all">All</button>
+    <button class="sf-btn" data-bracket="low">Low</button>
+    <button class="sf-btn" data-bracket="mid">Mid</button>
+    <button class="sf-btn" data-bracket="high">High</button>
   </div>
   <div class="player-controls">
     <input type="text" class="search-input" id="search" placeholder="Search player…">
@@ -1156,7 +1192,7 @@
 
 <section id="adminSection" class="admin-only" style="margin-top:48px;display:none;">
   <div class="section-head">
-    <span class="num">No. 09</span>
+    <span class="num">No. 08</span>
     <h2 id="adminPanelTitle">Add a New Week</h2>
     <span class="sub" id="adminPanelSub">Paste in the SmartGolf format — same as Week 1</span>
     <span style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;background:#ffffff;color:#091529;padding:3px 10px;border-radius:2px;font-weight:700;margin-left:12px;">Admin</span>
@@ -1584,7 +1620,6 @@ let ALL_VIEWS = WEEKS.map(w => ({ kind: 'week', id: w.id, label: w.label, date: 
 const state = {
   eventId: 'mensNight',                                  // active event ('mensNight' | 'snips')
   view: ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0], // default to latest week
-  bracket: 'all',
   sortKey: 'gross',
   sortDir: 1,
   search: '',
@@ -1670,9 +1705,13 @@ function currentRounds() {
   }
   return YTD; // YTD aggregated objects (rounds-like but with totals)
 }
-function filterByBracket(items) {
-  if (state.bracket === 'all') return items;
-  return items.filter(p => p.bracket === state.bracket);
+// Each filterable section keeps its own independent bracket selection.
+const sectionBracket = { dist: 'all', insights: 'all', movers: 'all', holes: 'all', standings: 'all' };
+
+function filterByBracket(items, sectionKey) {
+  const b = sectionBracket[sectionKey] || 'all';
+  if (b === 'all') return items;
+  return items.filter(p => p.bracket === b);
 }
 function ytdMode() { return state.view.kind === 'ytd'; }
 
@@ -1752,26 +1791,26 @@ function renderWeekTabs() {
 }
 
 // =================================================================
-// BRACKET FILTER
+// BRACKET FILTER — one independent filter per section
 // =================================================================
-function renderBracketCounts() {
-  const items = currentRounds();
-  const counts = { all: items.length, low: 0, mid: 0, high: 0 };
-  items.forEach(p => counts[p.bracket]++);
-  Object.keys(counts).forEach(k => {
-    const el = document.getElementById('ct-' + k);
-    if (el) el.textContent = `(${counts[k]})`;
-  });
-  document.querySelectorAll('.filter-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.bracket === state.bracket);
-  });
-}
-document.getElementById('filterBar').addEventListener('click', e => {
-  if (e.target.matches('.filter-btn') || e.target.closest('.filter-btn')) {
-    const btn = e.target.closest('.filter-btn');
-    state.bracket = btn.dataset.bracket;
-    renderAll();
-  }
+const SECTION_RENDER = {
+  dist:      () => renderKpis(),
+  insights:  () => renderInsights(),
+  movers:    () => renderMovers(),
+  holes:     () => renderHolesTables(),
+  standings: () => renderPlayerTable()
+};
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.sf-btn');
+  if (!btn) return;
+  const wrap = btn.closest('.section-filter');
+  if (!wrap) return;
+  const section = wrap.dataset.section;
+  sectionBracket[section] = btn.dataset.bracket;
+  wrap.querySelectorAll('.sf-btn').forEach(b => b.classList.toggle('active', b === btn));
+  const fn = SECTION_RENDER[section];
+  if (fn) fn();
 });
 
 // =================================================================
@@ -1812,7 +1851,7 @@ function getNet(p)   { return ytdMode() ? p.avgNet   : p.net; }
 // KPIs
 // =================================================================
 function renderKpis() {
-  const items = filterByBracket(currentRounds());  // distribution row (filtered)
+  const items = filterByBracket(currentRounds(), 'dist');  // distribution row (filtered)
   const allItems = currentRounds();                // Row-1 cards (ignore filter)
   const summaryEl = document.getElementById('kpiSummary');
   const distEl = document.getElementById('kpiDistribution');
@@ -1830,15 +1869,27 @@ function renderKpis() {
     const group = allItems.filter(p => p.bracket === bracketKey);
     if (!group.length) {
       return `<div class="kpi">
-        <div class="kpi-label">${label}</div>
-        <div class="kpi-value" style="opacity:0.4">—</div>
-        <div class="kpi-sub">no players</div>
+        <div class="kpi-label-row">
+          <span class="kpi-label">${label}</span>
+          <span class="kpi-label">Players</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" style="opacity:0.4">—</span>
+          <span class="kpi-count">0</span>
+        </div>
+        <div class="kpi-sub">no players in this view</div>
       </div>`;
     }
     const ba = group.reduce((s,p)=>s+getGross(p), 0) / group.length;
     return `<div class="kpi">
-      <div class="kpi-label">${label}</div>
-      <div class="kpi-value">${ba.toFixed(1)}</div>
+      <div class="kpi-label-row">
+        <span class="kpi-label">${label}</span>
+        <span class="kpi-label">Players</span>
+      </div>
+      <div class="kpi-value-row">
+        <span class="kpi-value">${ba.toFixed(1)}</span>
+        <span class="kpi-count">${group.length}</span>
+      </div>
       <div class="kpi-sub">+${(ba-71).toFixed(1)} vs par${isYtd ? ' · per round' : ''}</div>
     </div>`;
   }
@@ -1846,8 +1897,14 @@ function renderKpis() {
   // Row 1: Field Avg + the three handicap-bracket averages (unfiltered)
   summaryEl.innerHTML = `
     <div class="kpi">
-      <div class="kpi-label">Field ${isYtd ? 'Avg Gross' : 'Avg'}</div>
-      <div class="kpi-value">${fieldAvg.toFixed(1)}</div>
+      <div class="kpi-label-row">
+        <span class="kpi-label">Field ${isYtd ? 'Avg Gross' : 'Avg'}</span>
+        <span class="kpi-label">Players</span>
+      </div>
+      <div class="kpi-value-row">
+        <span class="kpi-value">${fieldAvg.toFixed(1)}</span>
+        <span class="kpi-count">${allItems.length}</span>
+      </div>
       <div class="kpi-sub">+${(fieldAvg-71).toFixed(1)} vs par${isYtd ? ' · per round' : ''}</div>
     </div>
     ${bracketCard('Low Cap Avg',  'low')}
@@ -1903,7 +1960,7 @@ function renderKpis() {
 // INSIGHTS
 // =================================================================
 function renderInsights() {
-  const items = filterByBracket(currentRounds());
+  const items = filterByBracket(currentRounds(), 'insights');
   if (!items.length) {
     document.getElementById('insights').innerHTML = '';
     return;
@@ -2005,11 +2062,11 @@ function renderMovers() {
   }
 
   document.querySelector('#moversSection .section-head .sub').innerHTML =
-    `${prevWeek.label} → ${curWeek.label} · ${state.bracket === 'all' ? 'all brackets' : state.bracket + ' bracket only'}`;
+    `${prevWeek.label} → ${curWeek.label} · ${sectionBracket.movers === 'all' ? 'all brackets' : sectionBracket.movers + ' bracket only'}`;
 
   const prevByName = new Map(prevWeek.rounds.map(r => [r.name, r]));
   const both = curWeek.rounds.filter(r => prevByName.has(r.name));
-  const filtered = state.bracket === 'all' ? both : both.filter(r => r.bracket === state.bracket);
+  const filtered = sectionBracket.movers === 'all' ? both : both.filter(r => r.bracket === sectionBracket.movers);
 
   const deltas = filtered.map(r => {
     const prev = prevByName.get(r.name);
@@ -2227,7 +2284,7 @@ function renderFrontBack() {
 // HARDEST / EASIEST
 // =================================================================
 function renderHolesTables() {
-  const items = filterByBracket(currentRounds());
+  const items = filterByBracket(currentRounds(), 'holes');
   if (!items.length) {
     document.getElementById('hardestTable').innerHTML = '<tbody><tr><td style="color:var(--muted);font-style:italic;padding:24px;text-align:center">No players in this view</td></tr></tbody>';
     document.getElementById('easiestTable').innerHTML = '';
@@ -2313,7 +2370,7 @@ function renderPlayerTableHead() {
 
 function renderPlayerTable() {
   renderPlayerTableHead();
-  let rows = filterByBracket(currentRounds());
+  let rows = filterByBracket(currentRounds(), 'standings');
   if (state.search) {
     const s = state.search.toLowerCase();
     rows = rows.filter(p => p.name.toLowerCase().includes(s));
@@ -2611,7 +2668,6 @@ function closeScorecard() {
 // =================================================================
 function renderAll() {
   renderWeekTabs();
-  renderBracketCounts();
   renderKpis();
   renderInsights();
   renderMovers();
