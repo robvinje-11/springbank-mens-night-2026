@@ -6,6 +6,15 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v3.10  Merged the top averages card with Front Nine vs Back Nine into
+         one section, "Scoring by Bracket". Each column (All / Low /
+         Mid / High) is now a single profile card: average score,
+         vs-par, player count, and that bracket's front-9 / back-9
+         split together. Score Distribution is now its own numbered
+         section. Sections renumbered 01–09.
+  v3.9   Front Nine vs Back Nine now leads with an "All Players" card
+         as a field baseline, so the Low / Mid / High cards can be
+         compared against the whole field.
   v3.8   Headlines now fully respect their bracket filter. Picking
          Low / Mid / High recomputes every card from that bracket
          only (round of the day, birdie leader, steadiest card, etc.)
@@ -401,10 +410,6 @@
     overflow: hidden;
     display: grid;
   }
-  .kpis-summary {
-    grid-template-columns: repeat(4, 1fr);
-    margin-bottom: 12px;
-  }
   .kpis-distribution {
     grid-template-columns: repeat(6, 1fr);
   }
@@ -423,37 +428,17 @@
     letter-spacing: -0.02em;
   }
   .kpi-sub { font-size: 12px; color: #ffffff; font-style: italic; font-weight: 500; }
-  /* Summary cards: label + big value sit in rows so the player count
-     can align right, on the same baseline as the score. */
-  .kpi-label-row { display: flex; justify-content: space-between; gap: 12px; }
-  .kpi-value-row {
-    display: flex; justify-content: space-between; align-items: baseline;
-    gap: 12px; margin-bottom: 6px;
-  }
-  .kpi-value-row .kpi-value { margin-bottom: 0; }
-  .kpi-count {
-    font-family: 'Fraunces', serif; font-size: 40px; font-weight: 400;
-    color: var(--green); line-height: 1; letter-spacing: -0.02em;
-  }
   /* Distribution cards: tighter padding since 6 cards in a row */
   .kpis-distribution .kpi { padding: 18px 16px; }
   .kpis-distribution .kpi-value { font-size: 32px; }
   .kpis-distribution .kpi-sub { font-size: 22px; line-height: 1.2; margin-top: 2px; }
-  /* Responsive: distribution wraps before summary because it's tighter */
   @media (max-width: 1200px) {
     .kpis-distribution { grid-template-columns: repeat(3, 1fr); }
     .kpis-distribution .kpi { border-bottom: 1px solid var(--rule-soft); }
     .kpis-distribution .kpi:nth-child(3n) { border-right: none; }
     .kpis-distribution .kpi:nth-last-child(-n+3) { border-bottom: none; }
-    .kpis-summary { grid-template-columns: repeat(2, 1fr); }
-    .kpis-summary .kpi { border-bottom: 1px solid var(--rule-soft); }
-    .kpis-summary .kpi:nth-child(2n) { border-right: none; }
-    .kpis-summary .kpi:nth-last-child(-n+2) { border-bottom: none; }
   }
   @media (max-width: 720px) {
-    .kpis-summary { grid-template-columns: 1fr; }
-    .kpis-summary .kpi { border-right: none; border-bottom: 1px solid var(--rule-soft); }
-    .kpis-summary .kpi:last-child { border-bottom: none; }
     .kpis-distribution { grid-template-columns: repeat(2, 1fr); }
     .kpis-distribution .kpi:nth-child(2n) { border-right: none; }
     .kpis-distribution .kpi:nth-child(odd) { border-right: 1px solid var(--rule-soft); }
@@ -546,37 +531,67 @@
   .dist-legend-item { display: flex; align-items: center; gap: 5px; }
   .dist-legend-swatch { width: 10px; height: 10px; border-radius: 1px; }
 
-  /* ===== FRONT/BACK ===== */
-  .fb-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+  /* ===== BRACKET PROFILE (avg + front/back combined) ===== */
+  .bp-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
     border: 1px solid var(--rule); background: var(--paper);
   }
-  @media (max-width: 800px) { .fb-grid { grid-template-columns: 1fr; } }
-  .fb-cell { padding: 24px; border-right: 1px solid var(--rule-soft); text-align: center; }
-  .fb-cell:last-child { border-right: none; }
-  .fb-cell-bracket {
+  @media (max-width: 1100px) { .bp-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .bp-grid { grid-template-columns: 1fr; } }
+  .bp-cell { padding: 22px 24px; border-right: 1px solid var(--rule-soft); }
+  .bp-cell:last-child { border-right: none; }
+  @media (max-width: 1100px) {
+    .bp-cell { border-bottom: 1px solid var(--rule-soft); }
+    .bp-cell:nth-child(2n) { border-right: none; }
+    .bp-cell:nth-last-child(-n+2) { border-bottom: none; }
+  }
+  @media (max-width: 560px) {
+    .bp-cell { border-right: none; }
+    .bp-cell:last-child { border-bottom: none; }
+  }
+  /* Header — bracket name + player count */
+  .bp-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .bp-bracket {
     font-family: 'Fraunces', serif; font-style: italic;
-    font-size: 16px; margin-bottom: 16px; color: var(--brass);
+    font-size: 17px; color: var(--brass);
   }
-  .fb-split {
-    display: flex; justify-content: space-around;
-    align-items: flex-end; margin-bottom: 12px;
+  .bp-count { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+  /* Average block */
+  .bp-avg-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 10px; margin-top: 14px;
   }
-  .fb-side .num {
-    font-family: 'Fraunces', serif; font-size: 36px; line-height: 1; color: var(--ink);
+  .bp-avg-label {
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500;
   }
-  .fb-side .vs-par {
+  .bp-avg {
+    font-family: 'Fraunces', serif; font-size: 40px; font-weight: 400;
+    line-height: 1; color: #ffffff; letter-spacing: -0.02em;
+  }
+  .bp-vspar {
     font-family: 'JetBrains Mono', monospace; font-size: 12px;
     color: var(--birdie); margin-top: 4px;
   }
-  .fb-side .label {
-    font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em;
+  .bp-divider { height: 1px; background: var(--rule-soft); margin: 16px 0; }
+  /* Front/back split */
+  .bp-split { display: flex; justify-content: space-between; align-items: flex-end; }
+  .bp-side { text-align: center; flex: 1; }
+  .bp-side .label {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em;
     color: var(--muted); margin-bottom: 6px;
   }
-  .fb-arrow { align-self: center; font-size: 20px; color: var(--brass); }
-  .fb-insight {
+  .bp-side .num {
+    font-family: 'Fraunces', serif; font-size: 30px; line-height: 1; color: var(--ink);
+  }
+  .bp-side .vs-par {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--birdie); margin-top: 4px;
+  }
+  .bp-arrow { align-self: center; font-size: 18px; color: var(--brass); padding: 0 6px; }
+  .bp-insight {
     font-size: 12px; color: #ffffff; font-style: italic; font-weight: 500;
-    padding-top: 12px; border-top: 1px solid var(--rule-soft);
+    margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule-soft);
   }
 
   /* ===== HARDEST/EASIEST ===== */
@@ -1010,7 +1025,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v3.8</div>
+    <div class="splash-version">v3.10</div>
   </div>
 </div>
 
@@ -1034,7 +1049,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v3.8</div>
+  <div class="masthead-version">v3.10</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1066,7 +1081,20 @@
 <main>
 
 <section>
-  <div class="kpis kpis-summary" id="kpiSummary"></div>
+  <div class="section-head">
+    <span class="num">No. 01</span>
+    <h2>Scoring by Bracket</h2>
+    <span class="sub">Field &amp; handicap-group averages, front vs back</span>
+  </div>
+  <div class="bp-grid" id="bracketProfileGrid"></div>
+</section>
+
+<section>
+  <div class="section-head">
+    <span class="num">No. 02</span>
+    <h2>Score Distribution</h2>
+    <span class="sub">Every hole, by result</span>
+  </div>
   <div class="section-filter" data-section="dist">
     <span class="sf-label">Bracket</span>
     <button class="sf-btn active" data-bracket="all">All</button>
@@ -1079,7 +1107,7 @@
 
 <section>
   <div class="section-head">
-    <span class="num">No. 01</span>
+    <span class="num">No. 03</span>
     <h2>Headlines</h2>
     <span class="sub">What the data is telling us</span>
   </div>
@@ -1095,7 +1123,7 @@
 
 <section id="moversSection">
   <div class="section-head">
-    <span class="num">No. 02</span>
+    <span class="num">No. 04</span>
     <h2>Week-over-Week Movers</h2>
     <span class="sub">Only players who appeared in both selected weeks</span>
   </div>
@@ -1111,7 +1139,7 @@
 
 <section>
   <div class="section-head">
-    <span class="num">No. 03</span>
+    <span class="num">No. 05</span>
     <h2>Hole by Hole — Average vs Par</h2>
     <span class="sub">Click the legend — <em>All</em> shows the whole field; Low/Mid/High are multi-select</span>
   </div>
@@ -1129,7 +1157,7 @@
 
 <section>
   <div class="section-head">
-    <span class="num">No. 04</span>
+    <span class="num">No. 06</span>
     <h2>How They Made Their Score</h2>
     <span class="sub">Share of holes played as eagle / birdie / par / bogey / double+</span>
   </div>
@@ -1148,16 +1176,7 @@
 
 <section>
   <div class="section-head">
-    <span class="num">No. 05</span>
-    <h2>Front Nine vs Back Nine</h2>
-    <span class="sub">Where do the wheels come off?</span>
-  </div>
-  <div class="fb-grid" id="fbGrid"></div>
-</section>
-
-<section>
-  <div class="section-head">
-    <span class="num">No. 06</span>
+    <span class="num">No. 07</span>
     <h2>The Course Speaks</h2>
     <span class="sub">Ranked by field-average strokes over par</span>
   </div>
@@ -1184,7 +1203,7 @@
 
 <section>
   <div class="section-head">
-    <span class="num">No. 07</span>
+    <span class="num">No. 08</span>
     <h2 id="standingsHeading">Player Standings</h2>
     <span class="sub" id="standingsSub">Click any column to sort · tap a row for the scorecard</span>
   </div>
@@ -1209,7 +1228,7 @@
 
 <section id="adminSection" class="admin-only" style="margin-top:48px;display:none;">
   <div class="section-head">
-    <span class="num">No. 08</span>
+    <span class="num">No. 09</span>
     <h2 id="adminPanelTitle">Add a New Week</h2>
     <span class="sub" id="adminPanelSub">Paste in the SmartGolf format — same as Week 1</span>
     <span style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;background:#ffffff;color:#091529;padding:3px 10px;border-radius:2px;font-weight:700;margin-left:12px;">Admin</span>
@@ -1865,72 +1884,76 @@ function getGross(p) { return ytdMode() ? p.avgGross : p.gross; }
 function getNet(p)   { return ytdMode() ? p.avgNet   : p.net; }
 
 // =================================================================
-// KPIs
+// SCORING BY BRACKET — combined section: per-bracket average gross
+// plus that bracket's front-9 / back-9 split. One card per group:
+// All / Low / Mid / High. Always shows the full field (no filter).
 // =================================================================
-function renderKpis() {
-  const items = filterByBracket(currentRounds(), 'dist');  // distribution row (filtered)
-  const allItems = currentRounds();                // Row-1 cards (ignore filter)
-  const summaryEl = document.getElementById('kpiSummary');
-  const distEl = document.getElementById('kpiDistribution');
-  if (!allItems.length) {
-    summaryEl.innerHTML = `<div class="kpi"><div class="kpi-label">No players</div><div class="kpi-sub">in this view</div></div>`;
-    distEl.innerHTML = '';
+function renderBracketProfiles() {
+  const grid = document.getElementById('bracketProfileGrid');
+  if (!grid) return;
+  const rounds = currentRounds();
+  if (!rounds.length) {
+    grid.innerHTML = `<div class="bp-cell"><div class="bp-bracket">No players</div></div>`;
     return;
   }
-  const fieldAvg = allItems.reduce((s,p)=>s+getGross(p), 0) / allItems.length;
   const isYtd = ytdMode();
+  const cells = ['all','low','mid','high'];
+  const labels = { all: 'All Players', low: 'Low (0–7)', mid: 'Mid (8–15)', high: 'High (16+)' };
 
-  // Per-bracket average gross. Always drawn from the full field for the
-  // current view (week / YTD) — the field filter does NOT affect these.
-  function bracketCard(label, bracketKey) {
-    const group = allItems.filter(p => p.bracket === bracketKey);
+  grid.innerHTML = cells.map(key => {
+    const group = key === 'all' ? rounds : rounds.filter(p => p.bracket === key);
     if (!group.length) {
-      return `<div class="kpi">
-        <div class="kpi-label-row">
-          <span class="kpi-label">${label}</span>
-          <span class="kpi-label">Players</span>
-        </div>
-        <div class="kpi-value-row">
-          <span class="kpi-value" style="opacity:0.4">—</span>
-          <span class="kpi-count">0</span>
-        </div>
-        <div class="kpi-sub">no players in this view</div>
+      return `<div class="bp-cell">
+        <div class="bp-head"><span class="bp-bracket">${labels[key]}</span><span class="bp-count">0 players</span></div>
+        <div class="bp-avg-row"><span class="bp-avg-label">Avg Gross</span></div>
+        <div class="bp-avg" style="opacity:0.4">—</div>
+        <div class="bp-insight">No players in this bracket for this view.</div>
       </div>`;
     }
-    const ba = group.reduce((s,p)=>s+getGross(p), 0) / group.length;
-    return `<div class="kpi">
-      <div class="kpi-label-row">
-        <span class="kpi-label">${label}</span>
-        <span class="kpi-label">Players</span>
-      </div>
-      <div class="kpi-value-row">
-        <span class="kpi-value">${ba.toFixed(1)}</span>
-        <span class="kpi-count">${group.length}</span>
-      </div>
-      <div class="kpi-sub">+${(ba-71).toFixed(1)} vs par${isYtd ? ' · per round' : ''}</div>
-    </div>`;
-  }
+    const avg = group.reduce((s,p)=>s+getGross(p), 0) / group.length;
+    const fb = frontBackStats(group);
+    const realDiff = fb.bVsPar - fb.fVsPar;
+    const harder = Math.abs(realDiff) < 0.3 ? 'Front and back played similarly' :
+                   realDiff > 0 ? `Back ${realDiff.toFixed(1)} strokes harder vs par` :
+                   `Front ${(-realDiff).toFixed(1)} strokes harder vs par`;
+    const arrow = Math.abs(realDiff) < 0.3 ? '≈' : realDiff > 0 ? '→' : '←';
+    return `
+      <div class="bp-cell">
+        <div class="bp-head">
+          <span class="bp-bracket">${labels[key]}</span>
+          <span class="bp-count">${group.length} player${group.length===1?'':'s'}</span>
+        </div>
+        <div class="bp-avg-row">
+          <span class="bp-avg-label">${isYtd ? 'Avg Gross' : 'Avg Score'}</span>
+          <span class="bp-avg">${avg.toFixed(1)}</span>
+        </div>
+        <div class="bp-vspar">+${(avg-71).toFixed(1)} vs par${isYtd ? ' · per round' : ''}</div>
+        <div class="bp-divider"></div>
+        <div class="bp-split">
+          <div class="bp-side">
+            <div class="label">Front 9 (Par 36)</div>
+            <div class="num">${fb.front.toFixed(1)}</div>
+            <div class="vs-par">+${fb.fVsPar.toFixed(1)}</div>
+          </div>
+          <div class="bp-arrow">${arrow}</div>
+          <div class="bp-side">
+            <div class="label">Back 9 (Par 35)</div>
+            <div class="num">${fb.back.toFixed(1)}</div>
+            <div class="vs-par">+${fb.bVsPar.toFixed(1)}</div>
+          </div>
+        </div>
+        <div class="bp-insight">${harder}</div>
+      </div>`;
+  }).join('');
+}
 
-  // Row 1: Field Avg + the three handicap-bracket averages (unfiltered)
-  summaryEl.innerHTML = `
-    <div class="kpi">
-      <div class="kpi-label-row">
-        <span class="kpi-label">Field ${isYtd ? 'Avg Gross' : 'Avg'}</span>
-        <span class="kpi-label">Players</span>
-      </div>
-      <div class="kpi-value-row">
-        <span class="kpi-value">${fieldAvg.toFixed(1)}</span>
-        <span class="kpi-count">${allItems.length}</span>
-      </div>
-      <div class="kpi-sub">+${(fieldAvg-71).toFixed(1)} vs par${isYtd ? ' · per round' : ''}</div>
-    </div>
-    ${bracketCard('Low Cap Avg',  'low')}
-    ${bracketCard('Mid Cap Avg',  'mid')}
-    ${bracketCard('High Cap Avg', 'high')}
-  `;
-
-  // Distribution row reflects the field filter. If the filter leaves
-  // nobody, show a note instead of an empty strip.
+// =================================================================
+// SCORE DISTRIBUTION — every hole by result (filtered by its bracket)
+// =================================================================
+function renderKpis() {
+  const items = filterByBracket(currentRounds(), 'dist');
+  const distEl = document.getElementById('kpiDistribution');
+  if (!distEl) return;
   if (!items.length) {
     distEl.innerHTML = `<div class="kpi"><div class="kpi-label">No players</div><div class="kpi-sub">in this bracket for this view</div></div>`;
     return;
@@ -1938,7 +1961,7 @@ function renderKpis() {
   const dist = distribution(items);
   const pct = n => (n / dist.total * 100).toFixed(1);
 
-  // Row 2: score distribution (% of holes — sums to 100.0%)
+  // Score distribution (% of holes — sums to 100.0%)
   distEl.innerHTML = `
     <div class="kpi">
       <div class="kpi-label">Albatross</div>
@@ -2303,44 +2326,6 @@ function renderDistribution() {
           <span style="color:#f59e0b">${pct(d.bogeys).toFixed(1)}</span> ·
           <span style="color:#ff8e84">${pct(d.doubles).toFixed(1)}</span>
         </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// =================================================================
-// FRONT / BACK
-// =================================================================
-function renderFrontBack() {
-  const brackets = ['low','mid','high'];
-  const labels = { low: 'Low (0–7)', mid: 'Mid (8–15)', high: 'High (16+)' };
-  document.getElementById('fbGrid').innerHTML = brackets.map(b => {
-    const items = currentRounds().filter(p => p.bracket === b);
-    const fb = frontBackStats(items);
-    if (!fb) return `<div class="fb-cell"><div class="fb-cell-bracket">${labels[b]}</div><div style="color:var(--muted);font-size:13px">No players</div></div>`;
-    const diff = fb.back - fb.front - (-1); // back is par 35 vs front 36, normalize
-    const realDiff = (fb.bVsPar) - (fb.fVsPar); // strokes-over-par diff
-    const harder = Math.abs(realDiff) < 0.3 ? 'Front and back played similarly' :
-                   realDiff > 0 ? `Back ${realDiff.toFixed(1)} strokes harder vs par` :
-                   `Front ${(-realDiff).toFixed(1)} strokes harder vs par`;
-    const arrow = Math.abs(realDiff) < 0.3 ? '≈' : realDiff > 0 ? '→' : '←';
-    return `
-      <div class="fb-cell">
-        <div class="fb-cell-bracket">${labels[b]} · ${items.length} player${items.length===1?'':'s'}</div>
-        <div class="fb-split">
-          <div class="fb-side">
-            <div class="label">Front 9 (Par 36)</div>
-            <div class="num">${fb.front.toFixed(1)}</div>
-            <div class="vs-par">+${fb.fVsPar.toFixed(1)}</div>
-          </div>
-          <div class="fb-arrow">${arrow}</div>
-          <div class="fb-side">
-            <div class="label">Back 9 (Par 35)</div>
-            <div class="num">${fb.back.toFixed(1)}</div>
-            <div class="vs-par">+${fb.bVsPar.toFixed(1)}</div>
-          </div>
-        </div>
-        <div class="fb-insight">${harder}</div>
       </div>
     `;
   }).join('');
@@ -2735,11 +2720,11 @@ function closeScorecard() {
 function renderAll() {
   renderWeekTabs();
   renderKpis();
+  renderBracketProfiles();
   renderInsights();
   renderMovers();
   renderHoleChart();
   renderDistribution();
-  renderFrontBack();
   renderHolesTables();
   renderPlayerTable();
 }
