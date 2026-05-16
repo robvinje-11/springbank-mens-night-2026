@@ -6,6 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v1.25  Version badge moved to top-left of the masthead, above the
+         deer-head logo — clear of the title and meta block on both
+         desktop and mobile. Masthead top padding nudged for room.
   v1.24  Version badge dropped down to sit vertically inline with the
          "Men's Night & Weekend Snips" title.
   v1.23  Version moved to the top-right corner of the masthead (pinned
@@ -124,7 +127,7 @@
   /* ===== HEADER ===== */
   header.masthead {
     border-bottom: 2px solid var(--ink);
-    padding: 36px 48px 28px;
+    padding: 40px 48px 28px;
     background: var(--cream);
     position: relative;
   }
@@ -135,7 +138,7 @@
   }
   .masthead-version {
     position: absolute;
-    top: 50px; right: 48px;
+    top: 12px; left: 48px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     font-weight: 600;
@@ -143,7 +146,7 @@
     letter-spacing: 0.04em;
   }
   @media (max-width: 720px) {
-    .masthead-version { top: 32px; right: 20px; }
+    .masthead-version { top: 10px; left: 20px; font-size: 12px; }
   }
   .masthead-row {
     display: flex; justify-content: space-between;
@@ -878,7 +881,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v1.24</div>
+    <div class="splash-version">v1.25</div>
   </div>
 </div>
 
@@ -902,7 +905,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v1.24</div>
+  <div class="masthead-version">v1.25</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
