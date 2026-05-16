@@ -1,4 +1,35 @@
 <!DOCTYPE html>
+<!--
+  ====================================================================
+  Springbank Links · Men's Night · 2026 Season Dashboard
+  Built with RTV Business Solutions Group Ltd.
+  ====================================================================
+  VERSION HISTORY
+  ────────────────────────────────────────────────────────────────────
+  v1.12  Admin code locked to user's private value — preserved on all
+         future iterations (no more placeholder resets).
+  v1.11  Bigger Field Filter bar — full-width, larger buttons,
+         responsive mobile layout.
+  v1.10  Admin code-gated "Add a New Week" panel (footer toggle).
+  v1.9   Scorecard now shows Gross + Net rows with orange stroke dots
+         on holes where the player gets a stroke.
+  v1.8   Fixed nested-cell hover bleed — score-cell colors stay intact
+         when hovering scorecard.
+  v1.7   Scorecards now expand inline directly below clicked player
+         row (click again to toggle close).
+  v1.6   Splash screen ported from Robbie Golf Live (Springbank logo,
+         heartbeat anim, RTV credit, 5.8s auto-dismiss).
+  v1.5   All grey text removed → bright white only. Royal blue accent
+         swapped to white inversion on active states.
+  v1.4   Weekly HC computed as gross − net. YTD HC rolled up to
+         rounded integer average.
+  v1.3   Add-a-Week paste UI + localStorage. Splash navy theme.
+  v1.2   Springbank logo embedded, dashboard navy + white theme.
+  v1.1   Week 1 + Week 2 multi-week support, YTD aggregates,
+         W-o-W movers, inline scorecard.
+  v1.0   Initial Week 2 single-week dashboard.
+  ====================================================================
+-->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -183,22 +214,32 @@
   /* ===== BRACKET FILTER ===== */
   .filter-bar {
     display: flex; gap: 0; background: var(--paper);
-    border: 1px solid var(--rule); padding: 4px;
-    margin-bottom: 12px; width: fit-content; border-radius: 2px;
+    border: 1px solid var(--rule); padding: 6px;
+    margin-bottom: 14px; width: 100%;
+    border-radius: 4px; flex-wrap: wrap;
   }
   .filter-btn {
-    padding: 10px 22px; font-family: 'DM Sans', sans-serif; font-size: 13px;
-    font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+    flex: 1 1 140px;
+    padding: 20px 20px; font-family: 'DM Sans', sans-serif; font-size: 17px;
+    font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
     background: transparent; border: none; color: var(--ink-soft);
-    cursor: pointer; transition: all 0.2s ease; border-radius: 2px;
+    cursor: pointer; transition: all 0.2s ease; border-radius: 3px;
+    text-align: center;
   }
-  .filter-btn:hover { color: var(--ink); }
+  .filter-btn:hover { color: var(--ink); background: rgba(255,255,255,0.04); }
   .filter-btn.active { background: #ffffff; color: #091529; font-weight: 600; }
   .filter-count {
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
-    margin-left: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    margin-left: 10px; font-weight: 500;
   }
-  .filter-note { font-size: 12px; color: #ffffff; font-style: italic; font-weight: 500; margin-bottom: 24px; }
+  .filter-note { font-size: 13px; color: #ffffff; font-style: italic; font-weight: 500; margin-bottom: 24px; }
+  @media (max-width: 640px) {
+    .filter-btn {
+      flex: 1 1 calc(50% - 4px);
+      padding: 14px 10px; font-size: 13px; letter-spacing: 0.04em;
+    }
+    .filter-count { font-size: 12px; margin-left: 6px; }
+  }
 
   /* ===== PANELS ===== */
   .panel {
@@ -690,7 +731,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v1.0</div>
+    <div class="splash-version">v1.12</div>
   </div>
 </div>
 
@@ -936,7 +977,7 @@
 // "view source"s the page can see the code. Good enough for a golf
 // league; do not use this pattern for anything actually sensitive.
 // =================================================================
-const ADMIN_CODE = "76220";              // CHANGE THIS to your private code
+const ADMIN_CODE = "76220";             // user's private admin code — preserve across iterations
 const ADMIN_STORAGE_KEY = "mn_admin_v1";
 
 function isAdmin() { return localStorage.getItem(ADMIN_STORAGE_KEY) === "1"; }
