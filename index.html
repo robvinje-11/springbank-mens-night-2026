@@ -857,11 +857,12 @@
   <div class="scorecard-wrap" id="scorecardWrap" style="display:none"></div>
 </section>
 
-<section style="margin-top:48px;">
+<section id="adminSection" class="admin-only" style="margin-top:48px;display:none;">
   <div class="section-head">
     <span class="num">No. 09</span>
     <h2>Add a New Week</h2>
     <span class="sub">Paste in the SmartGolf format — same as Week 1</span>
+    <span style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;background:#ffffff;color:#091529;padding:3px 10px;border-radius:2px;font-weight:700;margin-left:12px;">Admin</span>
   </div>
 
   <div id="storedWeeksWrap" class="panel" style="display:none;margin-bottom:16px;">
@@ -897,7 +898,7 @@
   </div>
 </section>
 
-<details class="help">
+<details class="help admin-only" id="adminHelpBlock" style="display:none;">
   <summary>+ Alternative: edit the file directly</summary>
   <div class="helpBody">
     <p>If you'd rather not use the paste UI, open this HTML file in any text editor, find the <code>WEEKS</code> array near the top of the <code>&lt;script&gt;</code> block, and append a new object:</p>
@@ -917,10 +918,63 @@
 </main>
 
 <footer>
-  Springbank Links League Dashboard · Par 71 · Multi-week tracker · Built for SmartGolf data
+  <div>Springbank Links League Dashboard · Par 71 · Multi-week tracker · Built for SmartGolf data</div>
+  <div style="margin-top:14px;">
+    <button id="adminToggleBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.22);color:#ffffff;padding:6px 16px;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;opacity:0.65;transition:opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.65">Admin</button>
+  </div>
 </footer>
 
 <script>
+// =================================================================
+// ADMIN AUTH
+// To change the code: edit ADMIN_CODE below to whatever you want,
+// save the file, push to GitHub. Anyone with the new code (you)
+// gets access to the "Add a New Week" panel; everyone else just
+// sees the dashboard.
+//
+// Note: this is client-side gating, not real security. Someone who
+// "view source"s the page can see the code. Good enough for a golf
+// league; do not use this pattern for anything actually sensitive.
+// =================================================================
+const ADMIN_CODE = "1234";              // CHANGE THIS to your private code
+const ADMIN_STORAGE_KEY = "mn_admin_v1";
+
+function isAdmin() { return localStorage.getItem(ADMIN_STORAGE_KEY) === "1"; }
+function setAdmin(flag) {
+  if (flag) localStorage.setItem(ADMIN_STORAGE_KEY, "1");
+  else localStorage.removeItem(ADMIN_STORAGE_KEY);
+}
+function applyAdminUI() {
+  const admin = isAdmin();
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = admin ? '' : 'none';
+  });
+  const btn = document.getElementById('adminToggleBtn');
+  if (btn) {
+    btn.textContent = admin ? 'Admin · Sign Out' : 'Admin';
+    btn.style.borderColor = admin ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.22)';
+    btn.style.opacity = admin ? '1' : '0.65';
+  }
+}
+function promptAdminLogin() {
+  const code = window.prompt('Enter admin code:');
+  if (code === null) return;       // user cancelled
+  if (code === ADMIN_CODE) {
+    setAdmin(true);
+    applyAdminUI();
+    // bring the new admin UI into view
+    const sect = document.getElementById('adminSection');
+    if (sect) sect.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    window.alert('Incorrect code.');
+  }
+}
+function adminSignOut() {
+  if (!window.confirm('Sign out of admin?')) return;
+  setAdmin(false);
+  applyAdminUI();
+}
+
 // =================================================================
 // COURSE DATA — Springbank Links
 // =================================================================
@@ -2078,6 +2132,15 @@ document.getElementById('showSnippetBtn').addEventListener('click', () => {
 // INIT
 // =================================================================
 (function init() {
+  // Admin toggle wiring (works whether you're logged in or not)
+  const adminBtn = document.getElementById('adminToggleBtn');
+  if (adminBtn) {
+    adminBtn.addEventListener('click', () => {
+      isAdmin() ? adminSignOut() : promptAdminLogin();
+    });
+  }
+  applyAdminUI();
+
   const stored = loadStoredWeeks();
   stored.forEach(w => {
     if (!WEEKS.find(ww => ww.id === w.id)) WEEKS.push(w);
