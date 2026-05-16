@@ -6,6 +6,13 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v3.8   Headlines now fully respect their bracket filter. Picking
+         Low / Mid / High recomputes every card from that bracket
+         only (round of the day, birdie leader, steadiest card, etc.)
+         and prefixes each title with the segment, e.g. "Low Cap ·
+         Round of the day". The cross-bracket "Biggest skill gap"
+         card is swapped for a bracket-specific "Trouble hole" when
+         a single bracket is selected.
   v3.7   Dashboard title ampersand now renders upright instead of the
          very calligraphic Fraunces italic form, so it reads as a
          normal "&".
@@ -1003,7 +1010,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v3.7</div>
+    <div class="splash-version">v3.8</div>
   </div>
 </div>
 
@@ -1027,7 +1034,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v3.7</div>
+  <div class="masthead-version">v3.8</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1967,18 +1974,26 @@ function renderKpis() {
 }
 
 // =================================================================
-// INSIGHTS
+// INSIGHTS — every headline respects the section's bracket filter.
+// When filtered to one bracket, all eight cards describe that bracket;
+// the two cross-bracket cards (skill gap / blow-up share) are swapped
+// for single-bracket equivalents.
 // =================================================================
 function renderInsights() {
+  const bracket = sectionBracket.insights;          // 'all' | 'low' | 'mid' | 'high'
   const items = filterByBracket(currentRounds(), 'insights');
   if (!items.length) {
-    document.getElementById('insights').innerHTML = '';
+    document.getElementById('insights').innerHTML =
+      '<div class="insight-card"><div class="insight-body" style="font-style:italic;opacity:0.7">No players in this bracket for this view.</div></div>';
     return;
   }
-  const lowPl  = currentRounds().filter(p => p.bracket === 'low');
-  const midPl  = currentRounds().filter(p => p.bracket === 'mid');
-  const highPl = currentRounds().filter(p => p.bracket === 'high');
+  const isAll = bracket === 'all';
+  const capName = { low: 'Low Cap', mid: 'Mid Cap', high: 'High Cap' }[bracket] || '';
+  // prefix for card titles, e.g. "Low Cap · "
+  const tp = isAll ? '' : capName + ' · ';
 
+  // All per-hole and per-player stats below are computed from `items`,
+  // which is already filtered to the chosen bracket.
   const holeAvgs = COURSE.par.map((p,i) => ({
     hole: i+1, par: p, si: COURSE.si[i],
     avg: holeAverage(items, i),
@@ -1986,63 +2001,104 @@ function renderInsights() {
   }));
   const hardest = [...holeAvgs].sort((a,b) => b.delta - a.delta)[0];
   const easiest = [...holeAvgs].sort((a,b) => a.delta - b.delta)[0];
-  const biggestGap = COURSE.par.map((p,i) => ({
-    hole: i+1, par: p,
-    gap: holeAverage(highPl, i) - holeAverage(lowPl, i),
-  })).sort((a,b)=>b.gap-a.gap)[0];
 
-  const bestNet = [...currentRounds()].sort((a,b) => getNet(a) - getNet(b))[0];
-  const bestGross = [...currentRounds()].sort((a,b) => getGross(a) - getGross(b))[0];
+  const bestNet = [...items].sort((a,b) => getNet(a) - getNet(b))[0];
+  const bestGross = [...items].sort((a,b) => getGross(a) - getGross(b))[0];
 
   // Birdie leader — birdies + eagles + albatrosses (the "red numbers")
   const birdieKey = r => ytdMode()
     ? (r.totalBirdies + r.totalEagles + r.totalAlbatrosses)
     : (r.birdies + r.eagles + r.albatrosses);
-  const birdieLeader = [...currentRounds()].sort((a,b) => birdieKey(b) - birdieKey(a))[0];
+  const birdieLeader = [...items].sort((a,b) => birdieKey(b) - birdieKey(a))[0];
   const blCount = birdieKey(birdieLeader);
 
   // Steadiest card — most pars (single round) / highest par rate (YTD)
   const parRate = r => ytdMode() ? (r.totalPars / (r.rounds * 18)) : (r.pars / 18);
-  const steadiest = [...currentRounds()].sort((a,b) => parRate(b) - parRate(a))[0];
+  const steadiest = [...items].sort((a,b) => parRate(b) - parRate(a))[0];
 
-  const totalDoubles = currentRounds().reduce((s,r) => s + (ytdMode() ? r.totalDoubles : r.doubles), 0);
+  const totalDoubles = items.reduce((s,r) => s + (ytdMode() ? r.totalDoubles : r.doubles), 0);
   const totalHoles = ytdMode()
-    ? currentRounds().reduce((s,a)=>s+a.rounds*18, 0)
-    : currentRounds().length * 18;
+    ? items.reduce((s,a)=>s+a.rounds*18, 0)
+    : items.length * 18;
   const dblPct = (totalDoubles / totalHoles * 100).toFixed(1);
 
+  // --- Card 7: cross-bracket "skill gap" only makes sense for All ---
+  let card7;
+  if (isAll) {
+    const lowPl  = currentRounds().filter(p => p.bracket === 'low');
+    const highPl = currentRounds().filter(p => p.bracket === 'high');
+    if (lowPl.length && highPl.length) {
+      const biggestGap = COURSE.par.map((p,i) => ({
+        hole: i+1, par: p,
+        gap: holeAverage(highPl, i) - holeAverage(lowPl, i),
+      })).sort((a,b)=>b.gap-a.gap)[0];
+      card7 = { cls: '', title: 'Biggest skill gap',
+        body: `On <strong>Hole ${biggestGap.hole}</strong> (par ${biggestGap.par}), high handicaps average <strong>${biggestGap.gap.toFixed(2)} more strokes</strong> than low. The widest spread on the card.` };
+    } else {
+      card7 = { cls: '', title: 'Toughest stretch',
+        body: `The field's worst three-hole run averages <strong>+${worstStretch(items).toFixed(2)}</strong> over par.` };
+    }
+  } else {
+    // Single bracket → biggest blow-up hole for that bracket
+    const worstHole = [...holeAvgs].sort((a,b)=>b.delta-a.delta)[0];
+    card7 = { cls: '', title: `${capName} · Trouble hole`,
+      body: `${capName} players give the most back on <strong>Hole ${worstHole.hole}</strong> (par ${worstHole.par}) — averaging <strong>+${worstHole.delta.toFixed(2)}</strong> there.` };
+  }
+
+  // --- Card 8: blow-up holes. For All, show the High-bracket share;
+  //     for a single bracket, just that bracket's blow-up rate. ---
+  let card8;
+  if (isAll) {
+    const highPl = currentRounds().filter(p => p.bracket === 'high');
+    const highDbl = highPl.reduce((s,r)=>s+(ytdMode()?r.totalDoubles:r.doubles),0);
+    card8 = { cls: 'red', title: 'Blow-up holes',
+      body: `<strong>${totalDoubles}</strong> doubles-or-worse in this view (${dblPct}% of holes). High bracket owns <strong>${totalDoubles ? Math.round(highDbl / totalDoubles * 100) : 0}%</strong> of them.` };
+  } else {
+    card8 = { cls: 'red', title: `${capName} · Blow-up holes`,
+      body: `<strong>${totalDoubles}</strong> double${totalDoubles===1?'':'s'}-or-worse from the ${capName} bracket — <strong>${dblPct}%</strong> of their holes.` };
+  }
+
   const items_ = [
-    { cls: 'red', title: 'Hardest hole',
+    { cls: 'red', title: tp + 'Hardest hole',
       body: `<strong>Hole ${hardest.hole}</strong> (par ${hardest.par}, SI ${hardest.si}) played to <strong>${hardest.avg.toFixed(2)}</strong> — <strong>+${hardest.delta.toFixed(2)} over par</strong>.` },
-    { cls: 'green', title: 'Easiest hole',
+    { cls: 'green', title: tp + 'Easiest hole',
       body: `<strong>Hole ${easiest.hole}</strong> (par ${easiest.par}, SI ${easiest.si}) averaged <strong>${easiest.avg.toFixed(2)}</strong>, only <strong>+${easiest.delta.toFixed(2)}</strong>.` },
-    { cls: 'green', title: ytdMode() ? 'Top YTD gross (avg)' : 'Round of the day (gross)',
+    { cls: 'green', title: tp + (ytdMode() ? 'Top YTD gross (avg)' : 'Round of the day (gross)'),
       body: ytdMode()
         ? `<strong>${bestGross.name}</strong> (HC ${bestGross.hc}) owns the lowest scoring average — <strong>${bestGross.avgGross.toFixed(1)} gross</strong> over ${bestGross.rounds} round${bestGross.rounds===1?'':'s'}.`
         : `<strong>${bestGross.name}</strong> (HC ${bestGross.hc}) posted the low gross — a <strong>${bestGross.gross}</strong> (net ${bestGross.net}).` },
-    { cls: 'green', title: ytdMode() ? 'Top YTD net (avg)' : 'Round of the day (net)',
+    { cls: 'green', title: tp + (ytdMode() ? 'Top YTD net (avg)' : 'Round of the day (net)'),
       body: ytdMode()
         ? `<strong>${bestNet.name}</strong> (HC ${bestNet.hc}) sits on an avg net <strong>${bestNet.avgNet.toFixed(1)}</strong> across ${bestNet.rounds} round${bestNet.rounds===1?'':'s'}.`
         : `<strong>${bestNet.name}</strong> (HC ${bestNet.hc}) shot net <strong>${bestNet.net}</strong> — gross ${bestNet.gross} — for ${bestNet.np} net points.` },
-    { cls: '', title: 'Birdie leader',
+    { cls: '', title: tp + 'Birdie leader',
       body: blCount === 0
-        ? `No birdies in this view yet — the field was held to par or worse on every hole.`
+        ? `No birdies in this view yet — held to par or worse on every hole.`
         : (ytdMode()
             ? `<strong>${birdieLeader.name}</strong> has the most red numbers this season — <strong>${blCount} birdie${blCount===1?'':'s'} or better</strong>.`
-            : `<strong>${birdieLeader.name}</strong> lit up the card with <strong>${blCount} birdie${blCount===1?'':'s'} or better</strong> — the most in the field.`) },
-    { cls: 'green', title: 'Steadiest card',
+            : `<strong>${birdieLeader.name}</strong> lit up the card with <strong>${blCount} birdie${blCount===1?'':'s'} or better</strong> — the most in${isAll ? ' the field' : ' the bracket'}.`) },
+    { cls: 'green', title: tp + 'Steadiest card',
       body: ytdMode()
-        ? `<strong>${steadiest.name}</strong> pars <strong>${(steadiest.totalPars/(steadiest.rounds*18)*100).toFixed(0)}% of holes</strong> — the most consistent stick in the field.`
+        ? `<strong>${steadiest.name}</strong> pars <strong>${(steadiest.totalPars/(steadiest.rounds*18)*100).toFixed(0)}% of holes</strong> — the most consistent stick${isAll ? ' in the field' : ' in the bracket'}.`
         : `<strong>${steadiest.name}</strong> was metronomic — <strong>${steadiest.pars} par${steadiest.pars===1?'':'s'}</strong> with just ${steadiest.doubles} blow-up${steadiest.doubles===1?'':'s'} on the card.` },
-    { cls: '', title: 'Biggest skill gap',
-      body: `On <strong>Hole ${biggestGap.hole}</strong> (par ${biggestGap.par}), high handicaps average <strong>${biggestGap.gap.toFixed(2)} more strokes</strong> than low. The widest spread on the card.` },
-    { cls: 'red', title: 'Blow-up holes',
-      body: `<strong>${totalDoubles}</strong> doubles-or-worse in this view (${dblPct}% of holes). High bracket owns <strong>${highPl.length ? Math.round(highPl.reduce((s,r)=>s+(ytdMode()?r.totalDoubles:r.doubles),0) / totalDoubles * 100) : 0}%</strong> of them.` },
+    card7,
+    card8,
   ];
 
   document.getElementById('insights').innerHTML = items_.map(it =>
     `<div class="insight-card ${it.cls}"><div class="insight-title">${it.title}</div><div class="insight-body">${it.body}</div></div>`
   ).join('');
+}
+
+// Worst rolling 3-hole stretch (avg strokes over par) for a set of rounds.
+function worstStretch(items) {
+  const over = COURSE.par.map((p,i) => holeAverage(items, i) - p);
+  let worst = -Infinity;
+  for (let i = 0; i <= 15; i++) {
+    const s = (over[i] + over[i+1] + over[i+2]) / 3;
+    if (s > worst) worst = s;
+  }
+  return worst;
 }
 
 // =================================================================
