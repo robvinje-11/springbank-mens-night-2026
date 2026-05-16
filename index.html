@@ -6,6 +6,14 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v1.24  Version badge dropped down to sit vertically inline with the
+         "Men's Night & Weekend Snips" title.
+  v1.23  Version moved to the top-right corner of the masthead (pinned
+         absolute) instead of sitting in the meta list. Same bright
+         white JetBrains Mono styling.
+  v1.22  Version number now shown in the masthead meta block (far
+         right, under "Unique players") — bright white, matching the
+         Course Par row format. Still also on the splash screen.
   v1.21  KPI distribution row: dropped "of holes" suffix — just "%".
          Cleaner read since the section header already says "Share of
          holes played as eagle / birdie / par / bogey / double+".
@@ -124,6 +132,18 @@
     content: ''; position: absolute;
     left: 48px; right: 48px; bottom: -6px; height: 1px;
     background: var(--ink);
+  }
+  .masthead-version {
+    position: absolute;
+    top: 50px; right: 48px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: 0.04em;
+  }
+  @media (max-width: 720px) {
+    .masthead-version { top: 32px; right: 20px; }
   }
   .masthead-row {
     display: flex; justify-content: space-between;
@@ -858,7 +878,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v1.21</div>
+    <div class="splash-version">v1.24</div>
   </div>
 </div>
 
@@ -882,6 +902,7 @@
 
 
 <header class="masthead">
+  <div class="masthead-version">v1.24</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
