@@ -6,6 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v1.21  KPI distribution row: dropped "of holes" suffix — just "%".
+         Cleaner read since the section header already says "Share of
+         holes played as eagle / birdie / par / bogey / double+".
   v1.20  Per-round scorecard summary now mirrors the Season Aggregate:
          all 6 categories always visible (Albatross through Double+)
          with % of 18 holes next to each count. Colors aligned with
@@ -855,7 +858,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v1.20</div>
+    <div class="splash-version">v1.21</div>
   </div>
 </div>
 
@@ -1582,32 +1585,32 @@ function renderKpis() {
     <div class="kpi">
       <div class="kpi-label">Albatross</div>
       <div class="kpi-value" style="color:#facc15">${dist.albatrosses}</div>
-      <div class="kpi-sub">${pct(dist.albatrosses)}% of holes</div>
+      <div class="kpi-sub">${pct(dist.albatrosses)}%</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Eagle</div>
       <div class="kpi-value" style="color:#b48dd9">${dist.eagles}</div>
-      <div class="kpi-sub">${pct(dist.eagles)}% of holes</div>
+      <div class="kpi-sub">${pct(dist.eagles)}%</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Birdie</div>
       <div class="kpi-value" style="color:#ff6b5e">${dist.birdies}</div>
-      <div class="kpi-sub">${pct(dist.birdies)}% of holes</div>
+      <div class="kpi-sub">${pct(dist.birdies)}%</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Par</div>
       <div class="kpi-value" style="color:#62d4a1">${dist.pars}</div>
-      <div class="kpi-sub">${pct(dist.pars)}% of holes</div>
+      <div class="kpi-sub">${pct(dist.pars)}%</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Bogey</div>
       <div class="kpi-value" style="color:#f59e0b">${dist.bogeys}</div>
-      <div class="kpi-sub">${pct(dist.bogeys)}% of holes</div>
+      <div class="kpi-sub">${pct(dist.bogeys)}%</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Double+</div>
       <div class="kpi-value" style="color:#ff8e84">${dist.doubles}</div>
-      <div class="kpi-sub">${pct(dist.doubles)}% of holes</div>
+      <div class="kpi-sub">${pct(dist.doubles)}%</div>
     </div>
   `;
 }
