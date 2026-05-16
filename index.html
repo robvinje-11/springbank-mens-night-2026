@@ -6,6 +6,10 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v2.1   Manage entries now timestamps each added/corrected week with
+         the date + time it was pasted (e.g. "Added May 16, 2026,
+         3:42 PM"). Makes it easy to tell entries apart — especially
+         duplicates with the same label. Original weeks show no stamp.
   v2.0   MAJOR release.
          · Admin panel has its own event switch button (Men's Night
            ↔ Weekend Snips) — no need to scroll up to the tabs.
@@ -937,7 +941,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v2.0</div>
+    <div class="splash-version">v2.1</div>
   </div>
 </div>
 
@@ -961,7 +965,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v2.0</div>
+  <div class="masthead-version">v2.1</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -2625,6 +2629,17 @@ function nextWeekId() { return WEEKS.reduce((m,w) => Math.max(m, w.id), 0) + 1; 
 
 function refreshAllData() { recomputeAll(); }
 
+// "May 16, 2026, 3:42 PM" from an epoch-ms timestamp
+function formatSavedAt(ms) {
+  if (!ms) return '';
+  try {
+    return new Date(ms).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit'
+    });
+  } catch (e) { return ''; }
+}
+
 function renderStoredWeeks() {
   const wrap = document.getElementById('storedWeeksWrap');
   const list = document.getElementById('storedWeeksList');
@@ -2642,13 +2657,22 @@ function renderStoredWeeks() {
     else if (isStored && !isBase){ tag = 'added';     tagColor = '#62d4a1'; }
     else                         { tag = 'original';  tagColor = 'var(--muted)'; }
     const tagHtml = `<span style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;border:1px solid ${tagColor};color:${tagColor};padding:2px 7px;border-radius:2px;margin-left:8px;">${tag}</span>`;
+    // Timestamp — only stored (added/corrected) weeks carry savedAt
+    let stampHtml = '';
+    if (isStored && w.savedAt) {
+      const verb = tag === 'corrected' ? 'Corrected' : 'Added';
+      stampHtml = `<div style="font-size:10px;color:var(--muted);font-style:italic;margin-top:3px;">${verb} ${formatSavedAt(w.savedAt)}</div>`;
+    }
     // Remove (added) / Revert (corrected base) — only for stored entries
     const removeHtml = isStored
       ? `<button data-revert="${w.id}" style="padding:6px 12px;background:transparent;color:#ff6b5e;border:1px solid #ff6b5e;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">${isBase ? 'Revert' : 'Remove'}</button>`
       : '';
     return `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--rule-soft);">
-        <span><strong>${viewDisplayName(w, {full:true})}</strong> · ${count} players${tagHtml}</span>
+        <span style="display:flex;flex-direction:column;gap:0;">
+          <span><strong>${viewDisplayName(w, {full:true})}</strong> · ${count} players${tagHtml}</span>
+          ${stampHtml}
+        </span>
         <span style="display:flex;gap:6px;">
           <button data-overwrite="${w.id}" style="padding:6px 12px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">Overwrite</button>
           ${removeHtml}
@@ -2754,8 +2778,9 @@ document.getElementById('parseAddBtn').addEventListener('click', () => {
 
   // Save into the per-event stored list. A stored entry whose id matches a
   // base week overrides it (= overwrite); a new id is an addition.
+  // savedAt records when this paste happened, shown in Manage entries.
   const stored = loadStoredWeeks();
-  const entry = { id: targetId, label, date, players };
+  const entry = { id: targetId, label, date, players, savedAt: Date.now() };
   const existingIdx = stored.findIndex(w => w.id === targetId);
   if (existingIdx >= 0) stored[existingIdx] = entry;
   else stored.push(entry);
