@@ -451,6 +451,15 @@
   }
   .legend-item { display: flex; align-items: center; gap: 8px; }
   .legend-swatch { width: 14px; height: 14px; border-radius: 2px; }
+  .legend-item.clickable {
+    cursor: pointer; padding: 4px 10px; border-radius: 3px;
+    border: 1px solid transparent; transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+    opacity: 0.55; user-select: none;
+  }
+  .legend-item.clickable:hover { opacity: 0.85; background: rgba(255,255,255,0.05); }
+  .legend-item.clickable.active {
+    opacity: 1; background: rgba(255,255,255,0.09); border-color: var(--rule);
+  }
   .hole-chart {
     width: 100%; height: 360px; position: relative; overflow-x: auto;
   }
@@ -1051,13 +1060,14 @@
   <div class="section-head">
     <span class="num">No. 04</span>
     <h2>Hole by Hole — Average vs Par</h2>
-    <span class="sub">Bars show strokes <em>over par</em> by bracket</span>
+    <span class="sub">Click the legend — <em>All</em> shows the whole field; Low/Mid/High are multi-select</span>
   </div>
   <div class="panel">
-    <div class="chart-legend">
-      <div class="legend-item"><span class="legend-swatch" style="background:#ffffff"></span> Low (0–7)</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:#7eb8e8"></span> Mid (8–15)</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:1px solid #ffffff"></span> High (16+)</div>
+    <div class="chart-legend" id="holeChartLegend">
+      <div class="legend-item clickable" data-bracket="all"><span class="legend-swatch" style="background:#6f9fd8"></span> All</div>
+      <div class="legend-item clickable" data-bracket="low"><span class="legend-swatch" style="background:#ffffff"></span> Low (0–7)</div>
+      <div class="legend-item clickable" data-bracket="mid"><span class="legend-swatch" style="background:#7eb8e8"></span> Mid (8–15)</div>
+      <div class="legend-item clickable" data-bracket="high"><span class="legend-swatch" style="background:transparent;border:1px solid #ffffff"></span> High (16+)</div>
       <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--ink)"></span> Par line</div>
     </div>
     <div class="hole-chart"><svg id="holeChart" viewBox="0 0 900 360" preserveAspectRatio="xMidYMid meet"></svg></div>
@@ -2017,25 +2027,58 @@ function renderMovers() {
 // =================================================================
 // HOLE BY HOLE CHART
 // =================================================================
+// Hole-by-Hole chart filter, set by clicking its legend.
+//  - mode 'all'      → one accumulated bar = whole field's avg vs par
+//  - mode 'brackets' → a grouped bar for each selected bracket
+//    (multi-select: any combination of Low / Mid / High)
+let holeChartMode = 'all';
+let holeChartBrackets = { low: true, mid: true, high: true };
+
+function syncHoleChartLegend() {
+  document.querySelectorAll('#holeChartLegend .legend-item.clickable').forEach(el => {
+    const b = el.dataset.bracket;
+    const active = (b === 'all')
+      ? holeChartMode === 'all'
+      : holeChartMode === 'brackets' && holeChartBrackets[b];
+    el.classList.toggle('active', active);
+  });
+}
+
+// Color/stroke for each series key
+function holeChartStyle(key) {
+  if (key === 'all') return { fill: '#6f9fd8', stroke: 'none',    sw: 0 };
+  if (key === 'low') return { fill: '#ffffff', stroke: 'none',    sw: 0 };
+  if (key === 'mid') return { fill: '#7eb8e8', stroke: 'none',    sw: 0 };
+  return                    { fill: 'none',    stroke: '#ffffff', sw: 1.25 }; // high
+}
+
 function renderHoleChart() {
+  syncHoleChartLegend();
   const svg = document.getElementById('holeChart');
   const W = 900, H = 360;
   const pad = { l: 44, r: 16, t: 32, b: 64 };
   const chartW = W - pad.l - pad.r;
   const chartH = H - pad.t - pad.b;
   const items = currentRounds();
-  const lowAvgs  = COURSE.par.map((_,i) => holeAverage(items.filter(p=>p.bracket==='low'), i));
-  const midAvgs  = COURSE.par.map((_,i) => holeAverage(items.filter(p=>p.bracket==='mid'), i));
-  const highAvgs = COURSE.par.map((_,i) => holeAverage(items.filter(p=>p.bracket==='high'), i));
-  const lowOver  = lowAvgs.map((v,i) => v - COURSE.par[i]);
-  const midOver  = midAvgs.map((v,i) => v - COURSE.par[i]);
-  const highOver = highAvgs.map((v,i) => v - COURSE.par[i]);
-  const maxOver = Math.max(...lowOver, ...midOver, ...highOver, 1.5) * 1.1;
 
-  const showLow  = state.bracket === 'all' || state.bracket === 'low';
-  const showMid  = state.bracket === 'all' || state.bracket === 'mid';
-  const showHigh = state.bracket === 'all' || state.bracket === 'high';
-  const numActive = [showLow, showMid, showHigh].filter(Boolean).length;
+  // Build the list of series (bars) to draw for each hole
+  let series;
+  if (holeChartMode === 'all') {
+    series = [{ key: 'all', label: 'Field', items }];
+  } else {
+    series = [];
+    if (holeChartBrackets.low)  series.push({ key: 'low',  label: 'Low',  items: items.filter(p=>p.bracket==='low')  });
+    if (holeChartBrackets.mid)  series.push({ key: 'mid',  label: 'Mid',  items: items.filter(p=>p.bracket==='mid')  });
+    if (holeChartBrackets.high) series.push({ key: 'high', label: 'High', items: items.filter(p=>p.bracket==='high') });
+  }
+  series.forEach(s => {
+    s.avgs = COURSE.par.map((_,i) => holeAverage(s.items, i));
+    s.over = s.avgs.map((v,i) => v - COURSE.par[i]);
+  });
+
+  const allOver = series.reduce((acc,s) => acc.concat(s.over), []);
+  const maxOver = Math.max(...allOver, 1.5) * 1.1;
+  const numActive = Math.max(1, series.length);
 
   const holeW = chartW / 18;
   const barGroupW = holeW * 0.78;
@@ -2053,23 +2096,15 @@ function renderHoleChart() {
   // bars
   for (let i = 0; i < 18; i++) {
     const x = pad.l + i * holeW + barGap;
-    let off = 0;
-    const drawBar = (val, cls, avg) => {
+    series.forEach((s, k) => {
+      const val = s.over[i];
       const h = Math.max(0, (val / maxOver) * chartH);
       const y = pad.t + chartH - h;
-      const tooltip = `Hole ${i+1} · ${cls} avg ${avg.toFixed(2)} (${val>=0?'+':''}${val.toFixed(2)})`;
-      // Low = solid white, Mid = solid sky blue, High = outlined white (no fill)
-      const isHigh = cls === 'High';
-      const fill   = cls === 'Low' ? '#ffffff' : cls === 'Mid' ? '#7eb8e8' : 'none';
-      const stroke = isHigh ? '#ffffff' : 'none';
-      const sw     = isHigh ? 1.25 : 0;
-      html += `<rect x="${x + off}" y="${y}" width="${barW - 1}" height="${h}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" rx="1">
+      const tooltip = `Hole ${i+1} · ${s.label} avg ${s.avgs[i].toFixed(2)} (${val>=0?'+':''}${val.toFixed(2)})`;
+      const st = holeChartStyle(s.key);
+      html += `<rect x="${x + k*barW}" y="${y}" width="${barW - 1}" height="${h}" fill="${st.fill}" stroke="${st.stroke}" stroke-width="${st.sw}" rx="1">
                  <title>${tooltip}</title></rect>`;
-      off += barW;
-    };
-    if (showLow)  drawBar(lowOver[i], 'Low', lowAvgs[i]);
-    if (showMid)  drawBar(midOver[i], 'Mid', midAvgs[i]);
-    if (showHigh) drawBar(highOver[i], 'High', highAvgs[i]);
+    });
     const cx = pad.l + i * holeW + holeW/2;
     html += `<text x="${cx}" y="${H - pad.b + 18}" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="600" fill="#ffffff">${i+1}</text>`;
     html += `<text x="${cx}" y="${H - pad.b + 32}" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#ffffff">P${COURSE.par[i]}·SI${COURSE.si[i]}</text>`;
@@ -2920,6 +2955,29 @@ async function initFirebase() {
   // Event switcher wiring (Men's Night vs Weekend Snips)
   document.querySelectorAll('.event-btn').forEach(btn => {
     btn.addEventListener('click', () => switchEvent(btn.dataset.event));
+  });
+
+  // Hole-by-Hole chart legend → All = accumulated field bar;
+  // Low / Mid / High are multi-select (toggle any combination).
+  document.querySelectorAll('#holeChartLegend .legend-item.clickable').forEach(el => {
+    el.addEventListener('click', () => {
+      const b = el.dataset.bracket;
+      if (b === 'all') {
+        holeChartMode = 'all';
+      } else if (holeChartMode === 'all') {
+        // leaving All → isolate the clicked bracket
+        holeChartMode = 'brackets';
+        holeChartBrackets = { low: false, mid: false, high: false };
+        holeChartBrackets[b] = true;
+      } else {
+        holeChartBrackets[b] = !holeChartBrackets[b];
+        // cleared every bracket → fall back to the accumulated All view
+        if (!holeChartBrackets.low && !holeChartBrackets.mid && !holeChartBrackets.high) {
+          holeChartMode = 'all';
+        }
+      }
+      renderHoleChart();
+    });
   });
 
   // Render once with built-in seed data so the page isn't blank while
