@@ -6,6 +6,41 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v2.0   MAJOR release.
+         · Admin panel has its own event switch button (Men's Night
+           ↔ Weekend Snips) — no need to scroll up to the tabs.
+         · OVERWRITE: any week (base or pasted) can be corrected.
+           The data model now computes WEEKS from baseWeeks + stored
+           overrides; a stored entry with a matching id replaces the
+           base week. "Manage entries" lists every week with
+           Overwrite / Remove / Revert.
+         · Snips date no longer doubles up. Display auto-detects when
+           a label already contains its date ("Sat · May 9") and
+           shows it once. To change a day's display, edit its label.
+         · View picker is now adaptive: a row of tabs while small,
+           auto-switches to a compact dropdown past WEEK_TAB_LIMIT (7)
+           views so the top bar never sprawls as the season grows.
+  v1.30  Admin "Add a New Week" panel is now fully event-aware:
+         · Parser handles both quota (Men's Night) and vs-Par (Snips)
+           formats — Snips totals line just needs Gross + Net, vs-Par
+           is computed automatically.
+         · Panel re-skins per active event (title, instructions,
+           placeholders) with a banner showing which event you're
+           adding to. Storage was already namespaced per event.
+  v1.29  Exclusion filter now also catches "Ghost" names, not just
+         "Blind" — covers placeholder partners however they're named.
+  v1.28  "Blind" players (placeholder partners the club uses to even
+         out an odd field) are now excluded from ALL data — stats,
+         headlines, standings, YTD, charts, KPIs. Filter is a single
+         isExcludedPlayer() check applied at the normalize step, so
+         it covers admin-pasted weeks too.
+  v1.27  Headlines reordered into 4 logical pairs: hardest/easiest,
+         gross/net round of the day, birdie leader/steadiest card,
+         skill gap/blow-up holes.
+  v1.26  Headlines expanded from 5 to 8 cards. New:
+         · Round of the day (gross) — low gross / best YTD avg gross
+         · Birdie leader — most birdies+ in the view
+         · Steadiest card — most pars / highest par rate
   v1.25  Version badge moved to top-left of the masthead, above the
          deer-head logo — clear of the title and meta block on both
          desktop and mobile. Masthead top padding nudged for room.
@@ -226,6 +261,27 @@
   }
   .week-tab.ytd { font-style: italic; }
   .week-tab.ytd.active { background: #ffffff; color: #091529; border-color: #ffffff; }
+  /* Dropdown variant of the view picker — used when there are many weeks */
+  .week-select {
+    padding: 9px 40px 9px 16px;
+    background-color: var(--paper);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9'><path d='M1 1.5 L7 7 L13 1.5' stroke='white' stroke-width='2' fill='none'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.03em;
+    border-radius: 2px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    min-width: 210px;
+  }
+  .week-select:hover { border-color: var(--green); }
+  .week-select option { background: var(--paper); color: var(--ink); }
 
   /* ===== MAIN ===== */
   main { max-width: 1440px; margin: 0 auto; padding: 32px 48px 64px; }
@@ -881,7 +937,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v1.25</div>
+    <div class="splash-version">v2.0</div>
   </div>
 </div>
 
@@ -905,7 +961,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v1.25</div>
+  <div class="masthead-version">v2.0</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1060,22 +1116,32 @@
 <section id="adminSection" class="admin-only" style="margin-top:48px;display:none;">
   <div class="section-head">
     <span class="num">No. 09</span>
-    <h2>Add a New Week</h2>
-    <span class="sub">Paste in the SmartGolf format — same as Week 1</span>
+    <h2 id="adminPanelTitle">Add a New Week</h2>
+    <span class="sub" id="adminPanelSub">Paste in the SmartGolf format — same as Week 1</span>
     <span style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;background:#ffffff;color:#091529;padding:3px 10px;border-radius:2px;font-weight:700;margin-left:12px;">Admin</span>
   </div>
 
+  <div id="adminEventBanner" style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 18px;background:#ffffff;color:#091529;border-radius:3px;margin-bottom:16px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.02em;">
+    <span>Currently managing: <strong id="adminEventName">Men&rsquo;s Night</strong></span>
+    <button id="adminEventSwitchBtn" style="padding:9px 18px;background:#091529;color:#fff;border:none;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;">Switch to Weekend Snips</button>
+  </div>
+
   <div id="storedWeeksWrap" class="panel" style="display:none;margin-bottom:16px;">
-    <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;margin-bottom:12px;">Weeks added in this browser</div>
-    <div id="storedWeeksList"></div>
-    <div style="font-size:11px;color:#fff;margin-top:10px;font-style:italic;">
-      These are saved in your browser only (localStorage). To make them permanent in the file (so others see them when you share), use the JS snippet button below after parsing.
+    <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;margin-bottom:4px;">Manage entries</div>
+    <div style="font-size:11px;color:#fff;margin-bottom:12px;font-style:italic;">
+      Overwrite fixes a bad paste; Remove deletes an added entry; Revert restores an original week to its built-in data.
     </div>
+    <div id="storedWeeksList"></div>
   </div>
 
   <div class="panel">
+    <div id="adminModeBanner" style="display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:14px;background:#f59e0b;color:#091529;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;">
+      <span id="adminModeText">Overwrite mode</span>
+      <button id="adminCancelOverwriteBtn" style="padding:6px 14px;background:#091529;color:#fff;border:none;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">Cancel — add new instead</button>
+    </div>
+
     <div style="margin-bottom:14px;">
-      <div style="font-size:12px;letter-spacing:0.05em;line-height:1.6;">
+      <div id="adminPasteInstructions" style="font-size:12px;letter-spacing:0.05em;line-height:1.6;">
         Paste the exact format SmartGolf gives you: <strong>handicap, name, 18 hole scores (one per line), then a totals line</strong> (Gross / Net / Gross Pts / Net Pts) for each player. Header rows are auto-skipped.
       </div>
     </div>
@@ -1101,15 +1167,28 @@
 <details class="help admin-only" id="adminHelpBlock" style="display:none;">
   <summary>+ Alternative: edit the file directly</summary>
   <div class="helpBody">
-    <p>If you'd rather not use the paste UI, open this HTML file in any text editor, find the <code>WEEKS</code> array near the top of the <code>&lt;script&gt;</code> block, and append a new object:</p>
+    <p>If you'd rather not use the paste UI, open this HTML file in any text editor, find the active event's <code>baseWeeks</code> array inside the <code>EVENTS</code> object near the top of the <code>&lt;script&gt;</code> block, and append a new object:</p>
   </div>
-  <pre>{
+  <pre>// Men's Night — last two values are quota points:
+{
   id: 3,
   label: "Week 3",
   date: "May 19, 2026",
   players: [
-    // Format: [name, hc, [18 hole scores], gross, net, grossPoints, netPoints]
+    // [name, hc, [18 hole scores], gross, net, grossPts, netPts]
     ["Player Name", 5, [4,4,5,4,3,4,4,3,5, 3,4,4,4,4,4,3,5,4], 71, 66, 36, 41],
+    // ...add the rest
+  ]
+}
+
+// Weekend Snips — last two values are vs-par (gross-71, net-71):
+{
+  id: 3,
+  label: "Sat · May 16",
+  date: "May 16, 2026",
+  players: [
+    // [name, hc, [18 hole scores], gross, net, vsParGross, vsParNet]
+    ["Player Name", 5, [4,4,5,4,3,4,4,3,5, 3,4,4,4,4,4,3,5,4], 74, 67, 3, -4],
     // ...add the rest
   ]
 }</pre>
@@ -1206,7 +1285,7 @@ const EVENTS = {
     mastheadSubtitle: "2026 Season Dashboard",
     scoring: "quota",   // shows G.Pts/N.Pts columns
     viewLabel: "Week",  // label for week tabs (e.g. "Week 1")
-    weeks: [
+    baseWeeks: [
       {
         id: 1, label: "Week 1", date: "May 5, 2026",
         players: [
@@ -1301,7 +1380,7 @@ const EVENTS = {
     mastheadSubtitle: "Weekend Series Dashboard",
     scoring: "vsPar",   // shows vs Par G/N columns instead of G.Pts/N.Pts
     viewLabel: "",      // labels are full dates like "Sat May 9"
-    weeks: [
+    baseWeeks: [
       {
         id: 1, label: "Sat · May 9", date: "May 9, 2026",
         players: [
@@ -1336,9 +1415,10 @@ const EVENTS = {
   },  // end snips
 };
 
-// `WEEKS` is a live reference that gets swapped when the active event changes.
-// All existing code below operates on WEEKS exactly as it did before.
-let WEEKS = EVENTS.mensNight.weeks;
+// `WEEKS` holds the active event's weeks. It is rebuilt by rebuildWeeks()
+// from the event's baseWeeks merged with any admin-stored weeks (additions
+// and corrections). Populated properly during init.
+let WEEKS = [];
 
 // =================================================================
 // NORMALIZE — turn array tuples into objects with derived fields
@@ -1364,7 +1444,35 @@ function normalizeRound(arr) {
     bracket: hc <= 7 ? 'low' : hc <= 15 ? 'mid' : 'high'
   };
 }
-WEEKS.forEach(w => { w.rounds = w.players.map(normalizeRound); });
+
+// Placeholder partners the club drops in to even out an odd field
+// (named "Blind ..." or "Ghost ..."). Excluded from ALL stats,
+// headlines, and standings.
+function isExcludedPlayer(name) {
+  return /blind|ghost/i.test(String(name || ''));
+}
+
+// Turn a week's raw player tuples into normalized rounds, dropping
+// excluded (Blind) players first so they never enter any aggregation.
+function buildWeekRounds(players) {
+  return players
+    .filter(p => !isExcludedPlayer(p[0]))
+    .map(normalizeRound);
+}
+
+// Rebuild WEEKS for the active event: the event's baseWeeks merged with
+// any admin-stored weeks. A stored week with the same id as a base week
+// OVERRIDES it (this is how "overwrite incorrect data" works); a stored
+// week with a new id is appended. Every week gets its rounds normalized.
+function rebuildWeeks() {
+  const ev = currentEvent();
+  const stored = loadStoredWeeks();          // admin additions + corrections
+  const byId = new Map();
+  ev.baseWeeks.forEach(w => byId.set(w.id, { id: w.id, label: w.label, date: w.date, players: w.players }));
+  stored.forEach(w => byId.set(w.id, w));    // override base, or add new
+  WEEKS = [...byId.values()].sort((a,b) => a.id - b.id);
+  WEEKS.forEach(w => { w.rounds = buildWeekRounds(w.players); });
+}
 
 // =================================================================
 // YTD AGGREGATION
@@ -1436,27 +1544,37 @@ const state = {
 
 function currentEvent() { return EVENTS[state.eventId]; }
 
-// Swap the active event. Re-normalizes its weeks if needed, rebuilds YTD,
-// resets the view to the latest entry, and re-renders everything.
-function switchEvent(newId) {
-  if (newId === state.eventId) return;
-  if (!EVENTS[newId]) return;
-  // Close any open scorecard before swapping data
-  if (typeof closeScorecard === 'function') closeScorecard();
-  state.eventId = newId;
-  WEEKS = EVENTS[newId].weeks;
-  // Normalize this event's rounds if not already done
-  WEEKS.forEach(w => { if (!w.rounds) w.rounds = w.players.map(normalizeRound); });
+// When non-null, the admin paste form is in "overwrite" mode targeting
+// this week id (instead of adding a brand-new week).
+let adminOverwriteId = null;
+
+// Rebuild WEEKS + YTD + ALL_VIEWS for the active event. Call after any
+// data change (event switch, week added, week overwritten, week removed).
+function recomputeAll() {
+  rebuildWeeks();
   YTD = buildYTD();
   ALL_VIEWS = WEEKS.map(w => ({ kind: 'week', id: w.id, label: w.label, date: w.date }))
     .concat([{ kind: 'ytd', id: 'ytd', label: 'Year to Date' }]);
-  state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
-  applyEventChrome();   // masthead, body classes, etc.
-  renderAll();
 }
 
-// Update non-data UI bits (active event button highlight) when event changes.
-// The masthead title is now static ("Men's Night & Weekend Snips") so we
+// Swap the active event, rebuild its data, reset the view to the latest
+// entry, and re-render everything.
+function switchEvent(newId) {
+  if (newId === state.eventId) return;
+  if (!EVENTS[newId]) return;
+  if (typeof closeScorecard === 'function') closeScorecard();
+  state.eventId = newId;
+  recomputeAll();
+  state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
+  adminOverwriteId = null;          // week ids differ per event — reset overwrite mode
+  applyEventChrome();
+  renderAll();
+  if (typeof renderStoredWeeks === 'function') renderStoredWeeks();
+  if (typeof syncAdminMode === 'function') syncAdminMode();
+}
+
+// Update non-data UI bits (active event button highlight, admin panel
+// copy) when the event changes. The masthead title is static so we
 // leave it alone here.
 function applyEventChrome() {
   const ev = currentEvent();
@@ -1465,6 +1583,33 @@ function applyEventChrome() {
   document.querySelectorAll('.event-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.event === state.eventId);
   });
+  applyAdminEventChrome();
+}
+
+// Re-skin the admin "Add a New ___" panel for the active event so the
+// admin always knows which event a pasted round will be filed under,
+// and what totals-line format the parser expects.
+function applyAdminEventChrome() {
+  const ev = currentEvent();
+  const isSnips = ev.id === 'snips';
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+
+  set('adminEventName', isSnips ? 'Weekend Snips' : "Men&rsquo;s Night");
+  set('adminPanelTitle', isSnips ? 'Add a New Snips Day' : 'Add a New Week');
+  set('adminPanelSub', isSnips
+    ? 'Paste a weekend round — Gross / Net per player'
+    : 'Paste in the SmartGolf format — same as Week 1');
+  set('adminPasteInstructions', isSnips
+    ? `Paste each player as: <strong>handicap, name, 18 hole scores (one per line), then a totals line</strong> with <strong>Gross and Net</strong>. vs-Par is calculated automatically (Gross &minus; 71, Net &minus; 71). Header rows are auto-skipped.`
+    : `Paste the exact format SmartGolf gives you: <strong>handicap, name, 18 hole scores (one per line), then a totals line</strong> (Gross / Net / Gross Pts / Net Pts) for each player. Header rows are auto-skipped.`);
+
+  const labelEl = document.getElementById('newWeekLabel');
+  const dateEl  = document.getElementById('newWeekDate');
+  if (labelEl) labelEl.placeholder = isSnips ? 'e.g. Sat · May 16' : 'e.g. Week 3';
+  if (dateEl)  dateEl.placeholder  = 'e.g. May 16, 2026';
+
+  const switchBtn = document.getElementById('adminEventSwitchBtn');
+  if (switchBtn) switchBtn.textContent = isSnips ? 'Switch to Men\u2019s Night' : 'Switch to Weekend Snips';
 }
 
 // =================================================================
@@ -1486,24 +1631,74 @@ function ytdMode() { return state.view.kind === 'ytd'; }
 // =================================================================
 // WEEK TABS
 // =================================================================
+// Beyond this many total views (weeks + YTD), the picker switches from
+// a row of tabs to a compact dropdown so it never overruns the page.
+const WEEK_TAB_LIMIT = 7;
+
+// "May 9, 2026" -> "May 9"  (strip the year)
+function monthDayOf(date) {
+  return String(date || '').replace(/,?\s*\d{4}\s*$/, '').trim();
+}
+// Display label that doesn't repeat the date when the label already
+// contains it. Snips "Sat · May 9" (date "May 9, 2026") -> "Sat · May 9".
+// Men's Night "Week 1" (date "May 5, 2026") -> "Week 1 · May 5" (or full).
+function viewDisplayName(v, opts) {
+  opts = opts || {};
+  if (!v) return '';
+  if (v.kind === 'ytd' || !v.date) return v.label;
+  const md = monthDayOf(v.date);
+  if (v.label.toLowerCase().includes(md.toLowerCase())) return v.label;
+  return opts.full ? `${v.label} · ${v.date}` : `${v.label} · ${md}`;
+}
+
+function setView(v) {
+  if (!v) return;
+  state.view = v;
+  state.search = '';
+  const s = document.getElementById('search');
+  if (s) s.value = '';
+  closeScorecard();
+  renderAll();
+}
+
 function renderWeekTabs() {
-  const html = ALL_VIEWS.map(v => {
-    const active = v.id === state.view.id ? ' active' : '';
-    const ytdCls = v.kind === 'ytd' ? ' ytd' : '';
-    const sub = v.date ? `<span style="font-size:10px;margin-left:6px;">${v.date.split(',')[0]}</span>` : '';
-    return `<button class="week-tab${active}${ytdCls}" data-id="${v.id}">${v.label}${sub}</button>`;
-  }).join('');
-  document.getElementById('weekTabs').innerHTML = html;
-  document.querySelectorAll('.week-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = isNaN(parseInt(btn.dataset.id)) ? btn.dataset.id : parseInt(btn.dataset.id);
-      state.view = ALL_VIEWS.find(v => v.id === id) || ALL_VIEWS.find(v => String(v.id) === String(id));
-      state.search = '';
-      document.getElementById('search').value = '';
-      closeScorecard();
-      renderAll();
+  const host = document.getElementById('weekTabs');
+  const weekViews = ALL_VIEWS.filter(v => v.kind === 'week');
+  const ytdView = ALL_VIEWS.find(v => v.kind === 'ytd');
+
+  if (ALL_VIEWS.length > WEEK_TAB_LIMIT) {
+    // DROPDOWN MODE — scales to any number of weeks, YTD stays pinned
+    const opts = weekViews.map(v =>
+      `<option value="${v.id}"${v.id === state.view.id ? ' selected' : ''}>${viewDisplayName(v)}</option>`
+    ).join('');
+    const ytdActive = state.view.kind === 'ytd' ? ' active' : '';
+    host.innerHTML =
+      `<select class="week-select" id="weekSelect">${opts}</select>` +
+      `<button class="week-tab ytd${ytdActive}" data-id="ytd">${ytdView.label}</button>`;
+    const sel = document.getElementById('weekSelect');
+    sel.addEventListener('change', () => {
+      setView(ALL_VIEWS.find(v => v.id === parseInt(sel.value, 10)));
     });
-  });
+    host.querySelector('.week-tab.ytd').addEventListener('click', () => setView(ytdView));
+  } else {
+    // TAB MODE — a row of tabs, nice tap targets while the season is young
+    host.innerHTML = ALL_VIEWS.map(v => {
+      const active = v.id === state.view.id ? ' active' : '';
+      const ytdCls = v.kind === 'ytd' ? ' ytd' : '';
+      const md = (v.kind !== 'ytd' && v.date) ? monthDayOf(v.date) : '';
+      const labelHasDate = md && v.label.toLowerCase().includes(md.toLowerCase());
+      const sub = (md && !labelHasDate)
+        ? `<span style="font-size:10px;margin-left:6px;opacity:0.85;">${md}</span>` : '';
+      return `<button class="week-tab${active}${ytdCls}" data-id="${v.id}">${v.label}${sub}</button>`;
+    }).join('');
+    host.querySelectorAll('.week-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const raw = btn.dataset.id;
+        const id = isNaN(parseInt(raw)) ? raw : parseInt(raw);
+        setView(ALL_VIEWS.find(v => v.id === id) || ALL_VIEWS.find(v => String(v.id) === String(id)));
+      });
+    });
+  }
   document.getElementById('weekCount').textContent = WEEKS.length;
   document.getElementById('uniquePlayers').textContent = YTD.length;
 }
@@ -1665,6 +1860,19 @@ function renderInsights() {
   })).sort((a,b)=>b.gap-a.gap)[0];
 
   const bestNet = [...currentRounds()].sort((a,b) => getNet(a) - getNet(b))[0];
+  const bestGross = [...currentRounds()].sort((a,b) => getGross(a) - getGross(b))[0];
+
+  // Birdie leader — birdies + eagles + albatrosses (the "red numbers")
+  const birdieKey = r => ytdMode()
+    ? (r.totalBirdies + r.totalEagles + r.totalAlbatrosses)
+    : (r.birdies + r.eagles + r.albatrosses);
+  const birdieLeader = [...currentRounds()].sort((a,b) => birdieKey(b) - birdieKey(a))[0];
+  const blCount = birdieKey(birdieLeader);
+
+  // Steadiest card — most pars (single round) / highest par rate (YTD)
+  const parRate = r => ytdMode() ? (r.totalPars / (r.rounds * 18)) : (r.pars / 18);
+  const steadiest = [...currentRounds()].sort((a,b) => parRate(b) - parRate(a))[0];
+
   const totalDoubles = currentRounds().reduce((s,r) => s + (ytdMode() ? r.totalDoubles : r.doubles), 0);
   const totalHoles = ytdMode()
     ? currentRounds().reduce((s,a)=>s+a.rounds*18, 0)
@@ -1676,12 +1884,26 @@ function renderInsights() {
       body: `<strong>Hole ${hardest.hole}</strong> (par ${hardest.par}, SI ${hardest.si}) played to <strong>${hardest.avg.toFixed(2)}</strong> — <strong>+${hardest.delta.toFixed(2)} over par</strong>.` },
     { cls: 'green', title: 'Easiest hole',
       body: `<strong>Hole ${easiest.hole}</strong> (par ${easiest.par}, SI ${easiest.si}) averaged <strong>${easiest.avg.toFixed(2)}</strong>, only <strong>+${easiest.delta.toFixed(2)}</strong>.` },
-    { cls: '', title: 'Biggest skill gap',
-      body: `On <strong>Hole ${biggestGap.hole}</strong> (par ${biggestGap.par}), high handicaps average <strong>${biggestGap.gap.toFixed(2)} more strokes</strong> than low. The widest spread on the card.` },
+    { cls: 'green', title: ytdMode() ? 'Top YTD gross (avg)' : 'Round of the day (gross)',
+      body: ytdMode()
+        ? `<strong>${bestGross.name}</strong> (HC ${bestGross.hc}) owns the lowest scoring average — <strong>${bestGross.avgGross.toFixed(1)} gross</strong> over ${bestGross.rounds} round${bestGross.rounds===1?'':'s'}.`
+        : `<strong>${bestGross.name}</strong> (HC ${bestGross.hc}) posted the low gross — a <strong>${bestGross.gross}</strong> (net ${bestGross.net}).` },
     { cls: 'green', title: ytdMode() ? 'Top YTD net (avg)' : 'Round of the day (net)',
       body: ytdMode()
         ? `<strong>${bestNet.name}</strong> (HC ${bestNet.hc}) sits on an avg net <strong>${bestNet.avgNet.toFixed(1)}</strong> across ${bestNet.rounds} round${bestNet.rounds===1?'':'s'}.`
         : `<strong>${bestNet.name}</strong> (HC ${bestNet.hc}) shot net <strong>${bestNet.net}</strong> — gross ${bestNet.gross} — for ${bestNet.np} net points.` },
+    { cls: '', title: 'Birdie leader',
+      body: blCount === 0
+        ? `No birdies in this view yet — the field was held to par or worse on every hole.`
+        : (ytdMode()
+            ? `<strong>${birdieLeader.name}</strong> has the most red numbers this season — <strong>${blCount} birdie${blCount===1?'':'s'} or better</strong>.`
+            : `<strong>${birdieLeader.name}</strong> lit up the card with <strong>${blCount} birdie${blCount===1?'':'s'} or better</strong> — the most in the field.`) },
+    { cls: 'green', title: 'Steadiest card',
+      body: ytdMode()
+        ? `<strong>${steadiest.name}</strong> pars <strong>${(steadiest.totalPars/(steadiest.rounds*18)*100).toFixed(0)}% of holes</strong> — the most consistent stick in the field.`
+        : `<strong>${steadiest.name}</strong> was metronomic — <strong>${steadiest.pars} par${steadiest.pars===1?'':'s'}</strong> with just ${steadiest.doubles} blow-up${steadiest.doubles===1?'':'s'} on the card.` },
+    { cls: '', title: 'Biggest skill gap',
+      body: `On <strong>Hole ${biggestGap.hole}</strong> (par ${biggestGap.par}), high handicaps average <strong>${biggestGap.gap.toFixed(2)} more strokes</strong> than low. The widest spread on the card.` },
     { cls: 'red', title: 'Blow-up holes',
       body: `<strong>${totalDoubles}</strong> doubles-or-worse in this view (${dblPct}% of holes). High bracket owns <strong>${highPl.length ? Math.round(highPl.reduce((s,r)=>s+(ytdMode()?r.totalDoubles:r.doubles),0) / totalDoubles * 100) : 0}%</strong> of them.` },
   ];
@@ -2195,7 +2417,7 @@ function openScorecard(name) {
     body += `
       <div style="margin-bottom:20px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-          <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;color:var(--brass);">${week.label} · ${week.date}</div>
+          <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;color:var(--brass);">${viewDisplayName(week, {full:true})}</div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);">
             Gross <strong style="color:var(--ink)">${round.gross}</strong> ·
             Net <strong style="color:var(--ink)">${round.net}</strong> ·
@@ -2316,7 +2538,13 @@ function renderAll() {
 const STORAGE_KEY_BASE = 'springbankWeeks_v2';
 function storageKey() { return `${STORAGE_KEY_BASE}_${state.eventId}`; }
 
-function parseSmartGolfPaste(raw) {
+function parseSmartGolfPaste(raw, scoring) {
+  // scoring: 'quota'  → totals line is [gross, net, grossPts, netPts]
+  //          'vsPar'  → totals line is [gross, net] (extra numbers ignored);
+  //                     gp/np are computed as strokes vs par.
+  scoring = scoring || 'quota';
+  const PAR_TOTAL = COURSE.par.reduce((a,b) => a+b, 0);   // 71
+  const minNums = scoring === 'vsPar' ? 2 : 4;
   const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
   const players = [];
   const errors = [];
@@ -2348,11 +2576,19 @@ function parseSmartGolfPaste(raw) {
     if (scoreErr) { errors.push(scoreErr); i++; continue; }
     const totalsLine = lines[i + 20];
     const totals = totalsLine.split(/\s+/).filter(s => s.length > 0).map(s => parseInt(s, 10));
-    if (totals.length < 4 || totals.some(n => isNaN(n))) {
-      errors.push(`${name}: invalid totals line "${totalsLine}"`);
+    if (totals.length < minNums || totals.slice(0, minNums).some(n => isNaN(n))) {
+      errors.push(`${name}: totals line needs at least ${minNums} numbers (${scoring === 'vsPar' ? 'Gross Net' : 'Gross Net GrossPts NetPts'}) — got "${totalsLine}"`);
       i++; continue;
     }
-    const [gross, net, gp, np] = totals;
+    let gross, net, gp, np;
+    if (scoring === 'vsPar') {
+      gross = totals[0];
+      net   = totals[1];
+      gp = gross - PAR_TOTAL;   // strokes vs par, gross
+      np = net   - PAR_TOTAL;   // strokes vs par, net
+    } else {
+      [gross, net, gp, np] = totals;
+    }
     const sumScores = scores.reduce((a,b) => a+b, 0);
     if (sumScores !== gross) {
       errors.push(`⚠ ${name}: scores sum to ${sumScores} but Gross says ${gross}. Saved anyway — check your paste.`);
@@ -2375,49 +2611,107 @@ function saveStoredWeeks(weeks) {
   try { localStorage.setItem(storageKey(), JSON.stringify(weeks)); return true; }
   catch (e) { return false; }
 }
-function getStoredWeeks() {
-  // Hardcoded weeks differ per event. Anything with an id beyond the highest
-  // hardcoded id (or absent from the event's original players list) is "stored".
-  const event = currentEvent();
-  const hardcodedIds = new Set(event.weeks.filter(w => w.players).slice(0, event.scoring === 'quota' ? 2 : 2).map(w => w.id));
-  // Simpler heuristic: any week whose ID is > maxHardcoded gets treated as stored
-  const maxHardcoded = event.id === 'mensNight' ? 2 : 2;
-  return WEEKS.filter(w => w.id > maxHardcoded);
+// Admin-managed weeks for the active event = whatever is in localStorage.
+// These are additions AND corrections (a stored week whose id matches a
+// base week overrides it). getStoredWeeks() is just the raw stored list.
+function getStoredWeeks() { return loadStoredWeeks(); }
+
+// True if a week id corresponds to one of the event's hardcoded base weeks.
+function isBaseWeek(id) {
+  return currentEvent().baseWeeks.some(w => w.id === id);
 }
+
 function nextWeekId() { return WEEKS.reduce((m,w) => Math.max(m, w.id), 0) + 1; }
 
-function refreshAllData() {
-  WEEKS.forEach(w => { w.rounds = w.players.map(normalizeRound); });
-  YTD = buildYTD();
-  ALL_VIEWS = WEEKS.map(w => ({ kind: 'week', id: w.id, label: w.label, date: w.date }))
-    .concat([{ kind: 'ytd', id: 'ytd', label: 'Year to Date' }]);
-}
+function refreshAllData() { recomputeAll(); }
 
 function renderStoredWeeks() {
-  const stored = getStoredWeeks();
   const wrap = document.getElementById('storedWeeksWrap');
-  if (!stored.length) { wrap.style.display = 'none'; return; }
+  const list = document.getElementById('storedWeeksList');
+  if (!wrap || !list) return;
+  const storedIds = new Set(loadStoredWeeks().map(w => w.id));
+  if (!WEEKS.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = '';
-  document.getElementById('storedWeeksList').innerHTML = stored.map(w => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--rule-soft);">
-      <span><strong>${w.label}</strong> · ${w.date} · ${w.players.length} players</span>
-      <button data-remove="${w.id}" style="padding:6px 14px;background:transparent;color:#ff6b5e;border:1px solid #ff6b5e;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">Remove</button>
-    </div>
-  `).join('');
-  document.querySelectorAll('[data-remove]').forEach(btn => {
+
+  list.innerHTML = WEEKS.map(w => {
+    const isStored = storedIds.has(w.id);
+    const isBase = isBaseWeek(w.id);
+    const count = w.players.filter(p => !isExcludedPlayer(p[0])).length;
+    let tag, tagColor;
+    if (isStored && isBase)      { tag = 'corrected'; tagColor = '#f59e0b'; }
+    else if (isStored && !isBase){ tag = 'added';     tagColor = '#62d4a1'; }
+    else                         { tag = 'original';  tagColor = 'var(--muted)'; }
+    const tagHtml = `<span style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;border:1px solid ${tagColor};color:${tagColor};padding:2px 7px;border-radius:2px;margin-left:8px;">${tag}</span>`;
+    // Remove (added) / Revert (corrected base) — only for stored entries
+    const removeHtml = isStored
+      ? `<button data-revert="${w.id}" style="padding:6px 12px;background:transparent;color:#ff6b5e;border:1px solid #ff6b5e;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">${isBase ? 'Revert' : 'Remove'}</button>`
+      : '';
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--rule-soft);">
+        <span><strong>${viewDisplayName(w, {full:true})}</strong> · ${count} players${tagHtml}</span>
+        <span style="display:flex;gap:6px;">
+          <button data-overwrite="${w.id}" style="padding:6px 12px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">Overwrite</button>
+          ${removeHtml}
+        </span>
+      </div>`;
+  }).join('');
+
+  list.querySelectorAll('[data-overwrite]').forEach(btn => {
+    btn.addEventListener('click', () => enterOverwriteMode(parseInt(btn.dataset.overwrite, 10)));
+  });
+  list.querySelectorAll('[data-revert]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const id = parseInt(btn.dataset.remove, 10);
-      const idx = WEEKS.findIndex(w => w.id === id);
-      if (idx >= 0) WEEKS.splice(idx, 1);
-      saveStoredWeeks(getStoredWeeks());
-      refreshAllData();
-      if (state.view.kind === 'week' && state.view.id === id) {
+      const id = parseInt(btn.dataset.revert, 10);
+      const wasBase = isBaseWeek(id);
+      saveStoredWeeks(loadStoredWeeks().filter(w => w.id !== id));
+      if (adminOverwriteId === id) exitOverwriteMode();
+      recomputeAll();
+      if (!WEEKS.find(w => w.id === id) && state.view.kind === 'week' && state.view.id === id) {
         state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
       }
       renderAll();
       renderStoredWeeks();
+      showParseResult(wasBase
+        ? `Reverted to the built-in data for that entry.`
+        : `Entry removed.`, 'success');
     });
   });
+}
+
+// ----- Overwrite mode ---------------------------------------------------
+// Loads an existing week into the paste form so a bad paste can be redone.
+function enterOverwriteMode(id) {
+  const w = WEEKS.find(x => x.id === id);
+  if (!w) return;
+  adminOverwriteId = id;
+  document.getElementById('newWeekLabel').value = w.label;
+  document.getElementById('newWeekDate').value = w.date;
+  document.getElementById('newWeekPaste').value = '';
+  document.getElementById('parseSnippet').style.display = 'none';
+  document.getElementById('showSnippetBtn').style.display = 'none';
+  document.getElementById('parseResult').innerHTML = '';
+  syncAdminMode();
+  document.getElementById('adminSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function exitOverwriteMode() {
+  adminOverwriteId = null;
+  syncAdminMode();
+}
+// Reflects the current add/overwrite mode in the form UI.
+function syncAdminMode() {
+  const banner = document.getElementById('adminModeBanner');
+  const btn = document.getElementById('parseAddBtn');
+  if (!banner || !btn) return;
+  if (adminOverwriteId != null) {
+    const w = WEEKS.find(x => x.id === adminOverwriteId);
+    document.getElementById('adminModeText').textContent =
+      `Overwriting: ${w ? viewDisplayName(w, {full:true}) : 'entry #' + adminOverwriteId} — paste the corrected data below.`;
+    banner.style.display = 'flex';
+    btn.textContent = 'Parse & Overwrite';
+  } else {
+    banner.style.display = 'none';
+    btn.textContent = 'Parse & Add Week';
+  }
 }
 
 function showParseResult(msg, kind) {
@@ -2444,31 +2738,54 @@ document.getElementById('parseAddBtn').addEventListener('click', () => {
   const labelInput = document.getElementById('newWeekLabel').value.trim();
   const dateInput = document.getElementById('newWeekDate').value.trim();
   if (!raw.trim()) { showParseResult('Paste box is empty.', 'error'); return; }
-  const newId = nextWeekId();
-  const label = labelInput || `Week ${newId}`;
+
+  const overwriting = adminOverwriteId != null;
+  const targetId = overwriting ? adminOverwriteId : nextWeekId();
+  const unit = currentEvent().scoring === 'vsPar' ? 'day' : 'week';
+  const fallbackLabel = currentEvent().scoring === 'vsPar' ? `Day ${targetId}` : `Week ${targetId}`;
+  const label = labelInput || fallbackLabel;
   const date = dateInput || new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
 
-  const { players, errors } = parseSmartGolfPaste(raw);
+  const { players, errors } = parseSmartGolfPaste(raw, currentEvent().scoring);
   if (!players.length) {
     showParseResult(`<strong>No players parsed.</strong><br>${errors.join('<br>') || 'Check the paste format.'}`, 'error');
     return;
   }
 
-  const newWeek = { id: newId, label, date, players };
-  WEEKS.push(newWeek);
-  WEEKS.sort((a,b) => a.id - b.id);
-  saveStoredWeeks(getStoredWeeks());
+  // Save into the per-event stored list. A stored entry whose id matches a
+  // base week overrides it (= overwrite); a new id is an addition.
+  const stored = loadStoredWeeks();
+  const entry = { id: targetId, label, date, players };
+  const existingIdx = stored.findIndex(w => w.id === targetId);
+  if (existingIdx >= 0) stored[existingIdx] = entry;
+  else stored.push(entry);
+  saveStoredWeeks(stored);
 
-  refreshAllData();
-  state.view = ALL_VIEWS.find(v => v.id === newId) || state.view;
+  recomputeAll();
+  state.view = ALL_VIEWS.find(v => v.id === targetId) || state.view;
+  exitOverwriteMode();
   renderAll();
   renderStoredWeeks();
 
   const errorMsg = errors.length ? `<br><br><em>Warnings (${errors.length}):</em><br>${errors.join('<br>')}` : '';
   const verb = errors.length ? 'parsed with warnings' : 'parsed cleanly';
-  showParseResult(`<strong>${players.length} player${players.length===1?'':'s'} ${verb}.</strong><br>Added as <strong>${label}</strong> (${date}). View switched to this week.${errorMsg}`, errors.length ? 'warn' : 'success');
+  const evName = currentEvent().name;
+  const action = overwriting
+    ? `Overwrote <strong>${label}</strong> in <strong>${evName}</strong> (${date}) with the corrected data.`
+    : `Added to <strong>${evName}</strong> as <strong>${label}</strong> (${date}). View switched to this ${unit}.`;
+  showParseResult(`<strong>${players.length} player${players.length===1?'':'s'} ${verb}.</strong><br>${action}${errorMsg}`, errors.length ? 'warn' : 'success');
   document.getElementById('showSnippetBtn').style.display = '';
-  document.getElementById('showSnippetBtn').dataset.weekId = newId;
+  document.getElementById('showSnippetBtn').dataset.weekId = targetId;
+});
+
+document.getElementById('adminCancelOverwriteBtn').addEventListener('click', () => {
+  exitOverwriteMode();
+  showParseResult('Back to add-new mode.', 'success');
+});
+
+document.getElementById('adminEventSwitchBtn').addEventListener('click', () => {
+  switchEvent(state.eventId === 'mensNight' ? 'snips' : 'mensNight');
+  document.getElementById('adminSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 document.getElementById('parseClearBtn').addEventListener('click', () => {
@@ -2478,6 +2795,7 @@ document.getElementById('parseClearBtn').addEventListener('click', () => {
   document.getElementById('parseResult').innerHTML = '';
   document.getElementById('parseSnippet').style.display = 'none';
   document.getElementById('showSnippetBtn').style.display = 'none';
+  exitOverwriteMode();
 });
 
 document.getElementById('showSnippetBtn').addEventListener('click', () => {
@@ -2490,7 +2808,7 @@ document.getElementById('showSnippetBtn').addEventListener('click', () => {
   pre.style.display = '';
   try {
     navigator.clipboard.writeText(snippet).then(() => {
-      showParseResult(`<strong>Snippet copied to clipboard.</strong> To make this week permanent (so it travels with the file when you share it), paste it inside the <code>WEEKS = [ ... ]</code> array near the top of the &lt;script&gt; block.`, 'success');
+      showParseResult(`<strong>Snippet copied to clipboard.</strong> To make this permanent (so it travels with the file when you share it), paste it inside the active event's <code>baseWeeks: [ ... ]</code> array near the top of the &lt;script&gt; block — replacing the matching entry if you overwrote one.`, 'success');
     }, () => {
       showParseResult(`Snippet shown below — select all and copy manually.`, 'warn');
     });
@@ -2517,14 +2835,11 @@ document.getElementById('showSnippetBtn').addEventListener('click', () => {
     btn.addEventListener('click', () => switchEvent(btn.dataset.event));
   });
 
-  const stored = loadStoredWeeks();
-  stored.forEach(w => {
-    if (!WEEKS.find(ww => ww.id === w.id)) WEEKS.push(w);
-  });
-  WEEKS.sort((a,b) => a.id - b.id);
-  refreshAllData();
+  // Build the active event's data (base weeks + any stored corrections/adds)
+  recomputeAll();
   state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
   applyEventChrome();
+  syncAdminMode();
   renderAll();
   renderStoredWeeks();
 })();
