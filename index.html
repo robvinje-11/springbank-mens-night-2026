@@ -6,6 +6,10 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v1.20  Per-round scorecard summary now mirrors the Season Aggregate:
+         all 6 categories always visible (Albatross through Double+)
+         with % of 18 holes next to each count. Colors aligned with
+         the KPI distribution palette (gold/purple/red/green/amber/coral).
   v1.19  Season Aggregate distribution counts now include a small
          white % of total beside each count (11px, half the count's
          font size). Math sums to 100.0% across the 6 categories.
@@ -851,7 +855,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v1.19</div>
+    <div class="splash-version">v1.20</div>
   </div>
 </div>
 
@@ -2222,12 +2226,17 @@ function openScorecard(name) {
           </table>
         </div>
         <div class="scorecard-summary">
-          ${round.albatrosses ? `<div class="summary-item"><div class="lbl">Albatross</div><div class="val" style="color:#facc15">${round.albatrosses}</div></div>` : ''}
-          <div class="summary-item"><div class="lbl">Eagles</div><div class="val" style="color:var(--eagle)">${round.eagles}</div></div>
-          <div class="summary-item"><div class="lbl">Birdies</div><div class="val" style="color:var(--birdie)">${round.birdies}</div></div>
-          <div class="summary-item"><div class="lbl">Pars</div><div class="val">${round.pars}</div></div>
-          <div class="summary-item"><div class="lbl">Bogeys</div><div class="val" style="color:var(--brass)">${round.bogeys}</div></div>
-          <div class="summary-item"><div class="lbl">Doubles+</div><div class="val" style="color:var(--birdie)">${round.doubles}</div></div>
+          ${(() => {
+            const pctR = (n) => (n / 18 * 100).toFixed(1);
+            return `
+              <div class="summary-item"><div class="lbl">Albatross</div><div class="val" style="color:#facc15">${round.albatrosses}<span class="val-pct">${pctR(round.albatrosses)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Eagle</div><div class="val" style="color:#b48dd9">${round.eagles}<span class="val-pct">${pctR(round.eagles)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Birdie</div><div class="val" style="color:#ff6b5e">${round.birdies}<span class="val-pct">${pctR(round.birdies)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Par</div><div class="val" style="color:#62d4a1">${round.pars}<span class="val-pct">${pctR(round.pars)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Bogey</div><div class="val" style="color:#f59e0b">${round.bogeys}<span class="val-pct">${pctR(round.bogeys)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Double+</div><div class="val" style="color:#ff8e84">${round.doubles}<span class="val-pct">${pctR(round.doubles)}%</span></div></div>
+            `;
+          })()}
         </div>
       </div>
     `;
