@@ -6,6 +6,11 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v3.18  Hole by Hole — Average vs Par now uses the standard All / Low
+         / Mid / High bracket filter (single-select), styled and
+         placed like every other section's filter, beside its Gross /
+         Net toggle. The old click-the-legend multi-select control was
+         replaced; the legend now just shows the Par line key.
   v3.17  The scorecard popup's Albatross–Double+ strip now follows the
          Player Standings Gross / Net toggle too — in Net mode it
          recategorizes each hole by net score and labels each tile
@@ -1079,7 +1084,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v3.17</div>
+    <div class="splash-version">v3.18</div>
   </div>
 </div>
 
@@ -1114,7 +1119,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v3.17</div>
+  <div class="masthead-version">v3.18</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1221,9 +1226,16 @@
   <div class="section-head">
     <span class="num">No. 05</span>
     <h2>Hole by Hole — Average vs Par</h2>
-    <span class="sub">Click the legend — <em>All</em> shows the whole field; Low/Mid/High are multi-select</span>
+    <span class="sub">Field-average strokes over par on every hole</span>
   </div>
-  <div class="section-filter">
+  <div class="section-filter" data-section="holeChart">
+    <span style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <span class="sf-label">Bracket</span>
+      <button class="sf-btn active" data-bracket="all">All</button>
+      <button class="sf-btn" data-bracket="low">Low</button>
+      <button class="sf-btn" data-bracket="mid">Mid</button>
+      <button class="sf-btn" data-bracket="high">High</button>
+    </span>
     <span class="mode-toggle" data-mode-section="holeChart" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
       <span class="sf-label">Score</span>
       <button class="sf-btn mode-btn active" data-mode="gross">Gross</button>
@@ -1232,10 +1244,6 @@
   </div>
   <div class="panel">
     <div class="chart-legend" id="holeChartLegend">
-      <div class="legend-item clickable" data-bracket="all"><span class="legend-swatch" style="background:#6f9fd8"></span> All</div>
-      <div class="legend-item clickable" data-bracket="low"><span class="legend-swatch" style="background:#ffffff"></span> Low (0–7)</div>
-      <div class="legend-item clickable" data-bracket="mid"><span class="legend-swatch" style="background:#7eb8e8"></span> Mid (8–15)</div>
-      <div class="legend-item clickable" data-bracket="high"><span class="legend-swatch" style="background:transparent;border:1px solid #ffffff"></span> High (16+)</div>
       <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--ink)"></span> Par line</div>
     </div>
     <div class="hole-chart"><svg id="holeChart" viewBox="0 0 900 360" preserveAspectRatio="xMidYMid meet"></svg></div>
@@ -1850,7 +1858,7 @@ function currentRounds() {
   return YTD; // YTD aggregated objects (rounds-like but with totals)
 }
 // Each filterable section keeps its own independent bracket selection.
-const sectionBracket = { dist: 'all', insights: 'all', movers: 'all', holes: 'all', standings: 'all' };
+const sectionBracket = { dist: 'all', insights: 'all', movers: 'all', holes: 'all', standings: 'all', holeChart: 'all' };
 
 // Gross/Net mode per section that supports the toggle.
 const sectionMode = { dist:'gross', movers:'gross', holeChart:'gross', distGrid:'gross', holes:'gross', standings:'gross' };
@@ -1945,7 +1953,8 @@ const SECTION_RENDER = {
   insights:  () => renderInsights(),
   movers:    () => renderMovers(),
   holes:     () => renderHolesTables(),
-  standings: () => renderPlayerTable()
+  standings: () => renderPlayerTable(),
+  holeChart: () => renderHoleChart()
 };
 
 // Render fn for each section that has a Gross/Net toggle
@@ -2439,50 +2448,22 @@ function renderMovers() {
 // =================================================================
 // HOLE BY HOLE CHART
 // =================================================================
-// Hole-by-Hole chart filter, set by clicking its legend.
-//  - mode 'all'      → one accumulated bar = whole field's avg vs par
-//  - mode 'brackets' → a grouped bar for each selected bracket
-//    (multi-select: any combination of Low / Mid / High)
-let holeChartMode = 'all';
-let holeChartBrackets = { low: true, mid: true, high: true };
-
-function syncHoleChartLegend() {
-  document.querySelectorAll('#holeChartLegend .legend-item.clickable').forEach(el => {
-    const b = el.dataset.bracket;
-    const active = (b === 'all')
-      ? holeChartMode === 'all'
-      : holeChartMode === 'brackets' && holeChartBrackets[b];
-    el.classList.toggle('active', active);
-  });
-}
-
-// Color/stroke for each series key
-function holeChartStyle(key) {
-  if (key === 'all') return { fill: '#6f9fd8', stroke: 'none',    sw: 0 };
-  if (key === 'low') return { fill: '#ffffff', stroke: 'none',    sw: 0 };
-  if (key === 'mid') return { fill: '#7eb8e8', stroke: 'none',    sw: 0 };
-  return                    { fill: 'none',    stroke: '#ffffff', sw: 1.25 }; // high
-}
+// Single bracket series, chosen via the standard bracket filter
+// (sectionBracket.holeChart): All / Low / Mid / High.
 
 function renderHoleChart() {
-  syncHoleChartLegend();
   const svg = document.getElementById('holeChart');
   const W = 900, H = 360;
   const pad = { l: 44, r: 16, t: 32, b: 64 };
   const chartW = W - pad.l - pad.r;
   const chartH = H - pad.t - pad.b;
-  const items = currentRounds();
 
-  // Build the list of series (bars) to draw for each hole
-  let series;
-  if (holeChartMode === 'all') {
-    series = [{ key: 'all', label: 'Field', items }];
-  } else {
-    series = [];
-    if (holeChartBrackets.low)  series.push({ key: 'low',  label: 'Low',  items: items.filter(p=>p.bracket==='low')  });
-    if (holeChartBrackets.mid)  series.push({ key: 'mid',  label: 'Mid',  items: items.filter(p=>p.bracket==='mid')  });
-    if (holeChartBrackets.high) series.push({ key: 'high', label: 'High', items: items.filter(p=>p.bracket==='high') });
-  }
+  const bracketLabels = { all: 'Field', low: 'Low', mid: 'Mid', high: 'High' };
+  const bracket = sectionBracket.holeChart;
+  const items = filterByBracket(currentRounds(), 'holeChart');
+
+  // One series for the chosen bracket
+  const series = [{ key: bracket, label: bracketLabels[bracket] || 'Field', items }];
   const chartMode = sectionMode.holeChart;
   series.forEach(s => {
     s.avgs = COURSE.par.map((_,i) => holeAvg(s.items, i, chartMode));
@@ -2514,8 +2495,7 @@ function renderHoleChart() {
       const h = Math.max(0, (val / maxOver) * chartH);
       const y = pad.t + chartH - h;
       const tooltip = `Hole ${i+1} · ${s.label} avg ${s.avgs[i].toFixed(2)} (${val>=0?'+':''}${val.toFixed(2)})`;
-      const st = holeChartStyle(s.key);
-      html += `<rect x="${x + k*barW}" y="${y}" width="${barW - 1}" height="${h}" fill="${st.fill}" stroke="${st.stroke}" stroke-width="${st.sw}" rx="1">
+      html += `<rect x="${x + k*barW}" y="${y}" width="${barW - 1}" height="${h}" fill="#6f9fd8" rx="1">
                  <title>${tooltip}</title></rect>`;
     });
     const cx = pad.l + i * holeW + holeW/2;
@@ -3373,29 +3353,6 @@ async function initFirebase() {
   // Event switcher wiring (Men's Night vs Weekend Snips)
   document.querySelectorAll('.event-btn').forEach(btn => {
     btn.addEventListener('click', () => switchEvent(btn.dataset.event));
-  });
-
-  // Hole-by-Hole chart legend → All = accumulated field bar;
-  // Low / Mid / High are multi-select (toggle any combination).
-  document.querySelectorAll('#holeChartLegend .legend-item.clickable').forEach(el => {
-    el.addEventListener('click', () => {
-      const b = el.dataset.bracket;
-      if (b === 'all') {
-        holeChartMode = 'all';
-      } else if (holeChartMode === 'all') {
-        // leaving All → isolate the clicked bracket
-        holeChartMode = 'brackets';
-        holeChartBrackets = { low: false, mid: false, high: false };
-        holeChartBrackets[b] = true;
-      } else {
-        holeChartBrackets[b] = !holeChartBrackets[b];
-        // cleared every bracket → fall back to the accumulated All view
-        if (!holeChartBrackets.low && !holeChartBrackets.mid && !holeChartBrackets.high) {
-          holeChartMode = 'all';
-        }
-      }
-      renderHoleChart();
-    });
   });
 
   // Render once with built-in seed data so the page isn't blank while
