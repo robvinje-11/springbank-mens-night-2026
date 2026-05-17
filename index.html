@@ -6,6 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v4.1   Hole by Hole — Average vs Par is now a horizontal bar chart:
+         the 18 holes stack top to bottom with the value at each bar's
+         end. Fits mobile screens with no sideways scrolling.
   v4.0   Milestone release. Rolls up everything since the 3.x line:
          cloud data with live multi-viewer sync, the reorganized
          section layout, the "Scoring by Bracket" merge, per-section
@@ -549,9 +552,9 @@
     opacity: 1; background: rgba(255,255,255,0.09); border-color: var(--rule);
   }
   .hole-chart {
-    width: 100%; height: 360px; position: relative; overflow-x: auto;
+    width: 100%; position: relative;
   }
-  .hole-chart svg { width: 100%; height: 100%; min-width: 720px; }
+  .hole-chart svg { width: 100%; height: auto; display: block; }
 
   /* ===== DISTRIBUTION ===== */
   .dist-grid {
@@ -1093,7 +1096,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v4.0</div>
+    <div class="splash-version">v4.1</div>
   </div>
 </div>
 
@@ -1128,7 +1131,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v4.0</div>
+  <div class="masthead-version">v4.1</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1255,7 +1258,7 @@
     <div class="chart-legend" id="holeChartLegend">
       <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--ink)"></span> Par line</div>
     </div>
-    <div class="hole-chart"><svg id="holeChart" viewBox="0 0 900 360" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div class="hole-chart"><svg id="holeChart" viewBox="0 0 640 720" preserveAspectRatio="xMidYMid meet"></svg></div>
   </div>
 </section>
 
@@ -2462,60 +2465,64 @@ function renderMovers() {
 
 function renderHoleChart() {
   const svg = document.getElementById('holeChart');
-  const W = 900, H = 360;
-  const pad = { l: 44, r: 16, t: 32, b: 64 };
-  const chartW = W - pad.l - pad.r;
-  const chartH = H - pad.t - pad.b;
 
   const bracketLabels = { all: 'Field', low: 'Low', mid: 'Mid', high: 'High' };
   const bracket = sectionBracket.holeChart;
   const items = filterByBracket(currentRounds(), 'holeChart');
-
-  // One series for the chosen bracket
-  const series = [{ key: bracket, label: bracketLabels[bracket] || 'Field', items }];
   const chartMode = sectionMode.holeChart;
-  series.forEach(s => {
-    s.avgs = COURSE.par.map((_,i) => holeAvg(s.items, i, chartMode));
-    s.over = s.avgs.map((v,i) => v - COURSE.par[i]);
-  });
 
-  const allOver = series.reduce((acc,s) => acc.concat(s.over), []);
-  const maxOver = Math.max(...allOver, 1.5) * 1.1;
-  const numActive = Math.max(1, series.length);
+  const avgs = COURSE.par.map((_,i) => holeAvg(items, i, chartMode));
+  const over = avgs.map((v,i) => v - COURSE.par[i]);
+  const seriesLabel = bracketLabels[bracket] || 'Field';
 
-  const holeW = chartW / 18;
-  const barGroupW = holeW * 0.78;
-  const barW = barGroupW / numActive;
-  const barGap = (holeW - barGroupW) / 2;
+  // ---- Horizontal layout: 18 hole rows stacked top to bottom ----
+  const W = 640;
+  const pad = { l: 116, r: 56, t: 30, b: 16 };
+  const rowH = 34;                 // height allotted per hole
+  const barH = 20;                 // thickness of each bar
+  const H = pad.t + 18 * rowH + pad.b + 18;  // +18 for the back-nine gap
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const plotW = W - pad.l - pad.r;
+  const maxOver = Math.max(...over, 1.5) * 1.08;
+
+  // y position of a hole row (0-indexed); back nine pushed down by a gap
+  const gap = 18;
+  const rowY = i => pad.t + i * rowH + (i >= 9 ? gap : 0);
+  const xFor = v => pad.l + Math.max(0, v / maxOver) * plotW;
 
   let html = '';
-  // gridlines
+
+  // vertical gridlines + scale labels along the top
   for (let v = 0; v <= maxOver; v += 0.5) {
-    const y = pad.t + chartH - (v / maxOver) * chartH;
+    const x = pad.l + (v / maxOver) * plotW;
     const isZero = v === 0;
-    html += `<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="${isZero?'#ffffff':'rgba(255,255,255,0.12)'}" stroke-width="${isZero?1.5:1}" ${isZero?'stroke-dasharray="4 4"':''} opacity="${isZero?0.85:1}"/>`;
-    html += `<text x="${pad.l - 6}" y="${y + 3}" text-anchor="end" font-family="JetBrains Mono" font-size="10" fill="#ffffff">+${v.toFixed(1)}</text>`;
+    html += `<line x1="${x}" y1="${pad.t - 6}" x2="${x}" y2="${H - pad.b}" stroke="${isZero?'#ffffff':'rgba(255,255,255,0.12)'}" stroke-width="${isZero?1.5:1}" ${isZero?'stroke-dasharray="4 4"':''} opacity="${isZero?0.85:1}"/>`;
+    html += `<text x="${x}" y="${pad.t - 12}" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#ffffff">+${v.toFixed(1)}</text>`;
   }
-  // bars
+
+  // FRONT / BACK section labels
+  html += `<text x="6" y="${rowY(0) + barH/2 + 4}" font-family="DM Sans" font-size="10" font-weight="600" letter-spacing="0.14em" fill="#ffffff" opacity="0.55">FRONT</text>`;
+  html += `<text x="6" y="${rowY(9) + barH/2 + 4}" font-family="DM Sans" font-size="10" font-weight="600" letter-spacing="0.14em" fill="#ffffff" opacity="0.55">BACK</text>`;
+
+  // bars — one per hole
   for (let i = 0; i < 18; i++) {
-    const x = pad.l + i * holeW + barGap;
-    series.forEach((s, k) => {
-      const val = s.over[i];
-      const h = Math.max(0, (val / maxOver) * chartH);
-      const y = pad.t + chartH - h;
-      const tooltip = `Hole ${i+1} · ${s.label} avg ${s.avgs[i].toFixed(2)} (${val>=0?'+':''}${val.toFixed(2)})`;
-      html += `<rect x="${x + k*barW}" y="${y}" width="${barW - 1}" height="${h}" fill="#6f9fd8" rx="1">
-                 <title>${tooltip}</title></rect>`;
-    });
-    const cx = pad.l + i * holeW + holeW/2;
-    html += `<text x="${cx}" y="${H - pad.b + 18}" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="600" fill="#ffffff">${i+1}</text>`;
-    html += `<text x="${cx}" y="${H - pad.b + 32}" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#ffffff">P${COURSE.par[i]}·SI${COURSE.si[i]}</text>`;
+    const y = rowY(i);
+    const val = over[i];
+    const barW = Math.max(2, (val / maxOver) * plotW);
+    const tooltip = `Hole ${i+1} · ${seriesLabel} avg ${avgs[i].toFixed(2)} (${val>=0?'+':''}${val.toFixed(2)})`;
+
+    // hole label (number + par/SI) on the left
+    html += `<text x="${pad.l - 12}" y="${y + barH/2 - 1}" text-anchor="end" font-family="JetBrains Mono" font-size="12" font-weight="600" fill="#ffffff">${i+1}</text>`;
+    html += `<text x="${pad.l - 12}" y="${y + barH/2 + 11}" text-anchor="end" font-family="JetBrains Mono" font-size="8.5" fill="#ffffff" opacity="0.6">P${COURSE.par[i]} · SI${COURSE.si[i]}</text>`;
+
+    // the bar
+    html += `<rect x="${pad.l}" y="${y}" width="${barW}" height="${barH}" fill="#6f9fd8" rx="2">
+               <title>${tooltip}</title></rect>`;
+    // value at the end of the bar
+    html += `<text x="${pad.l + barW + 7}" y="${y + barH/2 + 4}" font-family="JetBrains Mono" font-size="11" fill="#ffffff">+${val.toFixed(2)}</text>`;
   }
-  // F/B divider
-  const divX = pad.l + 9 * holeW;
-  html += `<line x1="${divX}" y1="${pad.t}" x2="${divX}" y2="${H-pad.b}" stroke="#ffffff" stroke-width="1" stroke-dasharray="2 4" opacity="0.6"/>`;
-  html += `<text x="${pad.l + 4.5*holeW}" y="${pad.t - 12}" text-anchor="middle" font-family="DM Sans" font-size="10" font-weight="600" letter-spacing="0.15em" fill="#ffffff">FRONT</text>`;
-  html += `<text x="${pad.l + 13.5*holeW}" y="${pad.t - 12}" text-anchor="middle" font-family="DM Sans" font-size="10" font-weight="600" letter-spacing="0.15em" fill="#ffffff">BACK</text>`;
+
   svg.innerHTML = html;
 }
 
