@@ -6,6 +6,13 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v5.0   Scorecard popup: new "By Par Type · vs Par" row added just
+         above the Albatross→Double+ strip. Shows the player's total
+         strokes vs par and the per-hole average on par 3s, par 4s
+         and par 5s separately. Appears in both the single-week
+         scorecard and the Season Aggregate block, and follows the
+         Player Standings Gross / Net toggle (recategorizing each
+         hole by net score in Net mode).
   v4.7   Hole by Hole chart is now responsive: on phones it switches
          to a narrower, taller layout with larger fonts and bars so it
          stays readable instead of shrinking. Re-renders if the
@@ -914,6 +921,14 @@
     margin-left: 6px;
     vertical-align: 2px;    /* nudge up so it baselines with the bigger serif numeral */
   }
+  /* Header for the scorecard "By Par Type" row — carries the divider
+     so the .scorecard-summary row right below it runs borderless. */
+  .par-type-label {
+    margin-top: 16px; padding-top: 16px;
+    border-top: 1px solid var(--rule);
+    font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--muted);
+  }
 
   /* ===== INSIGHTS ===== */
   .insights-grid {
@@ -1121,7 +1136,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v4.7</div>
+    <div class="splash-version">v5.0</div>
   </div>
 </div>
 
@@ -1156,7 +1171,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v4.7</div>
+  <div class="masthead-version">v5.0</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -2102,6 +2117,51 @@ function scorecardDist(scores, hc, mode) {
   });
   return { albatrosses:a, eagles:e, birdies:b, pars:p, bogeys:bo, doubles:d };
 }
+
+// Per-par-type performance vs par (par 3 / par 4 / par 5).
+// rounds: [{scores, hc}] — one entry for a single week, many for YTD.
+// mode 'net' subtracts the handicap strokes received on each hole first.
+// Returns { 3:{n,sum}, 4:{n,sum}, 5:{n,sum} } where n = holes of that
+// par played and sum = cumulative strokes vs par across them.
+function parTypeBreakdown(rounds, mode) {
+  const groups = { 3:{n:0,sum:0}, 4:{n:0,sum:0}, 5:{n:0,sum:0} };
+  rounds.forEach(({ scores, hc }) => {
+    scores.forEach((s, i) => {
+      const par = COURSE.par[i];
+      const g = groups[par];
+      if (!g) return;
+      const v = mode === 'net' ? s - strokesOnHole(hc, COURSE.si[i]) : s;
+      g.n++;
+      g.sum += v - par;
+    });
+  });
+  return groups;
+}
+
+// Renders the three .summary-item tiles (Par 3s / 4s / 5s) for the
+// scorecard "By Par Type" row: big total vs par + small per-hole avg.
+function parTypeTiles(groups, mode) {
+  const tag = mode === 'net' ? ' (net)' : '';
+  const fmtTot = (n) => n === 0 ? 'E' : (n > 0 ? `+${n}` : `${n}`);
+  const fmtAvg = (n) => {
+    const r = Math.round(n * 100) / 100;
+    if (r === 0) return 'E';
+    return (r > 0 ? '+' : '') + r.toFixed(2);
+  };
+  // under par = green, over par = amber, even = neutral light
+  const colr = (n) => n < 0 ? '#62d4a1' : n > 0 ? '#f59e0b' : '#c8d0d8';
+  return [3, 4, 5].map(par => {
+    const g = groups[par];
+    if (!g || !g.n) {
+      return `<div class="summary-item"><div class="lbl">Par ${par}s${tag}</div><div class="val" style="opacity:0.4">—</div></div>`;
+    }
+    const avg = g.sum / g.n;
+    return `<div class="summary-item">
+      <div class="lbl">Par ${par}s${tag} &middot; ${g.n} hole${g.n === 1 ? '' : 's'}</div>
+      <div class="val" style="color:${colr(g.sum)}">${fmtTot(g.sum)}<span class="val-pct">${fmtAvg(avg)}/hole</span></div>
+    </div>`;
+  }).join('');
+}
 function distribution(items) {
   let a=0,e=0,b=0,p=0,bo=0,d=0;
   if (ytdMode()) {
@@ -2878,6 +2938,16 @@ function openScorecard(name) {
           <div class="summary-item"><div class="lbl">Avg vs Par Net</div><div class="val">${fmtVsPar(avgVsParN)}</div></div>
         </div>
 
+        <!-- Row 1.5: vs par by par type, across the season -->
+        <div class="par-type-label">By Par Type &middot; vs Par</div>
+        <div class="scorecard-summary" style="margin-top:8px;border-top:none;padding-top:0;">
+          ${(() => {
+            const sMode = sectionMode.standings;
+            const rs = (ytdAgg.weeks || []).map(w => ({ scores: w.round.scores, hc: w.round.hc }));
+            return parTypeTiles(parTypeBreakdown(rs, sMode), sMode);
+          })()}
+        </div>
+
         <!-- Row 2: score distribution across the season -->
         <div class="scorecard-summary" style="margin-top:14px;">
           ${(() => {
@@ -2990,6 +3060,13 @@ function openScorecard(name) {
               </tr>
             </tbody>
           </table>
+        </div>
+        <div class="par-type-label">By Par Type &middot; vs Par</div>
+        <div class="scorecard-summary" style="margin-top:8px;border-top:none;padding-top:0;">
+          ${(() => {
+            const sMode = sectionMode.standings;
+            return parTypeTiles(parTypeBreakdown([{ scores: round.scores, hc: round.hc }], sMode), sMode);
+          })()}
         </div>
         <div class="scorecard-summary">
           ${(() => {
