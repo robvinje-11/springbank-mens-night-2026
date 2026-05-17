@@ -6,6 +6,10 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v3.19  Player Standings Net mode now also converts the Front and
+         Back nine columns to net (gross nine minus the handicap
+         strokes received on those holes); headers relabel to "Net
+         Front" / "Net Back". Sorting on those columns respects it.
   v3.18  Hole by Hole — Average vs Par now uses the standard All / Low
          / Mid / High bracket filter (single-select), styled and
          placed like every other section's filter, beside its Gross /
@@ -1084,7 +1088,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v3.18</div>
+    <div class="splash-version">v3.19</div>
   </div>
 </div>
 
@@ -1119,7 +1123,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v3.18</div>
+  <div class="masthead-version">v3.19</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -2608,6 +2612,8 @@ function renderPlayerTableHead() {
   const sMode = sectionMode.standings;
   const birdsLabel = sMode === 'net' ? 'Net Birds' : 'Birds';
   const dblLabel   = sMode === 'net' ? 'Net Dbl+' : 'Dbl+';
+  const frontLabel = sMode === 'net' ? 'Net Front' : 'Front';
+  const backLabel  = sMode === 'net' ? 'Net Back' : 'Back';
 
   const cols = ytd ? [
     { key: 'name', label: 'Player', left: true },
@@ -2624,8 +2630,8 @@ function renderPlayerTableHead() {
     { key: 'hc', label: 'HC' },
     { key: 'gross', label: 'Gross' },
     { key: 'net', label: 'Net' },
-    { key: 'front', label: 'Front' },
-    { key: 'back', label: 'Back' },
+    { key: 'front', label: frontLabel },
+    { key: 'back', label: backLabel },
     { key: 'gp', label: gpLabel },
     { key: 'np', label: npLabel },
     { key: 'birdies', label: birdsLabel },
@@ -2661,14 +2667,25 @@ function renderPlayerTable() {
   const albKey    = ytdMode() ? 'totalAlbatrosses' : 'albatrosses';
   const doubleKey = ytdMode() ? 'totalDoubles' : 'doubles';
 
-  // Birds (= birdie or better) and Dbl+ columns honor the Gross/Net mode.
+  // Birds (= birdie or better), Dbl+, Front and Back columns honor
+  // the Gross/Net mode. Net front/back = net score on holes 1-9 / 10-18.
   rows.forEach(p => {
     if (sMode === 'net') {
       const nc = netRedDbl(p);
       p._red = nc.red; p._dbl = nc.dbl;
+      // Net nines — only meaningful for a single weekly round
+      if (!ytdMode() && Array.isArray(p.scores)) {
+        let nf = 0, nb = 0;
+        p.scores.forEach((s,i) => {
+          const net = s - strokesOnHole(p.hc, COURSE.si[i]);
+          if (i < 9) nf += net; else nb += net;
+        });
+        p._front = nf; p._back = nb;
+      }
     } else {
       p._red = p[birdieKey] + p[eagleKey] + p[albKey];
       p._dbl = p[doubleKey];
+      p._front = p.front; p._back = p.back;
     }
   });
 
@@ -2677,6 +2694,8 @@ function renderPlayerTable() {
     if (state.sortKey === 'name') return state.sortDir * a.name.localeCompare(b.name);
     if (state.sortKey === 'birdies') { av = a._red; bv = b._red; }
     else if (state.sortKey === 'doubles') { av = a._dbl; bv = b._dbl; }
+    else if (state.sortKey === 'front') { av = a._front; bv = b._front; }
+    else if (state.sortKey === 'back') { av = a._back; bv = b._back; }
     else { av = a[state.sortKey]; bv = b[state.sortKey]; }
     return state.sortDir * (av - bv);
   });
@@ -2705,8 +2724,8 @@ function renderPlayerTable() {
       <td>${p.hc}</td>
       <td><strong>${p.gross}</strong></td>
       <td>${p.net}</td>
-      <td>${p.front}</td>
-      <td>${p.back}</td>
+      <td>${p._front}</td>
+      <td>${p._back}</td>
       <td>${fmtGp(p.gp)}</td>
       <td>${fmtGp(p.np)}</td>
       <td>${p._red}</td>
