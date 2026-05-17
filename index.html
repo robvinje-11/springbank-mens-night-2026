@@ -6,6 +6,15 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v3.17  The scorecard popup's Albatross–Double+ strip now follows the
+         Player Standings Gross / Net toggle too — in Net mode it
+         recategorizes each hole by net score and labels each tile
+         "(net)". Applies to both single-week and YTD scorecards.
+  v3.16  Player Standings now has a Gross / Net toggle — the Birds and
+         Dbl+ columns recompute as net-categorized counts in Net mode
+         (headers relabel to "Net Birds" / "Net Dbl+"). All Gross/Net
+         toggles now sit beside the bracket filter on desktop instead
+         of pushed to the far edge.
   v3.15  Gross / Net toggle added to four more sections: Week-over-Week
          Movers, Hole by Hole — Average vs Par, How They Made Their
          Score, and The Course Speaks. Net recomputes each hole as
@@ -493,8 +502,12 @@
   }
   .sf-btn:hover { color: var(--ink); background: rgba(255,255,255,0.05); }
   .sf-btn.active { background: #ffffff; color: #091529; font-weight: 600; border-color: #ffffff; }
+  /* Gross/Net toggle: sits just after the bracket filter on desktop
+     (modest gap, not pushed to the far edge). On mobile it wraps. */
+  .mode-toggle:not(:first-child) { margin-left: 22px; }
   @media (max-width: 640px) {
     .sf-btn { padding: 6px 12px; font-size: 11px; }
+    .mode-toggle:not(:first-child) { margin-left: 0; }
   }
 
   /* ===== PANELS ===== */
@@ -1066,7 +1079,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v3.15</div>
+    <div class="splash-version">v3.17</div>
   </div>
 </div>
 
@@ -1101,7 +1114,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v3.15</div>
+  <div class="masthead-version">v3.17</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1148,7 +1161,7 @@
     <h2>Score Distribution</h2>
     <span class="sub" id="distSubtitle">Every hole, by gross result</span>
   </div>
-  <div class="section-filter" data-section="dist" style="justify-content:space-between;">
+  <div class="section-filter" data-section="dist">
     <span style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
       <span class="sf-label">Bracket</span>
       <button class="sf-btn active" data-bracket="all">All</button>
@@ -1187,7 +1200,7 @@
     <h2>Week-over-Week Movers</h2>
     <span class="sub">Only players who appeared in both selected weeks</span>
   </div>
-  <div class="section-filter" data-section="movers" style="justify-content:space-between;">
+  <div class="section-filter" data-section="movers">
     <span style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
       <span class="sf-label">Bracket</span>
       <button class="sf-btn active" data-bracket="all">All</button>
@@ -1210,7 +1223,7 @@
     <h2>Hole by Hole — Average vs Par</h2>
     <span class="sub">Click the legend — <em>All</em> shows the whole field; Low/Mid/High are multi-select</span>
   </div>
-  <div class="section-filter" style="justify-content:flex-end;">
+  <div class="section-filter">
     <span class="mode-toggle" data-mode-section="holeChart" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
       <span class="sf-label">Score</span>
       <button class="sf-btn mode-btn active" data-mode="gross">Gross</button>
@@ -1235,7 +1248,7 @@
     <h2>How They Made Their Score</h2>
     <span class="sub" id="distGridSubtitle">Share of holes played as eagle / birdie / par / bogey / double+</span>
   </div>
-  <div class="section-filter" style="justify-content:flex-end;">
+  <div class="section-filter">
     <span class="mode-toggle" data-mode-section="distGrid" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
       <span class="sf-label">Score</span>
       <button class="sf-btn mode-btn active" data-mode="gross">Gross</button>
@@ -1261,7 +1274,7 @@
     <h2>The Course Speaks</h2>
     <span class="sub" id="holesSubtitle">Ranked by field-average gross strokes over par</span>
   </div>
-  <div class="section-filter" data-section="holes" style="justify-content:space-between;">
+  <div class="section-filter" data-section="holes">
     <span style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
       <span class="sf-label">Bracket</span>
       <button class="sf-btn active" data-bracket="all">All</button>
@@ -1296,11 +1309,18 @@
     <span class="sub" id="standingsSub">Click any column to sort · tap a row for the scorecard</span>
   </div>
   <div class="section-filter" data-section="standings">
-    <span class="sf-label">Bracket</span>
-    <button class="sf-btn active" data-bracket="all">All</button>
-    <button class="sf-btn" data-bracket="low">Low</button>
-    <button class="sf-btn" data-bracket="mid">Mid</button>
-    <button class="sf-btn" data-bracket="high">High</button>
+    <span style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <span class="sf-label">Bracket</span>
+      <button class="sf-btn active" data-bracket="all">All</button>
+      <button class="sf-btn" data-bracket="low">Low</button>
+      <button class="sf-btn" data-bracket="mid">Mid</button>
+      <button class="sf-btn" data-bracket="high">High</button>
+    </span>
+    <span class="mode-toggle" data-mode-section="standings" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <span class="sf-label">Score</span>
+      <button class="sf-btn mode-btn active" data-mode="gross">Gross</button>
+      <button class="sf-btn mode-btn" data-mode="net">Net</button>
+    </span>
   </div>
   <div class="player-controls">
     <input type="text" class="search-input" id="search" placeholder="Search player…">
@@ -1833,7 +1853,7 @@ function currentRounds() {
 const sectionBracket = { dist: 'all', insights: 'all', movers: 'all', holes: 'all', standings: 'all' };
 
 // Gross/Net mode per section that supports the toggle.
-const sectionMode = { dist:'gross', movers:'gross', holeChart:'gross', distGrid:'gross', holes:'gross' };
+const sectionMode = { dist:'gross', movers:'gross', holeChart:'gross', distGrid:'gross', holes:'gross', standings:'gross' };
 
 function filterByBracket(items, sectionKey) {
   const b = sectionBracket[sectionKey] || 'all';
@@ -1934,7 +1954,8 @@ const MODE_RENDER = {
   movers:   () => renderMovers(),
   holeChart:() => renderHoleChart(),
   distGrid: () => renderDistribution(),
-  holes:    () => renderHolesTables()
+  holes:    () => renderHolesTables(),
+  standings:() => renderPlayerTable()
 };
 
 document.addEventListener('click', e => {
@@ -2002,6 +2023,38 @@ function holeAverageNet(items, holeIdx) {
 // Either gross or net hole average, per the given mode.
 function holeAvg(items, holeIdx, mode) {
   return mode === 'net' ? holeAverageNet(items, holeIdx) : holeAverage(items, holeIdx);
+}
+
+// Net-categorized "red numbers" (birdie or better) and double+ counts
+// for one player/round — used by the Player Standings Net mode.
+function netRedDbl(item) {
+  let red = 0, dbl = 0;
+  const tally = (scores, hc) => scores.forEach((s,i) => {
+    const dd = (s - strokesOnHole(hc, COURSE.si[i])) - COURSE.par[i];
+    if (dd <= -1) red++;
+    if (dd >= 2) dbl++;
+  });
+  if (ytdMode()) (item.weeks || []).forEach(w => tally(w.round.scores, w.round.hc));
+  else tally(item.scores, item.hc);
+  return { red, dbl };
+}
+
+// Full Albatross→Double+ breakdown for the scorecard summary strip.
+// mode 'gross' uses the stored counts; 'net' recategorizes each hole
+// as gross minus handicap strokes received.
+function scorecardDist(scores, hc, mode) {
+  let a=0,e=0,b=0,p=0,bo=0,d=0;
+  scores.forEach((s,i) => {
+    const v = mode === 'net' ? s - strokesOnHole(hc, COURSE.si[i]) : s;
+    const dd = v - COURSE.par[i];
+    if (dd <= -3) a++;
+    else if (dd === -2) e++;
+    else if (dd === -1) b++;
+    else if (dd === 0) p++;
+    else if (dd === 1) bo++;
+    else d++;
+  });
+  return { albatrosses:a, eagles:e, birdies:b, pars:p, bogeys:bo, doubles:d };
 }
 function distribution(items) {
   let a=0,e=0,b=0,p=0,bo=0,d=0;
@@ -2572,6 +2625,10 @@ function renderPlayerTableHead() {
   const sumGpLabel = ev.scoring === 'vsPar' ? 'Σ vs Par G' : 'Σ Gross Pts';
   const sumNpLabel = ev.scoring === 'vsPar' ? 'Σ vs Par N' : 'Σ Net Pts';
 
+  const sMode = sectionMode.standings;
+  const birdsLabel = sMode === 'net' ? 'Net Birds' : 'Birds';
+  const dblLabel   = sMode === 'net' ? 'Net Dbl+' : 'Dbl+';
+
   const cols = ytd ? [
     { key: 'name', label: 'Player', left: true },
     { key: 'hc', label: 'HC' },
@@ -2580,8 +2637,8 @@ function renderPlayerTableHead() {
     { key: 'avgNet', label: 'Avg N' },
     { key: 'totalGp', label: sumGpLabel },
     { key: 'totalNp', label: sumNpLabel },
-    { key: 'totalBirdies', label: 'Birds' },
-    { key: 'totalDoubles', label: 'Dbl+' },
+    { key: 'totalBirdies', label: birdsLabel },
+    { key: 'totalDoubles', label: dblLabel },
   ] : [
     { key: 'name', label: 'Player', left: true },
     { key: 'hc', label: 'HC' },
@@ -2591,8 +2648,8 @@ function renderPlayerTableHead() {
     { key: 'back', label: 'Back' },
     { key: 'gp', label: gpLabel },
     { key: 'np', label: npLabel },
-    { key: 'birdies', label: 'Birds' },
-    { key: 'doubles', label: 'Dbl+' },
+    { key: 'birdies', label: birdsLabel },
+    { key: 'doubles', label: dblLabel },
   ];
 
   document.getElementById('playerTableHead').innerHTML = '<tr>' +
@@ -2611,6 +2668,8 @@ function renderPlayerTableHead() {
 
 function renderPlayerTable() {
   renderPlayerTableHead();
+  syncDistModeButtons();
+  const sMode = sectionMode.standings;
   let rows = filterByBracket(currentRounds(), 'standings');
   if (state.search) {
     const s = state.search.toLowerCase();
@@ -2619,13 +2678,25 @@ function renderPlayerTable() {
   // Pick correct birdie field
   const birdieKey = ytdMode() ? 'totalBirdies' : 'birdies';
   const eagleKey  = ytdMode() ? 'totalEagles' : 'eagles';
+  const albKey    = ytdMode() ? 'totalAlbatrosses' : 'albatrosses';
   const doubleKey = ytdMode() ? 'totalDoubles' : 'doubles';
+
+  // Birds (= birdie or better) and Dbl+ columns honor the Gross/Net mode.
+  rows.forEach(p => {
+    if (sMode === 'net') {
+      const nc = netRedDbl(p);
+      p._red = nc.red; p._dbl = nc.dbl;
+    } else {
+      p._red = p[birdieKey] + p[eagleKey] + p[albKey];
+      p._dbl = p[doubleKey];
+    }
+  });
 
   rows = [...rows].sort((a,b) => {
     let av, bv;
     if (state.sortKey === 'name') return state.sortDir * a.name.localeCompare(b.name);
-    if (state.sortKey === 'birdies') { av = a[birdieKey] + a[eagleKey]; bv = b[birdieKey] + b[eagleKey]; }
-    else if (state.sortKey === 'doubles') { av = a[doubleKey]; bv = b[doubleKey]; }
+    if (state.sortKey === 'birdies') { av = a._red; bv = b._red; }
+    else if (state.sortKey === 'doubles') { av = a._dbl; bv = b._dbl; }
     else { av = a[state.sortKey]; bv = b[state.sortKey]; }
     return state.sortDir * (av - bv);
   });
@@ -2645,8 +2716,8 @@ function renderPlayerTable() {
         <td>${p.avgNet.toFixed(1)}</td>
         <td>${fmtGp(p.totalGp)}</td>
         <td>${fmtGp(p.totalNp)}</td>
-        <td>${p.totalBirdies + p.totalEagles + p.totalAlbatrosses}</td>
-        <td>${p.totalDoubles}</td>
+        <td>${p._red}</td>
+        <td>${p._dbl}</td>
       </tr>`;
     }
     return `<tr data-name="${p.name}">
@@ -2658,8 +2729,8 @@ function renderPlayerTable() {
       <td>${p.back}</td>
       <td>${fmtGp(p.gp)}</td>
       <td>${fmtGp(p.np)}</td>
-      <td>${p.birdies + p.eagles + p.albatrosses}</td>
-      <td>${p.doubles}</td>
+      <td>${p._red}</td>
+      <td>${p._dbl}</td>
     </tr>`;
   }).join('');
 
@@ -2760,15 +2831,23 @@ function openScorecard(name) {
         <!-- Row 2: score distribution across the season -->
         <div class="scorecard-summary" style="margin-top:14px;">
           ${(() => {
+            const sMode = sectionMode.standings;
             const totalH = ytdAgg.rounds * 18;
             const pct = (n) => totalH ? (n / totalH * 100).toFixed(1) : '0.0';
+            // Sum the gross/net category breakdown over every logged round
+            const sd = { albatrosses:0, eagles:0, birdies:0, pars:0, bogeys:0, doubles:0 };
+            (ytdAgg.weeks || []).forEach(w => {
+              const d = scorecardDist(w.round.scores, w.round.hc, sMode);
+              for (const k in sd) sd[k] += d[k];
+            });
+            const tag = sMode === 'net' ? ' (net)' : '';
             return `
-              <div class="summary-item"><div class="lbl">Albatross</div><div class="val" style="color:#facc15">${ytdAgg.totalAlbatrosses}<span class="val-pct">${pct(ytdAgg.totalAlbatrosses)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Eagle</div><div class="val" style="color:#b48dd9">${ytdAgg.totalEagles}<span class="val-pct">${pct(ytdAgg.totalEagles)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Birdie</div><div class="val" style="color:#ff6b5e">${ytdAgg.totalBirdies}<span class="val-pct">${pct(ytdAgg.totalBirdies)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Par</div><div class="val" style="color:#62d4a1">${ytdAgg.totalPars}<span class="val-pct">${pct(ytdAgg.totalPars)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Bogey</div><div class="val" style="color:#f59e0b">${ytdAgg.totalBogeys}<span class="val-pct">${pct(ytdAgg.totalBogeys)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Double+</div><div class="val" style="color:#ff8e84">${ytdAgg.totalDoubles}<span class="val-pct">${pct(ytdAgg.totalDoubles)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Albatross${tag}</div><div class="val" style="color:#facc15">${sd.albatrosses}<span class="val-pct">${pct(sd.albatrosses)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Eagle${tag}</div><div class="val" style="color:#b48dd9">${sd.eagles}<span class="val-pct">${pct(sd.eagles)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Birdie${tag}</div><div class="val" style="color:#ff6b5e">${sd.birdies}<span class="val-pct">${pct(sd.birdies)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Par${tag}</div><div class="val" style="color:#62d4a1">${sd.pars}<span class="val-pct">${pct(sd.pars)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Bogey${tag}</div><div class="val" style="color:#f59e0b">${sd.bogeys}<span class="val-pct">${pct(sd.bogeys)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Double+${tag}</div><div class="val" style="color:#ff8e84">${sd.doubles}<span class="val-pct">${pct(sd.doubles)}%</span></div></div>
             `;
           })()}
         </div>
@@ -2864,14 +2943,17 @@ function openScorecard(name) {
         </div>
         <div class="scorecard-summary">
           ${(() => {
+            const sMode = sectionMode.standings;
+            const sd = scorecardDist(round.scores, round.hc, sMode);
             const pctR = (n) => (n / 18 * 100).toFixed(1);
+            const tag = sMode === 'net' ? ' (net)' : '';
             return `
-              <div class="summary-item"><div class="lbl">Albatross</div><div class="val" style="color:#facc15">${round.albatrosses}<span class="val-pct">${pctR(round.albatrosses)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Eagle</div><div class="val" style="color:#b48dd9">${round.eagles}<span class="val-pct">${pctR(round.eagles)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Birdie</div><div class="val" style="color:#ff6b5e">${round.birdies}<span class="val-pct">${pctR(round.birdies)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Par</div><div class="val" style="color:#62d4a1">${round.pars}<span class="val-pct">${pctR(round.pars)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Bogey</div><div class="val" style="color:#f59e0b">${round.bogeys}<span class="val-pct">${pctR(round.bogeys)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Double+</div><div class="val" style="color:#ff8e84">${round.doubles}<span class="val-pct">${pctR(round.doubles)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Albatross${tag}</div><div class="val" style="color:#facc15">${sd.albatrosses}<span class="val-pct">${pctR(sd.albatrosses)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Eagle${tag}</div><div class="val" style="color:#b48dd9">${sd.eagles}<span class="val-pct">${pctR(sd.eagles)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Birdie${tag}</div><div class="val" style="color:#ff6b5e">${sd.birdies}<span class="val-pct">${pctR(sd.birdies)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Par${tag}</div><div class="val" style="color:#62d4a1">${sd.pars}<span class="val-pct">${pctR(sd.pars)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Bogey${tag}</div><div class="val" style="color:#f59e0b">${sd.bogeys}<span class="val-pct">${pctR(sd.bogeys)}%</span></div></div>
+              <div class="summary-item"><div class="lbl">Double+${tag}</div><div class="val" style="color:#ff8e84">${sd.doubles}<span class="val-pct">${pctR(sd.doubles)}%</span></div></div>
             `;
           })()}
         </div>
