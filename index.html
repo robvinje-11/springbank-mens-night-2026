@@ -6,6 +6,15 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v3.15  Gross / Net toggle added to four more sections: Week-over-Week
+         Movers, Hole by Hole — Average vs Par, How They Made Their
+         Score, and The Course Speaks. Net recomputes each hole as
+         gross minus handicap strokes received. Each section's toggle
+         is independent.
+  v3.14  Score Distribution now has a Gross / Net toggle. Gross shows
+         the Albatross–Double+ breakdown from raw hole scores; Net
+         recomputes each hole as gross minus handicap strokes received
+         (by stroke index) and categorizes the net result vs par.
   v3.13  Fixed the dashboard sometimes loading scrolled down to the
          admin section. The auto-scroll only happens on an active
          sign-in now — not when Firebase restores a remembered admin
@@ -1057,7 +1066,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v3.13</div>
+    <div class="splash-version">v3.15</div>
   </div>
 </div>
 
@@ -1092,7 +1101,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v3.13</div>
+  <div class="masthead-version">v3.15</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1137,14 +1146,21 @@
   <div class="section-head">
     <span class="num">No. 02</span>
     <h2>Score Distribution</h2>
-    <span class="sub">Every hole, by result</span>
+    <span class="sub" id="distSubtitle">Every hole, by gross result</span>
   </div>
-  <div class="section-filter" data-section="dist">
-    <span class="sf-label">Bracket</span>
-    <button class="sf-btn active" data-bracket="all">All</button>
-    <button class="sf-btn" data-bracket="low">Low</button>
-    <button class="sf-btn" data-bracket="mid">Mid</button>
-    <button class="sf-btn" data-bracket="high">High</button>
+  <div class="section-filter" data-section="dist" style="justify-content:space-between;">
+    <span style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <span class="sf-label">Bracket</span>
+      <button class="sf-btn active" data-bracket="all">All</button>
+      <button class="sf-btn" data-bracket="low">Low</button>
+      <button class="sf-btn" data-bracket="mid">Mid</button>
+      <button class="sf-btn" data-bracket="high">High</button>
+    </span>
+    <span class="mode-toggle" data-mode-section="dist" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <span class="sf-label">Score</span>
+      <button class="sf-btn mode-btn active" data-mode="gross">Gross</button>
+      <button class="sf-btn mode-btn" data-mode="net">Net</button>
+    </span>
   </div>
   <div class="kpis kpis-distribution" id="kpiDistribution"></div>
 </section>
@@ -1171,12 +1187,19 @@
     <h2>Week-over-Week Movers</h2>
     <span class="sub">Only players who appeared in both selected weeks</span>
   </div>
-  <div class="section-filter" data-section="movers">
-    <span class="sf-label">Bracket</span>
-    <button class="sf-btn active" data-bracket="all">All</button>
-    <button class="sf-btn" data-bracket="low">Low</button>
-    <button class="sf-btn" data-bracket="mid">Mid</button>
-    <button class="sf-btn" data-bracket="high">High</button>
+  <div class="section-filter" data-section="movers" style="justify-content:space-between;">
+    <span style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <span class="sf-label">Bracket</span>
+      <button class="sf-btn active" data-bracket="all">All</button>
+      <button class="sf-btn" data-bracket="low">Low</button>
+      <button class="sf-btn" data-bracket="mid">Mid</button>
+      <button class="sf-btn" data-bracket="high">High</button>
+    </span>
+    <span class="mode-toggle" data-mode-section="movers" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <span class="sf-label">Score</span>
+      <button class="sf-btn mode-btn active" data-mode="gross">Gross</button>
+      <button class="sf-btn mode-btn" data-mode="net">Net</button>
+    </span>
   </div>
   <div class="movers-grid" id="moversGrid"></div>
 </section>
@@ -1186,6 +1209,13 @@
     <span class="num">No. 05</span>
     <h2>Hole by Hole — Average vs Par</h2>
     <span class="sub">Click the legend — <em>All</em> shows the whole field; Low/Mid/High are multi-select</span>
+  </div>
+  <div class="section-filter" style="justify-content:flex-end;">
+    <span class="mode-toggle" data-mode-section="holeChart" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <span class="sf-label">Score</span>
+      <button class="sf-btn mode-btn active" data-mode="gross">Gross</button>
+      <button class="sf-btn mode-btn" data-mode="net">Net</button>
+    </span>
   </div>
   <div class="panel">
     <div class="chart-legend" id="holeChartLegend">
@@ -1203,7 +1233,14 @@
   <div class="section-head">
     <span class="num">No. 06</span>
     <h2>How They Made Their Score</h2>
-    <span class="sub">Share of holes played as eagle / birdie / par / bogey / double+</span>
+    <span class="sub" id="distGridSubtitle">Share of holes played as eagle / birdie / par / bogey / double+</span>
+  </div>
+  <div class="section-filter" style="justify-content:flex-end;">
+    <span class="mode-toggle" data-mode-section="distGrid" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <span class="sf-label">Score</span>
+      <button class="sf-btn mode-btn active" data-mode="gross">Gross</button>
+      <button class="sf-btn mode-btn" data-mode="net">Net</button>
+    </span>
   </div>
   <div class="panel">
     <div class="dist-grid" id="distGrid"></div>
@@ -1222,14 +1259,21 @@
   <div class="section-head">
     <span class="num">No. 07</span>
     <h2>The Course Speaks</h2>
-    <span class="sub">Ranked by field-average strokes over par</span>
+    <span class="sub" id="holesSubtitle">Ranked by field-average gross strokes over par</span>
   </div>
-  <div class="section-filter" data-section="holes">
-    <span class="sf-label">Bracket</span>
-    <button class="sf-btn active" data-bracket="all">All</button>
-    <button class="sf-btn" data-bracket="low">Low</button>
-    <button class="sf-btn" data-bracket="mid">Mid</button>
-    <button class="sf-btn" data-bracket="high">High</button>
+  <div class="section-filter" data-section="holes" style="justify-content:space-between;">
+    <span style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <span class="sf-label">Bracket</span>
+      <button class="sf-btn active" data-bracket="all">All</button>
+      <button class="sf-btn" data-bracket="low">Low</button>
+      <button class="sf-btn" data-bracket="mid">Mid</button>
+      <button class="sf-btn" data-bracket="high">High</button>
+    </span>
+    <span class="mode-toggle" data-mode-section="holes" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <span class="sf-label">Score</span>
+      <button class="sf-btn mode-btn active" data-mode="gross">Gross</button>
+      <button class="sf-btn mode-btn" data-mode="net">Net</button>
+    </span>
   </div>
   <div class="panel">
     <div class="holes-table-wrap">
@@ -1788,6 +1832,9 @@ function currentRounds() {
 // Each filterable section keeps its own independent bracket selection.
 const sectionBracket = { dist: 'all', insights: 'all', movers: 'all', holes: 'all', standings: 'all' };
 
+// Gross/Net mode per section that supports the toggle.
+const sectionMode = { dist:'gross', movers:'gross', holeChart:'gross', distGrid:'gross', holes:'gross' };
+
 function filterByBracket(items, sectionKey) {
   const b = sectionBracket[sectionKey] || 'all';
   if (b === 'all') return items;
@@ -1881,17 +1928,51 @@ const SECTION_RENDER = {
   standings: () => renderPlayerTable()
 };
 
+// Render fn for each section that has a Gross/Net toggle
+const MODE_RENDER = {
+  dist:     () => renderKpis(),
+  movers:   () => renderMovers(),
+  holeChart:() => renderHoleChart(),
+  distGrid: () => renderDistribution(),
+  holes:    () => renderHolesTables()
+};
+
 document.addEventListener('click', e => {
   const btn = e.target.closest('.sf-btn');
   if (!btn) return;
+
+  // Gross / Net mode toggle (Score Distribution, Movers, Hole-by-Hole,
+  // How They Made Their Score, The Course Speaks)
+  if (btn.classList.contains('mode-btn')) {
+    const wrap = btn.closest('[data-mode-section]');
+    if (!wrap) return;
+    const sec = wrap.dataset.modeSection;
+    sectionMode[sec] = btn.dataset.mode;
+    wrap.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+    const fn = MODE_RENDER[sec];
+    if (fn) fn();
+    return;
+  }
+
+  // Per-section bracket filter (mode buttons handled above)
   const wrap = btn.closest('.section-filter');
-  if (!wrap) return;
+  if (!wrap || !wrap.dataset.section) return;
   const section = wrap.dataset.section;
   sectionBracket[section] = btn.dataset.bracket;
-  wrap.querySelectorAll('.sf-btn').forEach(b => b.classList.toggle('active', b === btn));
+  wrap.querySelectorAll('.sf-btn:not(.mode-btn)').forEach(b => b.classList.toggle('active', b === btn));
   const fn = SECTION_RENDER[section];
   if (fn) fn();
 });
+
+// Keep every Gross/Net toggle's active state in sync with sectionMode
+function syncDistModeButtons() {
+  document.querySelectorAll('[data-mode-section]').forEach(wrap => {
+    const m = sectionMode[wrap.dataset.modeSection] || 'gross';
+    wrap.querySelectorAll('.mode-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === m);
+    });
+  });
+}
 
 // =================================================================
 // HELPERS — averages, distributions
@@ -1903,6 +1984,25 @@ function holeAverage(items, holeIdx) {
   }
   return items.reduce((s,r) => s + r.scores[holeIdx], 0) / items.length;
 }
+
+// Average NET score on a hole = gross hole score minus the handicap
+// strokes that player receives on that hole (by stroke index).
+function holeAverageNet(items, holeIdx) {
+  let sum = 0, n = 0;
+  const si = COURSE.si[holeIdx];
+  const add = (scores, hc) => { sum += scores[holeIdx] - strokesOnHole(hc, si); n++; };
+  if (ytdMode()) {
+    items.forEach(x => (x.weeks || []).forEach(w => add(w.round.scores, w.round.hc)));
+  } else {
+    items.forEach(r => add(r.scores, r.hc));
+  }
+  return n ? sum / n : COURSE.par[holeIdx];
+}
+
+// Either gross or net hole average, per the given mode.
+function holeAvg(items, holeIdx, mode) {
+  return mode === 'net' ? holeAverageNet(items, holeIdx) : holeAverage(items, holeIdx);
+}
 function distribution(items) {
   let a=0,e=0,b=0,p=0,bo=0,d=0;
   if (ytdMode()) {
@@ -1912,6 +2012,33 @@ function distribution(items) {
   }
   items.forEach(r => { a+=r.albatrosses; e+=r.eagles; b+=r.birdies; p+=r.pars; bo+=r.bogeys; d+=r.doubles; });
   return { albatrosses:a, eagles:e, birdies:b, pars:p, bogeys:bo, doubles:d, total: items.length * 18 };
+}
+
+// Net-based distribution: each hole's net score = gross − handicap
+// strokes received on that hole (by stroke index). Categorizes net vs par.
+// For YTD this walks every round each player has logged.
+function distributionNet(items) {
+  let a=0,e=0,b=0,p=0,bo=0,d=0,total=0;
+  const tally = (scores, hc) => {
+    scores.forEach((s,i) => {
+      const net = s - strokesOnHole(hc, COURSE.si[i]);
+      const dd = net - COURSE.par[i];
+      if (dd <= -3) a++;
+      else if (dd === -2) e++;
+      else if (dd === -1) b++;
+      else if (dd === 0) p++;
+      else if (dd === 1) bo++;
+      else d++;
+      total++;
+    });
+  };
+  if (ytdMode()) {
+    // YTD player objects carry each underlying weekly round
+    items.forEach(x => (x.weeks || []).forEach(w => tally(w.round.scores, w.round.hc)));
+  } else {
+    items.forEach(r => tally(r.scores, r.hc));
+  }
+  return { albatrosses:a, eagles:e, birdies:b, pars:p, bogeys:bo, doubles:d, total };
 }
 function frontBackStats(items) {
   if (!items.length) return null;
@@ -2002,8 +2129,12 @@ function renderKpis() {
     distEl.innerHTML = `<div class="kpi"><div class="kpi-label">No players</div><div class="kpi-sub">in this bracket for this view</div></div>`;
     return;
   }
-  const dist = distribution(items);
-  const pct = n => (n / dist.total * 100).toFixed(1);
+  const mode = sectionMode.dist;
+  const dist = mode === 'net' ? distributionNet(items) : distribution(items);
+  const pct = n => dist.total ? (n / dist.total * 100).toFixed(1) : '0.0';
+  syncDistModeButtons();
+  const subEl = document.getElementById('distSubtitle');
+  if (subEl) subEl.textContent = `Every hole, by ${mode} result`;
 
   // Score distribution (% of holes — sums to 100.0%)
   distEl.innerHTML = `
@@ -2194,8 +2325,9 @@ function renderMovers() {
     prevWeek = WEEKS[WEEKS.length - 2];
   }
 
+  const mvMode = sectionMode.movers;
   document.querySelector('#moversSection .section-head .sub').innerHTML =
-    `${prevWeek.label} → ${curWeek.label} · ${sectionBracket.movers === 'all' ? 'all brackets' : sectionBracket.movers + ' bracket only'}`;
+    `${prevWeek.label} → ${curWeek.label} · ${sectionBracket.movers === 'all' ? 'all brackets' : sectionBracket.movers + ' bracket only'} · ${mvMode} score`;
 
   const prevByName = new Map(prevWeek.rounds.map(r => [r.name, r]));
   const both = curWeek.rounds.filter(r => prevByName.has(r.name));
@@ -2216,31 +2348,37 @@ function renderMovers() {
     };
   });
 
-  const improvedGross = [...deltas].sort((a,b) => a.grossDelta - b.grossDelta).slice(0, 5);
-  const regressedGross = [...deltas].sort((a,b) => b.grossDelta - a.grossDelta).slice(0, 5);
+  // Pick gross or net figures for ranking + display
+  const dVal  = d => mvMode === 'net' ? d.netDelta : d.grossDelta;
+  const dPrev = d => mvMode === 'net' ? d.prevNet  : d.prevGross;
+  const dCur  = d => mvMode === 'net' ? d.curNet   : d.curGross;
 
-  function renderList(arr, mode) {
+  const improved  = [...deltas].sort((a,b) => dVal(a) - dVal(b)).slice(0, 5);
+  const regressed = [...deltas].sort((a,b) => dVal(b) - dVal(a)).slice(0, 5);
+
+  function renderList(arr) {
     if (!arr.length) return '<li style="color:var(--muted);font-style:italic">No players in this bracket appeared in both weeks.</li>';
     return arr.map(d => {
-      const delta = d.grossDelta;
+      const delta = dVal(d);
       const sign = delta > 0 ? '+' : '';
       const cls = delta < 0 ? 'improved' : delta > 0 ? 'regressed' : '';
       return `<li>
         <span class="mover-name">${d.name}</span>
-        <span class="mover-detail">${d.prevGross} → ${d.curGross}</span>
+        <span class="mover-detail">${dPrev(d)} → ${dCur(d)}</span>
         <span class="mover-delta ${cls}">${sign}${delta}</span>
       </li>`;
     }).join('');
   }
 
+  const mLabel = mvMode === 'net' ? 'net' : 'gross';
   document.getElementById('moversGrid').innerHTML = `
     <div class="movers-card">
-      <h3>Most improved (gross)</h3>
-      <ul class="movers-list">${renderList(improvedGross)}</ul>
+      <h3>Most improved (${mLabel})</h3>
+      <ul class="movers-list">${renderList(improved)}</ul>
     </div>
     <div class="movers-card">
-      <h3>Biggest regression (gross)</h3>
-      <ul class="movers-list">${renderList(regressedGross)}</ul>
+      <h3>Biggest regression (${mLabel})</h3>
+      <ul class="movers-list">${renderList(regressed)}</ul>
     </div>
   `;
 }
@@ -2292,8 +2430,9 @@ function renderHoleChart() {
     if (holeChartBrackets.mid)  series.push({ key: 'mid',  label: 'Mid',  items: items.filter(p=>p.bracket==='mid')  });
     if (holeChartBrackets.high) series.push({ key: 'high', label: 'High', items: items.filter(p=>p.bracket==='high') });
   }
+  const chartMode = sectionMode.holeChart;
   series.forEach(s => {
-    s.avgs = COURSE.par.map((_,i) => holeAverage(s.items, i));
+    s.avgs = COURSE.par.map((_,i) => holeAvg(s.items, i, chartMode));
     s.over = s.avgs.map((v,i) => v - COURSE.par[i]);
   });
 
@@ -2342,6 +2481,9 @@ function renderHoleChart() {
 // DISTRIBUTION
 // =================================================================
 function renderDistribution() {
+  const dMode = sectionMode.distGrid;
+  const dgSub = document.getElementById('distGridSubtitle');
+  if (dgSub) dgSub.textContent = `Share of holes by ${dMode} result — eagle / birdie / par / bogey / double+`;
   const brackets = ['all','low','mid','high'];
   const labels = { all: 'Field', low: 'Low (0–7)', mid: 'Mid (8–15)', high: 'High (16+)' };
   document.getElementById('distGrid').innerHTML = brackets.map(b => {
@@ -2349,8 +2491,8 @@ function renderDistribution() {
     if (!items.length) {
       return `<div class="dist-card"><div class="dist-card-title">${labels[b]}</div><div class="dist-card-sub" style="margin-bottom:0">No players</div></div>`;
     }
-    const d = distribution(items);
-    const pct = n => (n / d.total * 100);
+    const d = dMode === 'net' ? distributionNet(items) : distribution(items);
+    const pct = n => d.total ? (n / d.total * 100) : 0;
     return `
       <div class="dist-card">
         <div class="dist-card-title">${labels[b]}</div>
@@ -2385,13 +2527,17 @@ function renderHolesTables() {
     document.getElementById('easiestTable').innerHTML = '';
     return;
   }
+  const hMode = sectionMode.holes;
+  const hSub = document.getElementById('holesSubtitle');
+  if (hSub) hSub.textContent = `Ranked by field-average ${hMode} strokes over par`;
   const holes = COURSE.par.map((p,i) => ({
     hole: i+1, par: p, si: COURSE.si[i],
-    avg: holeAverage(items, i),
-    delta: holeAverage(items, i) - p,
+    avg: holeAvg(items, i, hMode),
+    delta: holeAvg(items, i, hMode) - p,
     doubles: items.reduce((s,pp) => {
       if (ytdMode()) return s + 0; // skip for YTD detail
-      return s + (pp.scores[i] >= p+2 ? 1 : 0);
+      const v = hMode === 'net' ? pp.scores[i] - strokesOnHole(pp.hc, COURSE.si[i]) : pp.scores[i];
+      return s + (v >= p+2 ? 1 : 0);
     }, 0),
   }));
   const hardest = [...holes].sort((a,b) => b.delta - a.delta).slice(0, 9);
