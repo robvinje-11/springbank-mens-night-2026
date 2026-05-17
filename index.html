@@ -6,6 +6,10 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v4.7   Hole by Hole chart is now responsive: on phones it switches
+         to a narrower, taller layout with larger fonts and bars so it
+         stays readable instead of shrinking. Re-renders if the
+         viewport crosses the mobile/desktop breakpoint.
   v4.6   Hole by Hole chart: the dashed par line / bar origin now sits
          snug against the widest hole label — the label column
          auto-measures to fit, removing the leftover gap.
@@ -1115,7 +1119,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v4.6</div>
+    <div class="splash-version">v4.7</div>
   </div>
 </div>
 
@@ -1150,7 +1154,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v4.6</div>
+  <div class="masthead-version">v4.7</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -2495,20 +2499,24 @@ function renderHoleChart() {
   const seriesLabel = bracketLabels[bracket] || 'Field';
 
   // ---- Horizontal layout: 18 hole rows stacked top to bottom ----
-  // The hole label ("1  P4 · SI11") is pushed hard to the left edge;
-  // the dashed par line sits snug right after the WIDEST label so no
-  // gap is wasted; the bar uses all remaining width. The over-par
-  // value sits INSIDE the bar's right end.
-  const W = 640;
-  // Widest label is a 2-digit hole + 3-digit SI, e.g. "10 P3·SI18".
-  // JetBrains Mono ~8.4px/char at 14px; the em-space gap ~14px.
-  const labelChars = (s) => s.replace('\u2003','').length;   // monospace count
+  // The chart scales by viewport. On phones we use a narrower viewBox
+  // with bigger fonts/bars so everything reads larger once the SVG is
+  // shrunk to the screen — desktop keeps the roomier wide layout.
+  const isMobile = (window.innerWidth || 1024) < 640;
+  const W   = isMobile ? 380 : 640;
+  const fHole = isMobile ? 17 : 14;   // hole-label font
+  const fAxis = isMobile ? 16 : 14;   // axis-scale font
+  const fVal  = isMobile ? 18 : 15;   // over-par value font
+  const rowH  = isMobile ? 52 : 42;   // row height
+  const barH  = isMobile ? 40 : 32;   // bar thickness
+  const charW = fHole * 0.6;          // monospace char width estimate
+
+  // Widest label, e.g. "10 P3·SI18" — column auto-fits it.
+  const labelChars = (s) => s.replace('\u2003','').length;
   const labels = COURSE.par.map((p,i) => `${i+1}\u2003P${p}\u00b7SI${COURSE.si[i]}`);
   const widestChars = Math.max(...labels.map(labelChars));
-  const labelW = Math.ceil(widestChars * 8.4 + 14) + 8;      // text + em-gap + small pad
-  const pad = { l: 2, r: 14, t: 36, b: 12 };
-  const rowH = 42;                 // height allotted per hole
-  const barH = 32;                 // thickness of each bar
+  const labelW = Math.ceil(widestChars * charW + fHole) + 6;
+  const pad = { l: 2, r: 12, t: isMobile ? 40 : 36, b: 12 };
   const gap = 14;                  // small break between the nines
   const H = pad.t + 18 * rowH + pad.b + gap;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
@@ -2525,7 +2533,7 @@ function renderHoleChart() {
     const x = axisX + (v / maxOver) * plotW;
     const isZero = v === 0;
     html += `<line x1="${x}" y1="${pad.t - 9}" x2="${x}" y2="${H - pad.b}" stroke="${isZero?'#ffffff':'rgba(255,255,255,0.14)'}" stroke-width="${isZero?2:1}" ${isZero?'stroke-dasharray="4 4"':''} opacity="${isZero?0.9:1}"/>`;
-    html += `<text x="${x}" y="${pad.t - 15}" text-anchor="middle" font-family="JetBrains Mono" font-size="14" font-weight="700" fill="#ffffff">+${v.toFixed(1)}</text>`;
+    html += `<text x="${x}" y="${pad.t - 15}" text-anchor="middle" font-family="JetBrains Mono" font-size="${fAxis}" font-weight="700" fill="#ffffff">+${v.toFixed(1)}</text>`;
   }
 
   // bars — one per hole
@@ -2537,7 +2545,7 @@ function renderHoleChart() {
     const tooltip = `Hole ${i+1} · ${seriesLabel} avg ${avgs[i].toFixed(2)} (${val>=0?'+':''}${val.toFixed(2)})`;
 
     // hole label, anchored hard to the card's left edge
-    html += `<text x="${pad.l}" y="${midY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="14" font-weight="700" fill="#ffffff">${labels[i]}</text>`;
+    html += `<text x="${pad.l}" y="${midY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fHole}" font-weight="700" fill="#ffffff">${labels[i]}</text>`;
 
     // the bar
     html += `<rect x="${axisX}" y="${y}" width="${barW}" height="${barH}" fill="#6f9fd8" rx="3">
@@ -2546,10 +2554,10 @@ function renderHoleChart() {
     // over-par value INSIDE the bar — at its right end when there's
     // room, otherwise just past a very short bar.
     const valStr = `+${val.toFixed(2)}`;
-    const fitsInside = barW > 64;
+    const fitsInside = barW > fVal * 3.4;
     const valX = fitsInside ? axisX + barW - 10 : axisX + barW + 8;
     const valAnchor = fitsInside ? 'end' : 'start';
-    html += `<text x="${valX}" y="${midY}" dominant-baseline="central" text-anchor="${valAnchor}" font-family="JetBrains Mono" font-size="15" font-weight="700" fill="#ffffff">${valStr}</text>`;
+    html += `<text x="${valX}" y="${midY}" dominant-baseline="central" text-anchor="${valAnchor}" font-family="JetBrains Mono" font-size="${fVal}" font-weight="700" fill="#ffffff">${valStr}</text>`;
   }
 
   svg.innerHTML = html;
@@ -3423,6 +3431,22 @@ async function initFirebase() {
   syncAdminMode();
   renderAll();
   renderStoredWeeks();
+
+  // The hole chart uses a different viewBox/fonts below 640px wide, so
+  // re-render it when the viewport crosses that breakpoint (rotate /
+  // resize). Debounced so it doesn't fire on every resize tick.
+  let __holeChartWasMobile = (window.innerWidth || 1024) < 640;
+  let __resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(__resizeTimer);
+    __resizeTimer = setTimeout(() => {
+      const nowMobile = (window.innerWidth || 1024) < 640;
+      if (nowMobile !== __holeChartWasMobile) {
+        __holeChartWasMobile = nowMobile;
+        renderHoleChart();
+      }
+    }, 180);
+  });
 
   // Connect to the cloud
   initFirebase();
