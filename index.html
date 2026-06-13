@@ -6,6 +6,16 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v5.1   Admin tools: (1) every entry in "Manage entries" now has a
+         View button that opens a popup showing exactly what was
+         parsed in for that week/day — toggle between the Raw paste
+         format (reconstructed as typed) and a Clean table (player
+         rows, all 18 holes, Out/In/Gross/Net + Pts or vs-Par). The
+         totals line / columns follow the active event's scoring
+         (Men's Night quota vs Snips vs-Par). (2) An ⓘ info icon next
+         to the paste box opens a format reminder showing the expected
+         layout for BOTH Men's Night and Weekend Snips, each with a
+         worked example block. View-only — no data is changed.
   v5.0   Scorecard popup: new "By Par Type · vs Par" row added just
          above the Albatross→Double+ strip. Shows the player's total
          strokes vs par and the per-hole average on par 3s, par 4s
@@ -1136,7 +1146,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v5.0</div>
+    <div class="splash-version">v5.1</div>
   </div>
 </div>
 
@@ -1171,7 +1181,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v5.0</div>
+  <div class="masthead-version">v5.1</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1422,8 +1432,11 @@
     </div>
 
     <div style="margin-bottom:14px;">
-      <div id="adminPasteInstructions" style="font-size:12px;letter-spacing:0.05em;line-height:1.6;">
-        Paste the exact format SmartGolf gives you: <strong>handicap, name, 18 hole scores (one per line), then a totals line</strong> (Gross / Net / Gross Pts / Net Pts) for each player. Header rows are auto-skipped.
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div id="adminPasteInstructions" style="font-size:12px;letter-spacing:0.05em;line-height:1.6;flex:1;">
+          Paste the exact format SmartGolf gives you: <strong>handicap, name, 18 hole scores (one per line), then a totals line</strong> (Gross / Net / Gross Pts / Net Pts) for each player. Header rows are auto-skipped.
+        </div>
+        <button id="formatInfoBtn" title="Data format reminder" aria-label="Data format reminder" style="flex:none;width:26px;height:26px;line-height:1;border-radius:50%;background:transparent;color:#fff;border:1px solid var(--rule);cursor:pointer;font-family:'Fraunces',serif;font-style:italic;font-size:14px;font-weight:600;">i</button>
       </div>
     </div>
 
@@ -1465,6 +1478,91 @@
     <div style="display:flex;gap:8px;">
       <button id="loginSubmitBtn" style="flex:1;padding:11px;background:#fff;color:#091529;border:none;border-radius:3px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;">Sign In</button>
       <button id="loginCancelBtn" style="padding:11px 16px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:3px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Week View modal (read-only — shows parsed data, Raw / Table toggle) -->
+<div id="weekViewModal" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(5,12,28,0.85);align-items:center;justify-content:center;padding:18px;box-sizing:border-box;">
+  <div style="background:var(--paper);border:1px solid var(--rule);border-radius:6px;width:760px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;font-family:'DM Sans',sans-serif;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:22px 24px 14px;border-bottom:1px solid var(--rule);">
+      <div>
+        <div id="weekViewTitle" style="font-family:'Fraunces',serif;font-style:italic;font-size:22px;color:#fff;line-height:1.2;">Round</div>
+        <div id="weekViewSub" style="font-size:12px;color:var(--muted);margin-top:4px;"></div>
+      </div>
+      <button id="weekViewClose" style="flex:none;padding:8px 14px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;">Close ✕</button>
+    </div>
+    <div style="display:flex;gap:8px;padding:14px 24px 0;">
+      <button id="weekViewRawBtn" style="padding:7px 18px;background:#fff;color:#091529;border:none;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;">Raw paste</button>
+      <button id="weekViewTableBtn" style="padding:7px 18px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;">Clean table</button>
+    </div>
+    <div style="overflow:auto;padding:18px 24px 24px;">
+      <pre id="weekViewRaw" style="margin:0;white-space:pre;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55;color:#fff;background:#051329;border:1px solid var(--rule);border-radius:3px;padding:16px;overflow:auto;"></pre>
+      <div id="weekViewTable" style="display:none;overflow:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Data-format reminder modal (opened from the ⓘ icon) -->
+<div id="formatInfoModal" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(5,12,28,0.85);align-items:center;justify-content:center;padding:18px;box-sizing:border-box;">
+  <div style="background:var(--paper);border:1px solid var(--rule);border-radius:6px;width:560px;max-width:96vw;max-height:90vh;overflow:auto;font-family:'DM Sans',sans-serif;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:22px 24px 14px;border-bottom:1px solid var(--rule);">
+      <div style="font-family:'Fraunces',serif;font-style:italic;font-size:22px;color:#fff;">Paste data format</div>
+      <button id="formatInfoClose" style="flex:none;padding:8px 14px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;">Close ✕</button>
+    </div>
+    <div style="padding:18px 24px 24px;font-size:13px;line-height:1.6;color:#fff;">
+      <p style="margin:0 0 16px;">Each player is a <strong>21-line block</strong>: handicap, name, the 18 hole scores (one per line), then a totals line. Stack one block per player and paste them all at once — header rows are auto-skipped.</p>
+
+      <div style="margin-bottom:18px;">
+        <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;margin-bottom:6px;">Men's Night — totals line: <span style="font-family:'JetBrains Mono',monospace;font-style:normal;">Gross Net GrossPts NetPts</span></div>
+        <pre style="margin:0;white-space:pre;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;color:#fff;background:#051329;border:1px solid var(--rule);border-radius:3px;padding:14px;overflow:auto;">8
+Rob Vinje
+5
+4
+4
+3
+5
+4
+4
+3
+4
+4
+5
+4
+4
+3
+5
+4
+4
+4
+73 65 32 38</pre>
+      </div>
+
+      <div>
+        <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;margin-bottom:6px;">Weekend Snips — totals line: <span style="font-family:'JetBrains Mono',monospace;font-style:normal;">Gross Net</span></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-style:italic;">vs-Par is calculated automatically (Gross &minus; 71, Net &minus; 71).</div>
+        <pre style="margin:0;white-space:pre;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;color:#fff;background:#051329;border:1px solid var(--rule);border-radius:3px;padding:14px;overflow:auto;">8
+Rob Vinje
+5
+4
+4
+3
+5
+4
+4
+3
+4
+4
+5
+4
+4
+3
+5
+4
+4
+4
+73 65</pre>
+      </div>
     </div>
   </div>
 </div>
@@ -3246,18 +3344,133 @@ function renderStoredWeeks() {
           ${stamp}
         </span>
         <span style="display:flex;gap:6px;">
+          <button data-view="${w.id}" style="padding:6px 12px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">View</button>
           <button data-overwrite="${w.id}" style="padding:6px 12px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">Overwrite</button>
           <button data-delete="${w.id}" style="padding:6px 12px;background:transparent;color:#ff6b5e;border:1px solid #ff6b5e;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">Delete</button>
         </span>
       </div>`;
   }).join('');
 
+  list.querySelectorAll('[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => openWeekView(parseInt(btn.dataset.view, 10)));
+  });
   list.querySelectorAll('[data-overwrite]').forEach(btn => {
     btn.addEventListener('click', () => enterOverwriteMode(parseInt(btn.dataset.overwrite, 10)));
   });
   list.querySelectorAll('[data-delete]').forEach(btn => {
     btn.addEventListener('click', () => deleteWeek(parseInt(btn.dataset.delete, 10)));
   });
+}
+
+// ----- View entry (read-only) ------------------------------------------
+// Shows exactly what was parsed in for a week/day, with a Raw / Table
+// toggle. Reconstructs the paste in the active event's scoring format:
+//   quota → totals line "Gross Net GrossPts NetPts"
+//   vsPar → totals line "Gross Net" (vs-Par is derived, so not shown raw)
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function buildWeekViewRaw(w, scoring) {
+  // Each stored player: [name, hc, scores(18), gross, net, gp, np]
+  return w.players.map(p => {
+    const [name, hc, scores, gross, net, gp, np] = p;
+    const totals = scoring === 'vsPar'
+      ? `${gross} ${net}`
+      : `${gross} ${net} ${gp} ${np}`;
+    return [hc, name, ...scores, totals].join('\n');
+  }).join('\n');
+}
+
+function buildWeekViewTable(w, scoring) {
+  const cell = 'padding:5px 7px;border-bottom:1px solid var(--rule-soft);white-space:nowrap;text-align:center;';
+  const head = 'padding:6px 7px;border-bottom:1px solid var(--rule);white-space:nowrap;text-align:center;font-family:\'DM Sans\',sans-serif;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);';
+  const lcell = cell + 'text-align:left;font-weight:600;';
+  const lhead = head + 'text-align:left;';
+  const scLabel = scoring === 'vsPar' ? ['vs Par G', 'vs Par N'] : ['G.Pts', 'N.Pts'];
+
+  // Par reference row
+  const parCells = COURSE.par.map(p => `<td style="${cell}color:var(--muted);">${p}</td>`).join('');
+  let head1 = `<th style="${lhead}">Player</th><th style="${head}">HC</th>`;
+  for (let i = 0; i < 18; i++) head1 += `<th style="${head}">${i+1}</th>`;
+  head1 += `<th style="${head}">Out</th><th style="${head}">In</th><th style="${head}">Gross</th><th style="${head}">Net</th><th style="${head}">${scLabel[0]}</th><th style="${head}">${scLabel[1]}</th>`;
+
+  const rows = w.players.map(p => {
+    const [name, hc, scores, gross, net, gp, np] = p;
+    const out = scores.slice(0,9).reduce((a,b)=>a+b,0);
+    const inn = scores.slice(9).reduce((a,b)=>a+b,0);
+    const holeCells = scores.map((s,i) => {
+      const d = s - COURSE.par[i];
+      let col = 'color:#fff;';
+      if (d < 0) col = 'color:#7ee0a0;font-weight:700;';      // under par
+      else if (d >= 2) col = 'color:#ff9b8a;';                 // double+
+      return `<td style="${cell}${col}">${s}</td>`;
+    }).join('');
+    return `<tr>
+      <td style="${lcell}">${escHtml(name)}</td>
+      <td style="${cell}">${hc}</td>
+      ${holeCells}
+      <td style="${cell}font-weight:600;">${out}</td>
+      <td style="${cell}font-weight:600;">${inn}</td>
+      <td style="${cell}font-weight:700;">${gross}</td>
+      <td style="${cell}font-weight:700;">${net}</td>
+      <td style="${cell}">${gp}</td>
+      <td style="${cell}">${np}</td>
+    </tr>`;
+  }).join('');
+
+  return `<table style="border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:12px;min-width:100%;">
+    <thead><tr>${head1}</tr></thead>
+    <tbody>
+      <tr><td style="${lcell}color:var(--muted);">Par</td><td style="${cell}color:var(--muted);">—</td>${parCells}<td style="${cell}color:var(--muted);">36</td><td style="${cell}color:var(--muted);">35</td><td style="${cell}color:var(--muted);">71</td><td style="${cell}color:var(--muted);">—</td><td style="${cell}color:var(--muted);">—</td><td style="${cell}color:var(--muted);">—</td></tr>
+      ${rows}
+    </tbody>
+  </table>`;
+}
+
+function setWeekViewMode(mode) {
+  const raw = document.getElementById('weekViewRaw');
+  const tbl = document.getElementById('weekViewTable');
+  const rawBtn = document.getElementById('weekViewRawBtn');
+  const tblBtn = document.getElementById('weekViewTableBtn');
+  const isRaw = mode !== 'table';
+  raw.style.display = isRaw ? '' : 'none';
+  tbl.style.display = isRaw ? 'none' : '';
+  const on  = 'padding:7px 18px;background:#fff;color:#091529;border:none;border-radius:2px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;';
+  const off = 'padding:7px 18px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;';
+  rawBtn.setAttribute('style', isRaw ? on : off);
+  tblBtn.setAttribute('style', isRaw ? off : on);
+}
+
+function openWeekView(id) {
+  const w = WEEKS.find(x => x.id === id);
+  if (!w) return;
+  const scoring = currentEvent().scoring;
+  const count = w.players.filter(p => !isExcludedPlayer(p[0])).length;
+  document.getElementById('weekViewTitle').textContent = viewDisplayName(w, {full:true});
+  document.getElementById('weekViewSub').textContent =
+    `${currentEvent().name} · ${count} players · totals line: ` +
+    (scoring === 'vsPar' ? 'Gross Net' : 'Gross Net GrossPts NetPts');
+  document.getElementById('weekViewRaw').textContent = buildWeekViewRaw(w, scoring);
+  document.getElementById('weekViewTable').innerHTML = buildWeekViewTable(w, scoring);
+  setWeekViewMode('raw');
+  const m = document.getElementById('weekViewModal');
+  m.style.display = 'flex';
+}
+
+function closeWeekView() {
+  const m = document.getElementById('weekViewModal');
+  if (m) m.style.display = 'none';
+}
+
+// ----- Format reminder (ⓘ) ---------------------------------------------
+function openFormatInfo() {
+  const m = document.getElementById('formatInfoModal');
+  if (m) m.style.display = 'flex';
+}
+function closeFormatInfo() {
+  const m = document.getElementById('formatInfoModal');
+  if (m) m.style.display = 'none';
 }
 
 // Delete a week from the active event — writes straight to Firestore,
@@ -3495,6 +3708,34 @@ async function initFirebase() {
   document.getElementById('loginModal').addEventListener('click', e => {
     if (e.target.id === 'loginModal') closeLoginModal();
   });
+
+  // Week View modal wiring
+  const wvClose = document.getElementById('weekViewClose');
+  if (wvClose) wvClose.addEventListener('click', closeWeekView);
+  const wvRaw = document.getElementById('weekViewRawBtn');
+  if (wvRaw) wvRaw.addEventListener('click', () => setWeekViewMode('raw'));
+  const wvTbl = document.getElementById('weekViewTableBtn');
+  if (wvTbl) wvTbl.addEventListener('click', () => setWeekViewMode('table'));
+  const wvModal = document.getElementById('weekViewModal');
+  if (wvModal) wvModal.addEventListener('click', e => {
+    if (e.target.id === 'weekViewModal') closeWeekView();
+  });
+
+  // Format-info (ⓘ) modal wiring
+  const fiBtn = document.getElementById('formatInfoBtn');
+  if (fiBtn) fiBtn.addEventListener('click', openFormatInfo);
+  const fiClose = document.getElementById('formatInfoClose');
+  if (fiClose) fiClose.addEventListener('click', closeFormatInfo);
+  const fiModal = document.getElementById('formatInfoModal');
+  if (fiModal) fiModal.addEventListener('click', e => {
+    if (e.target.id === 'formatInfoModal') closeFormatInfo();
+  });
+
+  // Esc closes any open admin popup
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeWeekView(); closeFormatInfo(); }
+  });
+
   applyAdminUI();
 
   // Event switcher wiring (Men's Night vs Weekend Snips)
