@@ -6,23 +6,11 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v5.1   Admin tools: (1) every entry in "Manage entries" now has a
-         View button that opens a popup showing exactly what was
-         parsed in for that week/day — toggle between the Raw paste
-         format (reconstructed as typed) and a Clean table (player
-         rows, all 18 holes, Out/In/Gross/Net + Pts or vs-Par). The
-         totals line / columns follow the active event's scoring
-         (Men's Night quota vs Snips vs-Par). (2) An ⓘ info icon next
-         to the paste box opens a format reminder showing the expected
-         layout for BOTH Men's Night and Weekend Snips, each with a
-         worked example block. View-only — no data is changed.
-  v5.0   Scorecard popup: new "By Par Type · vs Par" row added just
-         above the Albatross→Double+ strip. Shows the player's total
-         strokes vs par and the per-hole average on par 3s, par 4s
-         and par 5s separately. Appears in both the single-week
-         scorecard and the Season Aggregate block, and follows the
-         Player Standings Gross / Net toggle (recategorizing each
-         hole by net score in Net mode).
+  v4.8   Weekend Snips now accepts the tab-separated scorecard CSV
+         from the Springbank Links scoring tool — paste the entire
+         export (groups, headers, Gross/Net rows, and "N hcp" lines
+         all in place) and it parses every player automatically. Men's
+         Night still uses the existing SmartGolf paste format.
   v4.7   Hole by Hole chart is now responsive: on phones it switches
          to a narrower, taller layout with larger fonts and bars so it
          stays readable instead of shrinking. Re-renders if the
@@ -259,8 +247,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Springbank Links — League Report</title>
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<meta name="apple-mobile-web-app-title" content="SBL Dashboard">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=DM+Sans:opsz,wght@9..40,300..700&family=JetBrains+Mono:wght@400..700&display=swap" rel="stylesheet">
@@ -931,14 +917,6 @@
     margin-left: 6px;
     vertical-align: 2px;    /* nudge up so it baselines with the bigger serif numeral */
   }
-  /* Header for the scorecard "By Par Type" row — carries the divider
-     so the .scorecard-summary row right below it runs borderless. */
-  .par-type-label {
-    margin-top: 16px; padding-top: 16px;
-    border-top: 1px solid var(--rule);
-    font-size: 10px; text-transform: uppercase;
-    letter-spacing: 0.12em; color: var(--muted);
-  }
 
   /* ===== INSIGHTS ===== */
   .insights-grid {
@@ -1146,7 +1124,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v5.1</div>
+    <div class="splash-version">v4.8</div>
   </div>
 </div>
 
@@ -1181,7 +1159,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v5.1</div>
+  <div class="masthead-version">v4.8</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1432,11 +1410,8 @@
     </div>
 
     <div style="margin-bottom:14px;">
-      <div style="display:flex;align-items:flex-start;gap:10px;">
-        <div id="adminPasteInstructions" style="font-size:12px;letter-spacing:0.05em;line-height:1.6;flex:1;">
-          Paste the exact format SmartGolf gives you: <strong>handicap, name, 18 hole scores (one per line), then a totals line</strong> (Gross / Net / Gross Pts / Net Pts) for each player. Header rows are auto-skipped.
-        </div>
-        <button id="formatInfoBtn" title="Data format reminder" aria-label="Data format reminder" style="flex:none;width:26px;height:26px;line-height:1;border-radius:50%;background:transparent;color:#fff;border:1px solid var(--rule);cursor:pointer;font-family:'Fraunces',serif;font-style:italic;font-size:14px;font-weight:600;">i</button>
+      <div id="adminPasteInstructions" style="font-size:12px;letter-spacing:0.05em;line-height:1.6;">
+        Paste the exact format SmartGolf gives you: <strong>handicap, name, 18 hole scores (one per line), then a totals line</strong> (Gross / Net / Gross Pts / Net Pts) for each player. Header rows are auto-skipped.
       </div>
     </div>
 
@@ -1478,91 +1453,6 @@
     <div style="display:flex;gap:8px;">
       <button id="loginSubmitBtn" style="flex:1;padding:11px;background:#fff;color:#091529;border:none;border-radius:3px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;">Sign In</button>
       <button id="loginCancelBtn" style="padding:11px 16px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:3px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- Week View modal (read-only — shows parsed data, Raw / Table toggle) -->
-<div id="weekViewModal" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(5,12,28,0.85);align-items:center;justify-content:center;padding:18px;box-sizing:border-box;">
-  <div style="background:var(--paper);border:1px solid var(--rule);border-radius:6px;width:760px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;font-family:'DM Sans',sans-serif;">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:22px 24px 14px;border-bottom:1px solid var(--rule);">
-      <div>
-        <div id="weekViewTitle" style="font-family:'Fraunces',serif;font-style:italic;font-size:22px;color:#fff;line-height:1.2;">Round</div>
-        <div id="weekViewSub" style="font-size:12px;color:var(--muted);margin-top:4px;"></div>
-      </div>
-      <button id="weekViewClose" style="flex:none;padding:8px 14px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;">Close ✕</button>
-    </div>
-    <div style="display:flex;gap:8px;padding:14px 24px 0;">
-      <button id="weekViewRawBtn" style="padding:7px 18px;background:#fff;color:#091529;border:none;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;">Raw paste</button>
-      <button id="weekViewTableBtn" style="padding:7px 18px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;">Clean table</button>
-    </div>
-    <div style="overflow:auto;padding:18px 24px 24px;">
-      <pre id="weekViewRaw" style="margin:0;white-space:pre;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55;color:#fff;background:#051329;border:1px solid var(--rule);border-radius:3px;padding:16px;overflow:auto;"></pre>
-      <div id="weekViewTable" style="display:none;overflow:auto;"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Data-format reminder modal (opened from the ⓘ icon) -->
-<div id="formatInfoModal" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(5,12,28,0.85);align-items:center;justify-content:center;padding:18px;box-sizing:border-box;">
-  <div style="background:var(--paper);border:1px solid var(--rule);border-radius:6px;width:560px;max-width:96vw;max-height:90vh;overflow:auto;font-family:'DM Sans',sans-serif;">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:22px 24px 14px;border-bottom:1px solid var(--rule);">
-      <div style="font-family:'Fraunces',serif;font-style:italic;font-size:22px;color:#fff;">Paste data format</div>
-      <button id="formatInfoClose" style="flex:none;padding:8px 14px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;">Close ✕</button>
-    </div>
-    <div style="padding:18px 24px 24px;font-size:13px;line-height:1.6;color:#fff;">
-      <p style="margin:0 0 16px;">Each player is a <strong>21-line block</strong>: handicap, name, the 18 hole scores (one per line), then a totals line. Stack one block per player and paste them all at once — header rows are auto-skipped.</p>
-
-      <div style="margin-bottom:18px;">
-        <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;margin-bottom:6px;">Men's Night — totals line: <span style="font-family:'JetBrains Mono',monospace;font-style:normal;">Gross Net GrossPts NetPts</span></div>
-        <pre style="margin:0;white-space:pre;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;color:#fff;background:#051329;border:1px solid var(--rule);border-radius:3px;padding:14px;overflow:auto;">8
-Rob Vinje
-5
-4
-4
-3
-5
-4
-4
-3
-4
-4
-5
-4
-4
-3
-5
-4
-4
-4
-73 65 32 38</pre>
-      </div>
-
-      <div>
-        <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;margin-bottom:6px;">Weekend Snips — totals line: <span style="font-family:'JetBrains Mono',monospace;font-style:normal;">Gross Net</span></div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-style:italic;">vs-Par is calculated automatically (Gross &minus; 71, Net &minus; 71).</div>
-        <pre style="margin:0;white-space:pre;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;color:#fff;background:#051329;border:1px solid var(--rule);border-radius:3px;padding:14px;overflow:auto;">8
-Rob Vinje
-5
-4
-4
-3
-5
-4
-4
-3
-4
-4
-5
-4
-4
-3
-5
-4
-4
-4
-73 65</pre>
-      </div>
     </div>
   </div>
 </div>
@@ -1985,7 +1875,7 @@ function applyAdminEventChrome() {
     ? 'Paste a weekend round — Gross / Net per player'
     : 'Paste in the SmartGolf format — same as Week 1');
   set('adminPasteInstructions', isSnips
-    ? `Paste each player as: <strong>handicap, name, 18 hole scores (one per line), then a totals line</strong> with <strong>Gross and Net</strong>. vs-Par is calculated automatically (Gross &minus; 71, Net &minus; 71). Header rows are auto-skipped.`
+    ? `Paste the full scorecard export from the Springbank Links scoring tool — tab-separated, with a <strong>Gross</strong> and <strong>Net</strong> row per player and the <code>N (Tee)  X.X idx / N hcp</code> handicap line that follows. Group headers, par row, and the footer are auto-skipped. vs-Par is calculated automatically (Gross/Net &minus; 71).`
     : `Paste the exact format SmartGolf gives you: <strong>handicap, name, 18 hole scores (one per line), then a totals line</strong> (Gross / Net / Gross Pts / Net Pts) for each player. Header rows are auto-skipped.`);
 
   const labelEl = document.getElementById('newWeekLabel');
@@ -2214,51 +2104,6 @@ function scorecardDist(scores, hc, mode) {
     else d++;
   });
   return { albatrosses:a, eagles:e, birdies:b, pars:p, bogeys:bo, doubles:d };
-}
-
-// Per-par-type performance vs par (par 3 / par 4 / par 5).
-// rounds: [{scores, hc}] — one entry for a single week, many for YTD.
-// mode 'net' subtracts the handicap strokes received on each hole first.
-// Returns { 3:{n,sum}, 4:{n,sum}, 5:{n,sum} } where n = holes of that
-// par played and sum = cumulative strokes vs par across them.
-function parTypeBreakdown(rounds, mode) {
-  const groups = { 3:{n:0,sum:0}, 4:{n:0,sum:0}, 5:{n:0,sum:0} };
-  rounds.forEach(({ scores, hc }) => {
-    scores.forEach((s, i) => {
-      const par = COURSE.par[i];
-      const g = groups[par];
-      if (!g) return;
-      const v = mode === 'net' ? s - strokesOnHole(hc, COURSE.si[i]) : s;
-      g.n++;
-      g.sum += v - par;
-    });
-  });
-  return groups;
-}
-
-// Renders the three .summary-item tiles (Par 3s / 4s / 5s) for the
-// scorecard "By Par Type" row: big total vs par + small per-hole avg.
-function parTypeTiles(groups, mode) {
-  const tag = mode === 'net' ? ' (net)' : '';
-  const fmtTot = (n) => n === 0 ? 'E' : (n > 0 ? `+${n}` : `${n}`);
-  const fmtAvg = (n) => {
-    const r = Math.round(n * 100) / 100;
-    if (r === 0) return 'E';
-    return (r > 0 ? '+' : '') + r.toFixed(2);
-  };
-  // under par = green, over par = amber, even = neutral light
-  const colr = (n) => n < 0 ? '#62d4a1' : n > 0 ? '#f59e0b' : '#c8d0d8';
-  return [3, 4, 5].map(par => {
-    const g = groups[par];
-    if (!g || !g.n) {
-      return `<div class="summary-item"><div class="lbl">Par ${par}s${tag}</div><div class="val" style="opacity:0.4">—</div></div>`;
-    }
-    const avg = g.sum / g.n;
-    return `<div class="summary-item">
-      <div class="lbl">Par ${par}s${tag} &middot; ${g.n} hole${g.n === 1 ? '' : 's'}</div>
-      <div class="val" style="color:${colr(g.sum)}">${fmtTot(g.sum)}<span class="val-pct">${fmtAvg(avg)}/hole</span></div>
-    </div>`;
-  }).join('');
 }
 function distribution(items) {
   let a=0,e=0,b=0,p=0,bo=0,d=0;
@@ -3036,16 +2881,6 @@ function openScorecard(name) {
           <div class="summary-item"><div class="lbl">Avg vs Par Net</div><div class="val">${fmtVsPar(avgVsParN)}</div></div>
         </div>
 
-        <!-- Row 1.5: vs par by par type, across the season -->
-        <div class="par-type-label">By Par Type &middot; vs Par</div>
-        <div class="scorecard-summary" style="margin-top:8px;border-top:none;padding-top:0;">
-          ${(() => {
-            const sMode = sectionMode.standings;
-            const rs = (ytdAgg.weeks || []).map(w => ({ scores: w.round.scores, hc: w.round.hc }));
-            return parTypeTiles(parTypeBreakdown(rs, sMode), sMode);
-          })()}
-        </div>
-
         <!-- Row 2: score distribution across the season -->
         <div class="scorecard-summary" style="margin-top:14px;">
           ${(() => {
@@ -3159,13 +2994,6 @@ function openScorecard(name) {
             </tbody>
           </table>
         </div>
-        <div class="par-type-label">By Par Type &middot; vs Par</div>
-        <div class="scorecard-summary" style="margin-top:8px;border-top:none;padding-top:0;">
-          ${(() => {
-            const sMode = sectionMode.standings;
-            return parTypeTiles(parTypeBreakdown([{ scores: round.scores, hc: round.hc }], sMode), sMode);
-          })()}
-        </div>
         <div class="scorecard-summary">
           ${(() => {
             const sMode = sectionMode.standings;
@@ -3229,6 +3057,118 @@ function renderAll() {
 // =================================================================
 // ADD / OVERWRITE / DELETE: parser + Firestore handlers
 // =================================================================
+
+// =================================================================
+// SNIPS — paste the tab-separated scorecard CSV from the Springbank
+// Links scoring tool. Format:
+//   • Title / "Group N" / blank rows are skipped.
+//   • A header row begins with two empty cells then  H1 H2 ... H9 Out
+//     H10 ... H18 In Total Par.
+//   • A "Par" row, an "HC" row, and a final "Powered by..." footer
+//     are skipped.
+//   • Each player is THREE rows:
+//       [name]\tGross\t<9 scores>\tOut\t\t<9 scores>\tIn\tTotal\tVs-Par
+//       \tNet\t<9 net scores>\tOut\t\t<9 net scores>\tIn\tTotal\tVs-Par
+//       [HC line, e.g. "2 (Blue)  6.4 idx / 6 hcp" or "+1 hcp" for plus]
+//
+// Player handicap is the integer just before the "hcp" token; "+N"
+// becomes -N in the data model.
+// =================================================================
+function parseSnipsScorecard(raw) {
+  const PAR_TOTAL = COURSE.par.reduce((a,b) => a+b, 0); // 71
+  const lines = raw.split(/\r?\n/);
+  const players = [];
+  const errors = [];
+
+  // Split a row on tabs/commas; trim each cell; keep empties.
+  const splitRow = (s) => s.split(/[\t,]/).map(c => c.trim());
+  // Extract just-the-name (strip annotations like "(Admin | Scorer)").
+  const cleanName = (s) => s.replace(/\s*\(.*?\)\s*$/, '').trim();
+  // Parse the HC line. Returns integer (plus handicaps come back negative)
+  // or null if the line doesn't carry a handicap.
+  const parseHcLine = (s) => {
+    if (!s) return null;
+    const m = s.match(/(\+?-?\d+)\s*hcp/i);
+    if (!m) return null;
+    const tok = m[1];
+    if (tok.startsWith('+')) return -parseInt(tok.slice(1), 10);
+    return parseInt(tok, 10);
+  };
+
+  let i = 0;
+  while (i < lines.length) {
+    const row = splitRow(lines[i]);
+    const joined = row.join(' ').trim();
+    // skip blank / title / group / "powered by" / header / par / HC rows
+    const isBlank = joined === '' || row.every(c => c === '');
+    const isHeader = row.includes('H1') && row.includes('H10');
+    const isPar = row[1] === 'Par';
+    const isHCHeader = row[1] === 'HC' && row.slice(2).every(c => c === '');
+    const isMeta = /^Group\s|Springbank|Powered by/i.test(joined);
+    if (isBlank || isHeader || isPar || isHCHeader || isMeta) { i++; continue; }
+
+    // First column has content → this is a player's Gross row.
+    if (row[0] && row[1] === 'Gross') {
+      const name = cleanName(row[0]);
+      const grossScores = [];
+      let scoreErr = null;
+      // columns 2..10 = front 9, then column 11 = "Out", 12 = blank, 13..21 = back 9
+      for (let k = 0; k < 9; k++) {
+        const v = row[2 + k];
+        if (!/^\d+$/.test(v)) { scoreErr = `${name}: bad front-nine score at H${k+1}: "${v}"`; break; }
+        grossScores.push(parseInt(v, 10));
+      }
+      if (!scoreErr) {
+        for (let k = 0; k < 9; k++) {
+          const v = row[13 + k];
+          if (!/^\d+$/.test(v)) { scoreErr = `${name}: bad back-nine score at H${k+10}: "${v}"`; break; }
+          grossScores.push(parseInt(v, 10));
+        }
+      }
+      if (scoreErr) { errors.push(scoreErr); i++; continue; }
+      const gross = parseInt(row[23], 10);
+      if (isNaN(gross)) {
+        errors.push(`${name}: missing Gross total`);
+        i++; continue;
+      }
+      // Next non-blank row should be the Net row
+      let j = i + 1;
+      while (j < lines.length && splitRow(lines[j]).every(c => c === '')) j++;
+      const netRow = j < lines.length ? splitRow(lines[j]) : [];
+      let net = gross; // fall back if Net row is missing
+      if (netRow[1] === 'Net') {
+        const nv = parseInt(netRow[23], 10);
+        if (!isNaN(nv)) net = nv;
+      } else {
+        errors.push(`${name}: missing Net row, using Gross as Net`);
+        j = i; // don't skip a non-Net row
+      }
+      // The HC line follows the Net row
+      let hc = null;
+      let k = j + 1;
+      while (k < lines.length && splitRow(lines[k]).every(c => c === '')) k++;
+      if (k < lines.length) hc = parseHcLine(lines[k]);
+      if (hc === null) {
+        errors.push(`${name}: couldn't read handicap line, defaulting HC to gross-net diff`);
+        hc = gross - net;
+      }
+      const sumScores = grossScores.reduce((a,b) => a+b, 0);
+      if (sumScores !== gross) {
+        errors.push(`⚠ ${name}: scores sum to ${sumScores} but Gross says ${gross}. Saved anyway.`);
+      }
+      const gp = gross - PAR_TOTAL;
+      const np = net   - PAR_TOTAL;
+      players.push([name, hc, grossScores, gross, net, gp, np]);
+      i = k + 1;
+      continue;
+    }
+
+    // Any other row we don't recognize — skip.
+    i++;
+  }
+
+  return { players, errors };
+}
 
 function parseSmartGolfPaste(raw, scoring) {
   // scoring: 'quota'  → totals line is [gross, net, grossPts, netPts]
@@ -3344,133 +3284,18 @@ function renderStoredWeeks() {
           ${stamp}
         </span>
         <span style="display:flex;gap:6px;">
-          <button data-view="${w.id}" style="padding:6px 12px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">View</button>
           <button data-overwrite="${w.id}" style="padding:6px 12px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">Overwrite</button>
           <button data-delete="${w.id}" style="padding:6px 12px;background:transparent;color:#ff6b5e;border:1px solid #ff6b5e;border-radius:2px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;">Delete</button>
         </span>
       </div>`;
   }).join('');
 
-  list.querySelectorAll('[data-view]').forEach(btn => {
-    btn.addEventListener('click', () => openWeekView(parseInt(btn.dataset.view, 10)));
-  });
   list.querySelectorAll('[data-overwrite]').forEach(btn => {
     btn.addEventListener('click', () => enterOverwriteMode(parseInt(btn.dataset.overwrite, 10)));
   });
   list.querySelectorAll('[data-delete]').forEach(btn => {
     btn.addEventListener('click', () => deleteWeek(parseInt(btn.dataset.delete, 10)));
   });
-}
-
-// ----- View entry (read-only) ------------------------------------------
-// Shows exactly what was parsed in for a week/day, with a Raw / Table
-// toggle. Reconstructs the paste in the active event's scoring format:
-//   quota → totals line "Gross Net GrossPts NetPts"
-//   vsPar → totals line "Gross Net" (vs-Par is derived, so not shown raw)
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function buildWeekViewRaw(w, scoring) {
-  // Each stored player: [name, hc, scores(18), gross, net, gp, np]
-  return w.players.map(p => {
-    const [name, hc, scores, gross, net, gp, np] = p;
-    const totals = scoring === 'vsPar'
-      ? `${gross} ${net}`
-      : `${gross} ${net} ${gp} ${np}`;
-    return [hc, name, ...scores, totals].join('\n');
-  }).join('\n');
-}
-
-function buildWeekViewTable(w, scoring) {
-  const cell = 'padding:5px 7px;border-bottom:1px solid var(--rule-soft);white-space:nowrap;text-align:center;';
-  const head = 'padding:6px 7px;border-bottom:1px solid var(--rule);white-space:nowrap;text-align:center;font-family:\'DM Sans\',sans-serif;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);';
-  const lcell = cell + 'text-align:left;font-weight:600;';
-  const lhead = head + 'text-align:left;';
-  const scLabel = scoring === 'vsPar' ? ['vs Par G', 'vs Par N'] : ['G.Pts', 'N.Pts'];
-
-  // Par reference row
-  const parCells = COURSE.par.map(p => `<td style="${cell}color:var(--muted);">${p}</td>`).join('');
-  let head1 = `<th style="${lhead}">Player</th><th style="${head}">HC</th>`;
-  for (let i = 0; i < 18; i++) head1 += `<th style="${head}">${i+1}</th>`;
-  head1 += `<th style="${head}">Out</th><th style="${head}">In</th><th style="${head}">Gross</th><th style="${head}">Net</th><th style="${head}">${scLabel[0]}</th><th style="${head}">${scLabel[1]}</th>`;
-
-  const rows = w.players.map(p => {
-    const [name, hc, scores, gross, net, gp, np] = p;
-    const out = scores.slice(0,9).reduce((a,b)=>a+b,0);
-    const inn = scores.slice(9).reduce((a,b)=>a+b,0);
-    const holeCells = scores.map((s,i) => {
-      const d = s - COURSE.par[i];
-      let col = 'color:#fff;';
-      if (d < 0) col = 'color:#7ee0a0;font-weight:700;';      // under par
-      else if (d >= 2) col = 'color:#ff9b8a;';                 // double+
-      return `<td style="${cell}${col}">${s}</td>`;
-    }).join('');
-    return `<tr>
-      <td style="${lcell}">${escHtml(name)}</td>
-      <td style="${cell}">${hc}</td>
-      ${holeCells}
-      <td style="${cell}font-weight:600;">${out}</td>
-      <td style="${cell}font-weight:600;">${inn}</td>
-      <td style="${cell}font-weight:700;">${gross}</td>
-      <td style="${cell}font-weight:700;">${net}</td>
-      <td style="${cell}">${gp}</td>
-      <td style="${cell}">${np}</td>
-    </tr>`;
-  }).join('');
-
-  return `<table style="border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:12px;min-width:100%;">
-    <thead><tr>${head1}</tr></thead>
-    <tbody>
-      <tr><td style="${lcell}color:var(--muted);">Par</td><td style="${cell}color:var(--muted);">—</td>${parCells}<td style="${cell}color:var(--muted);">36</td><td style="${cell}color:var(--muted);">35</td><td style="${cell}color:var(--muted);">71</td><td style="${cell}color:var(--muted);">—</td><td style="${cell}color:var(--muted);">—</td><td style="${cell}color:var(--muted);">—</td></tr>
-      ${rows}
-    </tbody>
-  </table>`;
-}
-
-function setWeekViewMode(mode) {
-  const raw = document.getElementById('weekViewRaw');
-  const tbl = document.getElementById('weekViewTable');
-  const rawBtn = document.getElementById('weekViewRawBtn');
-  const tblBtn = document.getElementById('weekViewTableBtn');
-  const isRaw = mode !== 'table';
-  raw.style.display = isRaw ? '' : 'none';
-  tbl.style.display = isRaw ? 'none' : '';
-  const on  = 'padding:7px 18px;background:#fff;color:#091529;border:none;border-radius:2px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;';
-  const off = 'padding:7px 18px;background:transparent;color:#fff;border:1px solid var(--rule);border-radius:2px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;';
-  rawBtn.setAttribute('style', isRaw ? on : off);
-  tblBtn.setAttribute('style', isRaw ? off : on);
-}
-
-function openWeekView(id) {
-  const w = WEEKS.find(x => x.id === id);
-  if (!w) return;
-  const scoring = currentEvent().scoring;
-  const count = w.players.filter(p => !isExcludedPlayer(p[0])).length;
-  document.getElementById('weekViewTitle').textContent = viewDisplayName(w, {full:true});
-  document.getElementById('weekViewSub').textContent =
-    `${currentEvent().name} · ${count} players · totals line: ` +
-    (scoring === 'vsPar' ? 'Gross Net' : 'Gross Net GrossPts NetPts');
-  document.getElementById('weekViewRaw').textContent = buildWeekViewRaw(w, scoring);
-  document.getElementById('weekViewTable').innerHTML = buildWeekViewTable(w, scoring);
-  setWeekViewMode('raw');
-  const m = document.getElementById('weekViewModal');
-  m.style.display = 'flex';
-}
-
-function closeWeekView() {
-  const m = document.getElementById('weekViewModal');
-  if (m) m.style.display = 'none';
-}
-
-// ----- Format reminder (ⓘ) ---------------------------------------------
-function openFormatInfo() {
-  const m = document.getElementById('formatInfoModal');
-  if (m) m.style.display = 'flex';
-}
-function closeFormatInfo() {
-  const m = document.getElementById('formatInfoModal');
-  if (m) m.style.display = 'none';
 }
 
 // Delete a week from the active event — writes straight to Firestore,
@@ -3552,7 +3377,9 @@ document.getElementById('parseAddBtn').addEventListener('click', async () => {
   const label = labelInput || fallbackLabel;
   const date = dateInput || new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
 
-  const { players, errors } = parseSmartGolfPaste(raw, currentEvent().scoring);
+  const { players, errors } = state.eventId === 'snips'
+    ? parseSnipsScorecard(raw)
+    : parseSmartGolfPaste(raw, currentEvent().scoring);
   if (!players.length) {
     showParseResult(`<strong>No players parsed.</strong><br>${errors.join('<br>') || 'Check the paste format.'}`, 'error');
     return;
@@ -3708,34 +3535,6 @@ async function initFirebase() {
   document.getElementById('loginModal').addEventListener('click', e => {
     if (e.target.id === 'loginModal') closeLoginModal();
   });
-
-  // Week View modal wiring
-  const wvClose = document.getElementById('weekViewClose');
-  if (wvClose) wvClose.addEventListener('click', closeWeekView);
-  const wvRaw = document.getElementById('weekViewRawBtn');
-  if (wvRaw) wvRaw.addEventListener('click', () => setWeekViewMode('raw'));
-  const wvTbl = document.getElementById('weekViewTableBtn');
-  if (wvTbl) wvTbl.addEventListener('click', () => setWeekViewMode('table'));
-  const wvModal = document.getElementById('weekViewModal');
-  if (wvModal) wvModal.addEventListener('click', e => {
-    if (e.target.id === 'weekViewModal') closeWeekView();
-  });
-
-  // Format-info (ⓘ) modal wiring
-  const fiBtn = document.getElementById('formatInfoBtn');
-  if (fiBtn) fiBtn.addEventListener('click', openFormatInfo);
-  const fiClose = document.getElementById('formatInfoClose');
-  if (fiClose) fiClose.addEventListener('click', closeFormatInfo);
-  const fiModal = document.getElementById('formatInfoModal');
-  if (fiModal) fiModal.addEventListener('click', e => {
-    if (e.target.id === 'formatInfoModal') closeFormatInfo();
-  });
-
-  // Esc closes any open admin popup
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeWeekView(); closeFormatInfo(); }
-  });
-
   applyAdminUI();
 
   // Event switcher wiring (Men's Night vs Weekend Snips)
