@@ -6,6 +6,10 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v8.3   Members import saves ONLY members matched to a 2026 player (or
+         on the staff guest list); everyone else is skipped and their
+         contact details are never stored. Skipped names are listed
+         after the import so near-misses can be aliased.
   v8.2   Members: re-renders once the season loads from the cloud (it
          had matched against the 2-week seed data, so round counts and
          auto-matches were wrong); import waits for the cloud data.
@@ -1701,7 +1705,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v8.2</div>
+    <div class="splash-version">v8.3</div>
   </div>
 </div>
 
@@ -1736,7 +1740,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v8.2</div>
+  <div class="masthead-version">v8.3</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -4841,15 +4845,23 @@ async function importMembers(text) {
   if (!rows.length) { if (out) out.innerHTML = '<span style="color:var(--up)">Nothing recognised — paste the tab-separated list (Name, Sales Class, Phone, Mobile, Email).</span>'; return; }
   const roster = memberRoster();
   const existing = new Map(MEMBERS.list.map(m => [m.id, m]));
+  // ONLY active players are stored. A member who never played a Men's Night
+  // or Snips round this season is skipped entirely — their contact details
+  // are not saved anywhere. (Club staff on GATE_GUESTS are the one exception.)
   let matched = 0, nw = 0, upd = 0;
-  const docs = rows.map(r => {
+  const skipped = [];
+  const docs = [];
+  rows.forEach(r => {
     const prev = existing.get(r.id);
     const mm = matchMemberToPlayer(r, roster);
     const player = prev && prev.playerLocked ? prev.player : mm.player;
+    const isGuest = GATE_GUESTS.some(g => g.toLowerCase() === r.name.toLowerCase());
+    if (!player && !isGuest) { skipped.push(r.name); return; }
     if (player) matched++;
     prev ? upd++ : nw++;
-    return Object.assign({}, prev || {}, r, { player, matchHow: prev && prev.playerLocked ? prev.matchHow : mm.how, playerLocked: !!(prev && prev.playerLocked), updatedAt: Date.now() });
+    docs.push(Object.assign({}, prev || {}, r, { player, matchHow: prev && prev.playerLocked ? prev.matchHow : mm.how, playerLocked: !!(prev && prev.playerLocked), updatedAt: Date.now() }));
   });
+  if (!docs.length) { if (out) out.innerHTML = `<span style="color:var(--up)">None of the ${rows.length} names matched a 2026 player, so nothing was saved.</span>`; return; }
   if (!db || !isAdmin()) { if (out) out.textContent = 'Sign in as admin to save.'; return; }
   try {
     for (let i = 0; i < docs.length; i += 400) {
@@ -4859,7 +4871,7 @@ async function importMembers(text) {
     }
     await loadMembers(true); renderMembers();
     const out2 = document.getElementById('membersImportResult');
-    if (out2) out2.innerHTML = `<span style="color:var(--down);font-weight:700">Saved ${docs.length} members</span> — ${nw} new · ${upd} updated · ${matched} matched to a player automatically. Check the <em>Player</em> column and fix any that are wrong.`;
+    if (out2) out2.innerHTML = `<span style="color:var(--down);font-weight:700">Saved ${docs.length} active players</span> — ${nw} new · ${upd} updated.${skipped.length ? ` <strong>${skipped.length} members skipped</strong> (never played a 2026 round — nothing stored): <span style="opacity:.75">${skipped.map(esc).join(', ')}</span>. If one of them <em>did</em> play under a different name, tell Rob/Claude to add an alias.` : ''}`;
     document.getElementById('membersPaste').value = '';
   } catch (e) {
     if (out) out.innerHTML = `<span style="color:var(--up)">Couldn’t save: ${esc(e.message || e)}. Add the <code>members</code> rule in Firestore (see note below).</span>`;
@@ -4921,7 +4933,7 @@ function renderMembers() {
   host.innerHTML = `
     <div class="panel" style="margin-bottom:16px">
       <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;margin-bottom:6px;">Import or update the member list</div>
-      <div style="font-size:var(--t-sm);margin-bottom:10px;">Paste the club export (tab-separated: <strong>Name · Sales Class · Phone · Mobile · Email</strong>, name as <em>Last,First</em>). Re-pasting updates contact details and keeps any player matches you set by hand.</div>
+      <div style="font-size:var(--t-sm);margin-bottom:10px;">Paste the club export (tab-separated: <strong>Name · Sales Class · Phone · Mobile · Email</strong>, name as <em>Last,First</em>). <strong>Only members who played a 2026 Men’s Night or Snips round are saved</strong> — everyone else is skipped and their details are never stored. Re-pasting updates contact details and keeps any player matches you set by hand.</div>
       <textarea id="membersPaste" spellcheck="false" placeholder="Name	Sales Class	Phone	Mobile Phone	Email&#10;Vinje,Rob	Springbank Dues Paying Member	…" style="width:100%;min-height:110px;padding:12px;background:var(--bg);border:1px solid var(--rule);color:var(--fg);border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:var(--t-sm);"></textarea>
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;">
         <button class="sf-btn active" id="membersImportBtn">Import / update members</button>
@@ -4929,7 +4941,7 @@ function renderMembers() {
       </div>
     </div>
     <div class="section-filter" id="membersFilterBar"><span class="sf-label">Show</span>
-      ${pill('all', 'All', counts.all)}${pill('players', 'Players', counts.players)}${pill('mensNight', "Men’s Night", counts.mensNight)}${pill('snips', 'Snips', counts.snips)}${pill('nonplayers', 'Not a player', counts.nonplayers)}${pill('nocontact', 'No email', counts.nocontact)}
+      ${pill('all', 'All', counts.all)}${pill('players', 'Players', counts.players)}${pill('mensNight', "Men’s Night", counts.mensNight)}${pill('snips', 'Snips', counts.snips)}${pill('nonplayers', 'Staff / guests', counts.nonplayers)}${pill('nocontact', 'No email', counts.nocontact)}
       <input type="text" id="membersSearch" value="${esc(membersSearch)}" placeholder="Search…" style="margin-left:auto;padding:7px 12px;background:var(--bg);border:1px solid var(--rule);color:var(--fg);border-radius:2px;font-family:'DM Sans',sans-serif;font-size:var(--t-md);min-width:150px;">
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px;">
