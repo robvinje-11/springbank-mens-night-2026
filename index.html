@@ -6,6 +6,10 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v5.5   Player tab: Ringer Board — best score on every hole across
+         the season, gross card stacked over net card, each cell dated,
+         with Out / In / Total vs par and how much the ringer beats the
+         best real round by.
   v5.4   Light / dark mode. Light (white, navy ink) is the default;
          the moon/sun button beside Share flips it and the choice is
          remembered on that browser. The whole palette now runs through
@@ -673,6 +677,20 @@
   .player-sc-wrap { margin-top: 14px; }
   .player-sc { min-width: 520px; }
   .player-trend { width: 100%; height: auto; display: block; }
+  .ringer-panel { padding: 22px 24px; }
+  .ringer-card + .ringer-card { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--rule); }
+  .ringer-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .ringer-title { font-family: 'Fraunces', serif; font-style: italic; font-size: 22px; }
+  .ringer-total { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .ringer-total .pk-big { font-size: 36px; }
+  .ringer-table { min-width: 640px; width: 100%; table-layout: fixed; }
+  .ringer-table th:first-child { width: 64px; } .ringer-table th:nth-last-child(-n+2) { width: 46px; }
+  .ringer-table th.ringer-lbl { text-align: left; font-family: 'DM Sans', sans-serif; letter-spacing: 0.1em; text-transform: uppercase; font-size: 10px; }
+  .ringer-cell { padding: 6px 4px !important; }
+  .ringer-cell.birdie, .ringer-cell.eagle, .ringer-cell.albatross { border-radius: 6px; }
+  .ringer-v { display: block; font-size: 15px; line-height: 1.1; }
+  .ringer-when { display: block; font-size: 8.5px; letter-spacing: 0.02em; opacity: 0.75; font-family: 'DM Sans', sans-serif; margin-top: 2px; white-space: nowrap; }
+  @media (max-width: 640px) { .ringer-total .pk-big { font-size: 30px; } }
   .trend-dot { cursor: pointer; }
   .trend-dot:hover { r: 7; }
   body.event-season #moversSection,
@@ -1336,7 +1354,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v5.4</div>
+    <div class="splash-version">v5.5</div>
   </div>
 </div>
 
@@ -1371,7 +1389,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v5.4</div>
+  <div class="masthead-version">v5.5</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -3539,7 +3557,7 @@ function renderPlayerPage() {
   const maxAbs = Math.max(0.5, ...holeRows.map(h => Math.max(Math.abs(h.g), Math.abs(h.n), Math.abs(h.fg))));
   const bar = (v) => { const w = Math.min(50, Math.abs(v) / maxAbs * 50); return `<div class="pb-track"><div class="pb-zero"></div><div class="pb-fill ${v < 0 ? 'neg' : 'pos'}" style="width:${w}%;background:${v < 0 ? '#62d4a1' : '#ff8e84'}"></div></div>`; };
   const sec3 = `
-    <div class="section-head"><span class="num">P.03</span><h2>Hole by Hole</h2><span class="sub">Your average vs par on every hole — gross and net — beside the field</span></div>
+    <div class="section-head"><span class="num">P.04</span><h2>Hole by Hole</h2><span class="sub">Your average vs par on every hole — gross and net — beside the field</span></div>
     <div class="panel" style="padding:18px 20px;">
       <div class="player-scroll"><table class="holes-table player-holes">
         <thead><tr><th>Hole</th><th>Par·SI</th><th>Gross avg</th><th>vs par</th><th>Net avg</th><th>vs par</th><th>Field</th><th>${bracketName.split(' ')[0]}</th><th>You − field</th></tr></thead>
@@ -3566,7 +3584,7 @@ function renderPlayerPage() {
   });
   const cmpRow = (lbl, v, color) => `<div class="pc-row"><div class="pc-lbl">${lbl}</div><div class="pc-track"><div class="pc-fill" style="width:${Math.min(100, Math.max(0, v) / 1.5 * 100)}%;background:${color}"></div></div><div class="pc-val ${pCls(v)}">${pSigned(v, 2)}</div></div>`;
   const sec4 = `
-    <div class="section-head"><span class="num">P.04</span><h2>Par 3s · Par 4s · Par 5s</h2><span class="sub">Average strokes over par by hole type</span></div>
+    <div class="section-head"><span class="num">P.05</span><h2>Par 3s · Par 4s · Par 5s</h2><span class="sub">Average strokes over par by hole type</span></div>
     <div class="player-panel-grid"><div class="dist-grid par-type-grid">${parTypes.map(t => `
       <div class="dist-card">
         <div class="dist-card-title">Par ${t.pv}s</div>
@@ -3595,7 +3613,7 @@ function renderPlayerPage() {
     </div>`;
   };
   const sec5 = `
-    <div class="section-head"><span class="num">P.05</span><h2>How ${esc(playerName.split(' ')[0])} Makes a Score</h2><span class="sub">Share of holes by result — the grey column is bracket % · field %</span></div>
+    <div class="section-head"><span class="num">P.06</span><h2>How ${esc(playerName.split(' ')[0])} Makes a Score</h2><span class="sub">Share of holes by result — the grey column is bracket % · field %</span></div>
     <div class="player-panel-grid"><div class="dist-grid player-dist-grid">${distCard('Gross', myDist, brDist, fieldDist)}${distCard('Net', myDistN, brDistN, fieldDistN)}</div></div>`;
 
   // ----- 6. best & worst rounds -----
@@ -3612,7 +3630,7 @@ function renderPlayerPage() {
       <div class="prc-tap">tap for scorecard</div>
     </div>`;
   const sec6 = `
-    <div class="section-head"><span class="num">P.06</span><h2>Best &amp; Worst Rounds</h2><span class="sub">Tap any card to open that scorecard</span></div>
+    <div class="section-head"><span class="num">P.07</span><h2>Best &amp; Worst Rounds</h2><span class="sub">Tap any card to open that scorecard</span></div>
     <div class="insights-grid">
       ${roundCard('green', 'Best gross', bestG, bestG.round.gross, `${pSignedInt(bestG.round.gross - PAR_TOTAL_)} vs par · net ${bestG.round.net} · HC ${bestG.round.hc}`)}
       ${roundCard('green', 'Best net', bestN, bestN.round.net, `${pSignedInt(bestN.round.net - PAR_TOTAL_)} vs par · gross ${bestN.round.gross} · HC ${bestN.round.hc}`)}
@@ -3638,7 +3656,7 @@ function renderPlayerPage() {
       <td class="hole-delta ${r.me - r.fd < -1e-9 ? 'under' : 'over-field'}">${pSigned(r.me - r.fd, 2)}</td></tr>`).join('')}
   </tbody></table></div><div class="player-note">${unit}</div>`;
   const sec7 = `
-    <div class="section-head"><span class="num">P.07</span><h2>Hard Holes vs Easy Holes</h2><span class="sub">Strokes over par by stroke-index group, and front vs back</span></div>
+    <div class="section-head"><span class="num">P.08</span><h2>Hard Holes vs Easy Holes</h2><span class="sub">Strokes over par by stroke-index group, and front vs back</span></div>
     <div class="grid-2">
       <div class="panel player-cmp-panel" style="padding:18px 20px;">${cmpTable(siRows, 'Average strokes over par per hole in each SI group.')}</div>
       <div class="panel player-cmp-panel" style="padding:18px 20px;">${cmpTable(fbRows, 'Average strokes over par per nine (front par 36, back par 35).')}</div>
@@ -3669,12 +3687,12 @@ function renderPlayerPage() {
     { cls: '', title: 'Par-3 tee shots', body: isNaN(clutch) ? '' : `You walk off a par 3 at <strong>par or better ${clutch.toFixed(0)}%</strong> of the time; your par-3 average is ${pSigned(parTypes[0].g, 2)}.` },
   ];
   const sec8 = `
-    <div class="section-head"><span class="num">P.08</span><h2>${esc(playerName.split(' ')[0])}’s Headlines</h2><span class="sub">What your 2026 numbers say</span></div>
+    <div class="section-head"><span class="num">P.09</span><h2>${esc(playerName.split(' ')[0])}’s Headlines</h2><span class="sub">What your 2026 numbers say</span></div>
     <div class="insights-grid">${headlines.map(h => `<div class="insight-card ${h.cls}"><div class="insight-title">${h.title}</div><div class="insight-body">${h.body}</div></div>`).join('')}</div>`;
 
   // ----- 9. every round -----
   const sec9 = `
-    <div class="section-head"><span class="num">P.09</span><h2>Every Round</h2><span class="sub">Tap a row for the scorecard</span></div>
+    <div class="section-head"><span class="num">P.10</span><h2>Every Round</h2><span class="sub">Tap a row for the scorecard</span></div>
     <div class="panel" style="padding:18px 20px;"><div class="player-scroll"><table class="holes-table player-rounds">
       <thead><tr><th>Date</th><th>Event</th><th>HC</th><th>Gross</th><th>vs par</th><th>Net</th><th>vs par</th><th>Front</th><th>Back</th><th>Birdie+</th><th>Par</th><th>Bogey</th><th>Dbl+</th></tr></thead>
       <tbody>${mine.map(e => `<tr class="player-round-row" data-rid="${e.week.id}">
@@ -3685,7 +3703,8 @@ function renderPlayerPage() {
       </tr>`).join('')}</tbody>
     </table></div></div>`;
 
-  host.innerHTML = sec1 + sec2 + sec3 + sec4 + sec5 + sec6 + sec7 + sec8 + sec9;
+  const secR = renderRingerBoard(mine, srcTag);
+  host.innerHTML = sec1 + secR + sec2 + sec3 + sec4 + sec5 + sec6 + sec7 + sec8 + sec9;
 
   // wire scorecard taps
   const openRound = rid => {
@@ -3699,6 +3718,44 @@ function renderPlayerPage() {
   };
   host.querySelectorAll('.player-round-card, .player-round-row').forEach(el => el.addEventListener('click', () => openRound(el.dataset.rid)));
   host.querySelectorAll('.trend-dot').forEach(el => el.addEventListener('click', () => openRound(el.dataset.rid)));
+}
+
+// Ringer board: best score on every hole across the season, gross and net,
+// with where each best came from. Stacked: gross card over net card.
+function renderRingerBoard(mine, srcTag) {
+  const best = (mode) => COURSE.par.map((p, i) => {
+    let b = null;
+    mine.forEach(e => {
+      const v = holeVal(e.round, i, mode);
+      if (b === null || v < b.v || (v === b.v && Date.parse(e.week.date) < Date.parse(b.e.week.date))) b = { v, e };
+    });
+    // how many rounds tied this best
+    const ties = mine.filter(e => holeVal(e.round, i, mode) === b.v).length;
+    return { v: b.v, e: b.e, ties };
+  });
+  const g = best('gross'), n = best('net');
+  const sum = (arr, a, b) => arr.slice(a, b).reduce((s, x) => s + x.v, 0);
+  const realBestG = Math.min(...mine.map(x => x.round.gross)), realBestN = Math.min(...mine.map(x => x.round.net));
+  const tot = { g: sum(g,0,18), n: sum(n,0,18) };
+  const dateShort = d => String(d || '').replace(/,?\s*\d{4}$/, '');
+  const card = (arr, label, total, realBest) => {
+    const cell = (h, i) => `<td class="score-cell ringer-cell ${scoreClass(h.v, COURSE.par[i])}" title="Hole ${i+1} · ${h.v} on ${h.e.week.date} (${srcTag(h.e.week)})${h.ties > 1 ? ` · matched ${h.ties}×` : ''}"><span class="ringer-v">${h.v}</span><span class="ringer-when">${dateShort(h.e.week.date)}</span></td>`;
+    const nine = (from) => `<table class="scorecard-table ringer-table"><thead><tr><th class="ringer-lbl">${from ? 'Back' : 'Front'}</th>${COURSE.par.slice(from, from+9).map((_,k) => `<th>${from+k+1}</th>`).join('')}<th>${from ? 'In' : 'Out'}</th><th>${from ? 'Tot' : ''}</th></tr></thead><tbody>
+      <tr><th>Par</th>${COURSE.par.slice(from, from+9).map(p => `<td>${p}</td>`).join('')}<td>${from ? 35 : 36}</td><td>${from ? 71 : ''}</td></tr>
+      <tr><th>Best</th>${arr.slice(from, from+9).map((h,k) => cell(h, from+k)).join('')}<td><strong>${sum(arr, from, from+9)}</strong></td><td>${from ? `<strong>${total}</strong>` : ''}</td></tr>
+    </tbody></table>`;
+    return `<div class="ringer-card">
+      <div class="ringer-head"><div class="ringer-title">${label}</div><div class="ringer-total"><span class="pk-big ${pCls(total - PAR_TOTAL_)}">${total}</span><span class="pk-lbl">${pSignedInt(total - PAR_TOTAL_)} vs par · best real round ${realBest} · ringer saves ${realBest - total}</span></div></div>
+      <div class="player-scroll">${nine(0)}</div><div class="player-scroll" style="margin-top:8px">${nine(9)}</div>
+    </div>`;
+  };
+  return `
+    <div class="section-head"><span class="num">P.02</span><h2>Ringer Board</h2><span class="sub">Your best score on every hole this season, stitched into one card</span></div>
+    <div class="panel ringer-panel">
+      ${card(g, 'Gross', tot.g, realBestG)}
+      ${card(n, 'Net', tot.n, realBestN)}
+      <div class="player-note">Each cell is your lowest score on that hole across ${mine.length} round${mine.length===1?'':'s'}; the small date is when you did it (earliest if tied — tap a cell for details). Net uses the strokes you received that day.</div>
+    </div>`;
 }
 
 // A single round's scorecard (gross + net rows), same cell styling as standings.
@@ -3731,7 +3788,7 @@ function renderPlayerTrend(mine, fieldAvgG) {
   const lbl = e => { const d = String(e.week.date || '').replace(/,?\s*\d{4}$/, ''); return d.length > 7 ? d.replace(/^(\w{3})\w*/, '$1') : d; };
   const every = n > 10 ? Math.ceil(n / 8) : 1;
   return `
-    <div class="section-head"><span class="num">P.02</span><h2>Round by Round</h2><span class="sub">Gross and net for every round, in date order</span></div>
+    <div class="section-head"><span class="num">P.03</span><h2>Round by Round</h2><span class="sub">Gross and net for every round, in date order</span></div>
     <div class="panel" style="padding:16px 12px 10px;">
       <div class="chart-legend"><div class="legend-item"><span class="legend-swatch" style="background:#ff8e84"></span>Gross</div><div class="legend-item"><span class="legend-swatch" style="background:#62d4a1"></span>Net</div><div class="legend-item"><span class="legend-swatch" style="background:rgba(var(--fg-rgb),0.35);height:2px"></span>Field avg gross ${fieldAvgG.toFixed(1)}</div><div class="legend-item"><span class="legend-swatch" style="background:transparent;border-top:2px dashed rgba(var(--fg-rgb),0.6);height:0"></span>Par 71</div></div>
       <svg class="player-trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
