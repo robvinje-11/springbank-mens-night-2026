@@ -6,6 +6,11 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v8.4   Welcome list = members who played (+ Kevin & Cam Heise). The
+         Members section publishes a names-only entry list to
+         events/roster (auto after import or a match change; also a
+         Publish button); the Welcome screen uses it. Until it's
+         published, every 2026 player is still allowed in.
   v8.3   Members import saves ONLY members matched to a 2026 player (or
          on the staff guest list); everyone else is skipped and their
          contact details are never stored. Skipped names are listed
@@ -1705,7 +1710,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v8.3</div>
+    <div class="splash-version">v8.4</div>
   </div>
 </div>
 
@@ -1740,7 +1745,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v8.3</div>
+  <div class="masthead-version">v8.4</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -2104,7 +2109,7 @@ const firebaseConfig = {
 
 let db = null, auth = null;          // Firestore + Auth handles
 let currentUser = null;              // signed-in admin (or null)
-const CLOUD = { mensNight: null, snips: null };  // weeks arrays from Firestore
+const CLOUD = { mensNight: null, snips: null, roster: null };  // weeks arrays from Firestore; roster = published entry list (names only)
 
 // ----- Admin state -------------------------------------------------
 function isAdmin() { return !!currentUser && !currentUser.isAnonymous; }
@@ -4398,8 +4403,15 @@ function titleCase(s) { return String(s || '').trim().replace(/\s+/g, ' ').repla
 
 // Roster for the type-ahead: every name across both events.
 // Non-players who are welcome on the entry list (club staff, management).
-const GATE_GUESTS = ['Kevin Heise'];
+const GATE_GUESTS = ['Kevin Heise', 'Cam Heise'];
+// Who may enter: the published entry list (members who played, from the
+// Members section) plus staff guests. Until the admin publishes one, every
+// 2026 player is allowed so the dashboard still works.
 function rosterNames() {
+  if (Array.isArray(CLOUD.roster) && CLOUD.roster.length) return [...new Set(CLOUD.roster.concat(GATE_GUESTS))].sort();
+  return allPlayerNames();
+}
+function allPlayerNames() {
   const names = new Set(GATE_GUESTS);
   ['mensNight', 'snips'].forEach(ev => {
     const src = Array.isArray(CLOUD[ev]) ? CLOUD[ev] : EVENTS[ev].baseWeeks;
@@ -4869,7 +4881,9 @@ async function importMembers(text) {
       docs.slice(i, i + 400).forEach(d => batch.set(db.collection('members').doc(d.id), d, { merge: true }));
       await batch.commit();
     }
-    await loadMembers(true); renderMembers();
+    await loadMembers(true);
+    try { await publishEntryRoster(); } catch (e) { console.warn('roster publish failed', e); }
+    renderMembers();
     const out2 = document.getElementById('membersImportResult');
     if (out2) out2.innerHTML = `<span style="color:var(--down);font-weight:700">Saved ${docs.length} active players</span> — ${nw} new · ${upd} updated.${skipped.length ? ` <strong>${skipped.length} members skipped</strong> (never played a 2026 round — nothing stored): <span style="opacity:.75">${skipped.map(esc).join(', ')}</span>. If one of them <em>did</em> play under a different name, tell Rob/Claude to add an alias.` : ''}`;
     document.getElementById('membersPaste').value = '';
@@ -4877,17 +4891,32 @@ async function importMembers(text) {
     if (out) out.innerHTML = `<span style="color:var(--up)">Couldn’t save: ${esc(e.message || e)}. Add the <code>members</code> rule in Firestore (see note below).</span>`;
   }
 }
+// Publish the entry list: every member matched to a player (+ staff guests).
+// Names only — no contact details leave the admin-only members collection.
+function entryRosterFromMembers() {
+  const names = new Set(GATE_GUESTS);
+  MEMBERS.list.forEach(m => { if (m.player) names.add(m.player); else if (GATE_GUESTS.some(g => g.toLowerCase() === (m.name || '').toLowerCase())) names.add(m.name); });
+  return [...names].sort();
+}
+async function publishEntryRoster() {
+  if (!isAdmin() || !db) return;
+  const names = entryRosterFromMembers();
+  await db.collection('events').doc('roster').set({ names, count: names.length, updatedAt: Date.now() });
+  CLOUD.roster = names;
+}
 async function setMemberPlayer(id, player) {
   const m = MEMBERS.list.find(x => x.id === id); if (!m) return;
   m.player = player; m.playerLocked = true; m.matchHow = player ? 'manual' : null;
-  try { await db.collection('members').doc(id).set({ player, playerLocked: true, matchHow: m.matchHow }, { merge: true }); } catch (e) {}
+  try { await db.collection('members').doc(id).set({ player, playerLocked: true, matchHow: m.matchHow }, { merge: true }); await publishEntryRoster(); } catch (e) {}
   renderMembers();
 }
 async function deleteMember(id) {
   const m = MEMBERS.list.find(x => x.id === id); if (!m) return;
   if (!confirm(`Remove ${m.name} from the members list?`)) return;
   try { await db.collection('members').doc(id).delete(); } catch (e) {}
-  MEMBERS.list = MEMBERS.list.filter(x => x.id !== id); renderMembers();
+  MEMBERS.list = MEMBERS.list.filter(x => x.id !== id);
+  try { await publishEntryRoster(); } catch (e) {}
+  renderMembers();
 }
 
 function membersFiltered() {
@@ -4940,6 +4969,11 @@ function renderMembers() {
         <span id="membersImportResult" style="font-size:var(--t-sm);"></span>
       </div>
     </div>
+    <div class="panel" style="margin-bottom:16px;padding:14px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <span class="online-dot${Array.isArray(CLOUD.roster) && CLOUD.roster.length ? '' : ' off'}"></span>
+      <div style="flex:1;min-width:220px"><strong>Welcome-screen entry list:</strong> ${Array.isArray(CLOUD.roster) && CLOUD.roster.length ? `<strong>${CLOUD.roster.length}</strong> names published — only these (members who played, plus ${GATE_GUESTS.join(' & ')}) can open the dashboard.` : `<span style="color:var(--up)">not published yet</span> — until it is, every 2026 player can get in.`} <span style="opacity:.7">Names only; no contact details are published.</span></div>
+      <button class="sf-btn sf-tool" id="membersPublish"${entryRosterFromMembers().length > GATE_GUESTS.length ? '' : ' disabled'}>Publish entry list (${entryRosterFromMembers().length})</button>
+    </div>
     <div class="section-filter" id="membersFilterBar"><span class="sf-label">Show</span>
       ${pill('all', 'All', counts.all)}${pill('players', 'Players', counts.players)}${pill('mensNight', "Men’s Night", counts.mensNight)}${pill('snips', 'Snips', counts.snips)}${pill('nonplayers', 'Staff / guests', counts.nonplayers)}${pill('nocontact', 'No email', counts.nocontact)}
       <input type="text" id="membersSearch" value="${esc(membersSearch)}" placeholder="Search…" style="margin-left:auto;padding:7px 12px;background:var(--bg);border:1px solid var(--rule);color:var(--fg);border-radius:2px;font-family:'DM Sans',sans-serif;font-size:var(--t-md);min-width:150px;">
@@ -4967,6 +5001,7 @@ function renderMembers() {
   host.querySelectorAll('[data-mf]').forEach(b => b.addEventListener('click', () => { membersFilter = b.dataset.mf; renderMembers(); }));
   const sr = document.getElementById('membersSearch'); if (sr) { sr.addEventListener('input', () => { membersSearch = sr.value; const y = window.scrollY; renderMembers(); window.scrollTo(0, y); const el = document.getElementById('membersSearch'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }); }
   const ib = document.getElementById('membersImportBtn'); if (ib) ib.addEventListener('click', () => importMembers(document.getElementById('membersPaste').value));
+  const pb = document.getElementById('membersPublish'); if (pb) pb.addEventListener('click', async () => { pb.disabled = true; pb.textContent = 'Publishing…'; try { await publishEntryRoster(); } catch (e) { alert('Couldn’t publish: ' + (e.message || e)); } renderMembers(); });
   host.querySelectorAll('.member-player').forEach(sel => sel.addEventListener('change', () => setMemberPlayer(sel.dataset.mid, sel.value)));
   host.querySelectorAll('.member-del').forEach(b => b.addEventListener('click', () => deleteMember(b.dataset.mid)));
   const cp = document.getElementById('membersCopyEmails'); if (cp) cp.addEventListener('click', async () => {
@@ -5569,6 +5604,15 @@ async function initFirebase() {
 
   // Visitors: anonymous sign-in so activity events can be written
   startActivity();
+
+  // Entry list: names only (no contact details), published by the admin from
+  // the Members section. Public read like the score documents.
+  db.collection('events').doc('roster').onSnapshot(snap => {
+    const d = snap.data();
+    CLOUD.roster = (d && Array.isArray(d.names)) ? d.names : null;
+    if (document.getElementById('entryGate')?.style.display === 'flex' && typeof renderGateList === 'function') renderGateList();
+    if (typeof renderMembers === 'function' && isAdmin() && MEMBERS.loadedAt) renderMembers();
+  }, () => {});
 
   // Live listeners — any change to the data re-renders for every viewer
   ['mensNight', 'snips'].forEach(evId => {
