@@ -43,6 +43,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Club member list with contact details: admin only, in and out
+    match /members/{memberId} {
+      allow read, write: if isAdmin();
+    }
+
     // Anything else: locked
     match /{document=**} {
       allow read, write: if false;

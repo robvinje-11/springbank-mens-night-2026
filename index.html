@@ -6,7 +6,13 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v7.9   Activity tab: live "Online now" panel — who is viewing right
+  v7.9   Admin "Members" section: paste the club member export, it is
+         matched to the player roster (nicknames handled), stored in
+         Firestore `members` (admin-only rule), with mobile/email, a
+         Player dropdown to fix matches, filters (Men's Night / Snips /
+         not a player / no email), Copy emails, Open email (BCC), CSV,
+         and a list of players with no member record.
+         Activity tab: live "Online now" panel — who is viewing right
          now (green pulsing chips) and who was on in the last 30 min;
          visitors send a quiet once-a-minute heartbeat while the tab
          is open. Footer says "Signed in as admin" while you're signed in (the
@@ -727,7 +733,9 @@
   .event-btn:not(.active):hover, .week-tab:not(.active):hover, .sf-btn:not(.active):hover { animation: none; }
   @media (prefers-reduced-motion: reduce) { .event-btn, .week-tab, .sf-btn { animation: none !important; } }
   body.event-activity main > section { display: none !important; }
-  body.event-activity main > section#activitySection { display: block !important; }
+  body.event-activity main > section#activitySection, body.event-activity main > section#membersSection.admin-only { display: block !important; }
+  body.event-season #membersSection { display: none !important; }
+  .members-table td { font-size: var(--t-md); }
   #activitySection { display: none; }
   .entry-gate { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(9,21,41,0.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
   body.gated { overflow: hidden; }
@@ -2022,6 +2030,16 @@
 
     <div id="parseResult" style="margin-top:16px;"></div>
   </div>
+</section>
+
+<section id="membersSection" class="admin-only" style="margin-top:48px;display:none;">
+  <div class="section-head">
+    <span class="num">No. 10</span>
+    <h2>Members</h2>
+    <span class="sub">Club membership matched to the player roster · contact details for invites</span>
+    <span style="font-size:var(--t-xs);letter-spacing:0.2em;text-transform:uppercase;background:var(--fg);color:var(--bg);padding:3px 10px;border-radius:2px;font-weight:700;margin-left:12px;">Admin</span>
+  </div>
+  <div id="membersBody"></div>
 </section>
 
 </main>
@@ -4726,6 +4744,223 @@ async function clearActivityLog() {
 }
 
 // =================================================================
+// MEMBERS (admin only) — club membership list matched to the player
+// roster, with contact details. Lives in Firestore `members/{id}`;
+// the rules allow ONLY the admin to read or write it, and nothing
+// here is ever rendered for visitors.
+// =================================================================
+let MEMBERS = { list: [], loadedAt: 0 };
+let membersFilter = 'all';     // all | players | mensNight | snips | nonplayers | nocontact
+let membersSearch = '';
+const NICKNAMES_ = [['tim','timothy'],['dave','david'],['mike','michael','mick'],['bob','robert','rob','bobby'],['steve','steven','stephen'],['jon','jonathan','john'],['rick','richard','rich','dick'],['dan','daniel','danny'],['jim','james','jimmy'],['bill','william','will'],['ken','kenneth','kenny'],['tony','anthony'],['pat','patrick'],['matt','matthew'],['chris','christopher'],['andy','andrew'],['jeff','jeffrey','geoff'],['greg','gregory'],['ed','edward','eddie'],['tom','thomas'],['doug','douglas'],['jerry','gerald','gerry'],['ron','ronald'],['don','donald'],['ted','theodore','edward'],['sam','samuel','samim'],['nick','nicholas','nic'],['joe','joseph'],['ben','benjamin'],['al','alvin','albert'],['phil','philip','phillip'],['hal','harold','henry'],['cam','cameron'],['ty','tyler'],['vince','vincent']];
+const nickKey_ = f => { f = String(f || '').toLowerCase(); const g = NICKNAMES_.find(g => g.includes(f)); return g ? g[0] : f; };
+
+// Member list paste: tab-separated "Name<TAB>Sales Class<TAB>Phone<TAB>Mobile<TAB>Email",
+// name as "Last,First". Header and blank lines are skipped.
+function parseMemberList(text) {
+  const rows = [];
+  String(text || '').split(/\r?\n/).forEach(line => {
+    if (!line.trim()) return;
+    const cells = line.split('\t').map(c => c.trim());
+    if (/^name$/i.test(cells[0] || '')) return;
+    const nm = cells[0] || '';
+    let last = '', first = '';
+    if (nm.includes(',')) { [last, first] = nm.split(',').map(x => x.trim()); }
+    else { const parts = nm.split(/\s+/); first = parts.slice(0, -1).join(' '); last = parts.slice(-1)[0] || ''; }
+    if (!first && !last) return;
+    const email = (cells[4] || '').trim().toLowerCase();
+    const m = { last: titleCase(last), first: titleCase(first), status: cells[1] || '', phone: cells[2] || '', mobile: cells[3] || '', email };
+    // Keep original capitalisation for names like McCartney / O'Connell / LaRochelle
+    m.last = last.trim(); m.first = first.trim();
+    m.name = `${m.first} ${m.last}`.trim();
+    m.id = memberId(m);
+    rows.push(m);
+  });
+  return rows;
+}
+function memberId(m) {
+  const base = (m.email || m.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return base || uuid();
+}
+function fmtPhone(p) {
+  const d = String(p || '').replace(/\D/g, '');
+  if (d.length === 10) return `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`;
+  if (d.length === 11 && d[0] === '1') return `${d.slice(1,4)}-${d.slice(4,7)}-${d.slice(7)}`;
+  return String(p || '').trim();
+}
+
+// Roster from both events with round counts per source.
+function memberRoster() {
+  const map = new Map();
+  ['mensNight', 'snips'].forEach(ev => {
+    const src = Array.isArray(CLOUD[ev]) ? CLOUD[ev] : EVENTS[ev].baseWeeks;
+    src.forEach(w => (w.players || []).forEach(p => {
+      const n = canonicalName(p[0]); if (isExcludedPlayer(n)) return;
+      const e = map.get(n) || { name: n, mn: 0, snips: 0 };
+      e[ev === 'mensNight' ? 'mn' : 'snips']++; map.set(n, e);
+    }));
+  });
+  return map;
+}
+// Match a member to a roster name: exact (after aliases) → nickname → surname + initial.
+function matchMemberToPlayer(m, roster) {
+  const names = [...roster.keys()];
+  const canon = canonicalName(`${m.first} ${m.last}`);
+  const ci = s => String(s || '').toLowerCase();
+  let hit = names.find(n => ci(n) === ci(canon));
+  if (hit) return { player: hit, how: 'exact' };
+  const lastCi = ci(m.last), firstKey = nickKey_(m.first);
+  const sameLast = names.filter(n => ci(n.split(' ').slice(1).join(' ')) === lastCi || ci(n).endsWith(' ' + lastCi));
+  hit = sameLast.find(n => nickKey_(n.split(' ')[0]) === firstKey);
+  if (hit) return { player: hit, how: 'nickname' };
+  const initial = sameLast.filter(n => ci(n[0]) === ci(m.first[0] || ''));
+  if (initial.length === 1 && sameLast.length === 1) return { player: initial[0], how: 'surname' };
+  return { player: '', how: null };
+}
+
+async function loadMembers(force) {
+  if (!isAdmin() || !db) return;
+  if (!force && Date.now() - MEMBERS.loadedAt < 60000) return;
+  const snap = await db.collection('members').get();
+  MEMBERS = { list: snap.docs.map(d => d.data()), loadedAt: Date.now() };
+}
+// Import / update from a paste. Existing player matches the admin set by hand are kept.
+async function importMembers(text) {
+  const rows = parseMemberList(text);
+  const out = document.getElementById('membersImportResult');
+  if (!rows.length) { if (out) out.innerHTML = '<span style="color:var(--up)">Nothing recognised — paste the tab-separated list (Name, Sales Class, Phone, Mobile, Email).</span>'; return; }
+  const roster = memberRoster();
+  const existing = new Map(MEMBERS.list.map(m => [m.id, m]));
+  let matched = 0, nw = 0, upd = 0;
+  const docs = rows.map(r => {
+    const prev = existing.get(r.id);
+    const mm = matchMemberToPlayer(r, roster);
+    const player = prev && prev.playerLocked ? prev.player : mm.player;
+    if (player) matched++;
+    prev ? upd++ : nw++;
+    return Object.assign({}, prev || {}, r, { player, matchHow: prev && prev.playerLocked ? prev.matchHow : mm.how, playerLocked: !!(prev && prev.playerLocked), updatedAt: Date.now() });
+  });
+  if (!db || !isAdmin()) { if (out) out.textContent = 'Sign in as admin to save.'; return; }
+  try {
+    for (let i = 0; i < docs.length; i += 400) {
+      const batch = db.batch();
+      docs.slice(i, i + 400).forEach(d => batch.set(db.collection('members').doc(d.id), d, { merge: true }));
+      await batch.commit();
+    }
+    await loadMembers(true); renderMembers();
+    const out2 = document.getElementById('membersImportResult');
+    if (out2) out2.innerHTML = `<span style="color:var(--down);font-weight:700">Saved ${docs.length} members</span> — ${nw} new · ${upd} updated · ${matched} matched to a player automatically. Check the <em>Player</em> column and fix any that are wrong.`;
+    document.getElementById('membersPaste').value = '';
+  } catch (e) {
+    if (out) out.innerHTML = `<span style="color:var(--up)">Couldn’t save: ${esc(e.message || e)}. Add the <code>members</code> rule in Firestore (see note below).</span>`;
+  }
+}
+async function setMemberPlayer(id, player) {
+  const m = MEMBERS.list.find(x => x.id === id); if (!m) return;
+  m.player = player; m.playerLocked = true; m.matchHow = player ? 'manual' : null;
+  try { await db.collection('members').doc(id).set({ player, playerLocked: true, matchHow: m.matchHow }, { merge: true }); } catch (e) {}
+  renderMembers();
+}
+async function deleteMember(id) {
+  const m = MEMBERS.list.find(x => x.id === id); if (!m) return;
+  if (!confirm(`Remove ${m.name} from the members list?`)) return;
+  try { await db.collection('members').doc(id).delete(); } catch (e) {}
+  MEMBERS.list = MEMBERS.list.filter(x => x.id !== id); renderMembers();
+}
+
+function membersFiltered() {
+  const roster = memberRoster();
+  const q = membersSearch.toLowerCase();
+  return MEMBERS.list.filter(m => {
+    const r = m.player ? roster.get(m.player) : null;
+    if (membersFilter === 'players' && !m.player) return false;
+    if (membersFilter === 'mensNight' && !(r && r.mn)) return false;
+    if (membersFilter === 'snips' && !(r && r.snips)) return false;
+    if (membersFilter === 'nonplayers' && m.player) return false;
+    if (membersFilter === 'nocontact' && m.email) return false;
+    if (q && !(`${m.name} ${m.email} ${m.status} ${m.player || ''}`.toLowerCase().includes(q))) return false;
+    return true;
+  }).sort((a, b) => a.last.localeCompare(b.last) || a.first.localeCompare(b.first));
+}
+function membersEmails(list) { return [...new Set(list.map(m => m.email).filter(Boolean))]; }
+
+function renderMembersPage() {
+  const host = document.getElementById('membersBody'); if (!host) return;
+  if (!isAdmin()) { host.innerHTML = ''; return; }
+  host.innerHTML = '<div class="panel player-empty"><div class="player-empty-sub">Loading members…</div></div>';
+  loadMembers().then(renderMembers).catch(e => { host.innerHTML = `<div class="panel player-empty"><div class="player-empty-title">Couldn’t load members</div><div class="player-empty-sub">${esc(e.message || e)}<br>Add this to your Firestore rules: <code>match /members/{id} { allow read, write: if isAdmin(); }</code></div></div>`; });
+}
+function renderMembers() {
+  const host = document.getElementById('membersBody'); if (!host) return;
+  const roster = memberRoster();
+  const list = membersFiltered();
+  const emails = membersEmails(list);
+  const all = MEMBERS.list;
+  const matchedNames = new Set(all.map(m => m.player).filter(Boolean));
+  const unmatchedPlayers = [...roster.values()].filter(r => !matchedNames.has(r.name)).sort((a, b) => (b.mn + b.snips) - (a.mn + a.snips));
+  const pill = (k, lbl, n) => `<button class="sf-btn sf-tool${membersFilter === k ? ' active' : ''}" data-mf="${k}">${lbl}${n !== undefined ? ` <span style="opacity:.6">${n}</span>` : ''}</button>`;
+  const counts = {
+    all: all.length, players: all.filter(m => m.player).length,
+    mensNight: all.filter(m => m.player && roster.get(m.player) && roster.get(m.player).mn).length,
+    snips: all.filter(m => m.player && roster.get(m.player) && roster.get(m.player).snips).length,
+    nonplayers: all.filter(m => !m.player).length, nocontact: all.filter(m => !m.email).length,
+  };
+  const rosterOpts = [...roster.keys()].sort();
+  const how = m => m.matchHow === 'manual' ? 'set by you' : m.matchHow === 'exact' ? 'auto' : m.matchHow === 'nickname' ? 'auto · nickname' : m.matchHow === 'surname' ? 'suggested · check' : '';
+  const mailto = emails.length ? `mailto:?bcc=${encodeURIComponent(emails.join(','))}&subject=${encodeURIComponent('Springbank Links · 2026 Men’s Night & Snips dashboard')}` : '';
+  host.innerHTML = `
+    <div class="panel" style="margin-bottom:16px">
+      <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;margin-bottom:6px;">Import or update the member list</div>
+      <div style="font-size:var(--t-sm);margin-bottom:10px;">Paste the club export (tab-separated: <strong>Name · Sales Class · Phone · Mobile · Email</strong>, name as <em>Last,First</em>). Re-pasting updates contact details and keeps any player matches you set by hand.</div>
+      <textarea id="membersPaste" spellcheck="false" placeholder="Name	Sales Class	Phone	Mobile Phone	Email&#10;Vinje,Rob	Springbank Dues Paying Member	…" style="width:100%;min-height:110px;padding:12px;background:var(--bg);border:1px solid var(--rule);color:var(--fg);border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:var(--t-sm);"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+        <button class="sf-btn active" id="membersImportBtn">Import / update members</button>
+        <span id="membersImportResult" style="font-size:var(--t-sm);"></span>
+      </div>
+    </div>
+    <div class="section-filter" id="membersFilterBar"><span class="sf-label">Show</span>
+      ${pill('all', 'All', counts.all)}${pill('players', 'Players', counts.players)}${pill('mensNight', "Men’s Night", counts.mensNight)}${pill('snips', 'Snips', counts.snips)}${pill('nonplayers', 'Not a player', counts.nonplayers)}${pill('nocontact', 'No email', counts.nocontact)}
+      <input type="text" id="membersSearch" value="${esc(membersSearch)}" placeholder="Search…" style="margin-left:auto;padding:7px 12px;background:var(--bg);border:1px solid var(--rule);color:var(--fg);border-radius:2px;font-family:'DM Sans',sans-serif;font-size:var(--t-md);min-width:150px;">
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px;">
+      <button class="sf-btn sf-tool" id="membersCopyEmails"${emails.length ? '' : ' disabled'}>Copy ${emails.length} email${emails.length === 1 ? '' : 's'}</button>
+      ${mailto ? `<a class="sf-btn sf-tool" href="${mailto}" id="membersMailto" style="text-decoration:none">Open email to all (BCC)</a>` : ''}
+      <button class="sf-btn sf-tool" id="membersCsv"${list.length ? '' : ' disabled'}>Download CSV</button>
+      <span class="sf-label" style="margin-left:auto">${list.length} shown</span>
+    </div>
+    <div class="panel" style="padding:18px 20px"><div class="player-scroll"><table class="holes-table player-rounds members-table" style="min-width:860px">
+      <thead><tr><th style="text-align:left">Member</th><th style="text-align:left">Status</th><th style="text-align:left">Mobile</th><th style="text-align:left">Email</th><th style="text-align:left">Player</th><th>MN</th><th>Snips</th><th></th></tr></thead>
+      <tbody>${list.length ? list.map(m => { const r = m.player ? roster.get(m.player) : null; return `<tr data-mid="${esc(m.id)}">
+        <td style="text-align:left;white-space:nowrap"><strong>${esc(m.last)}</strong>, ${esc(m.first)}</td>
+        <td style="text-align:left;font-size:var(--t-xs)">${esc(m.status.replace('Springbank ', ''))}</td>
+        <td style="text-align:left;white-space:nowrap">${m.mobile ? `<a href="tel:${esc(m.mobile.replace(/\D/g, ''))}">${esc(fmtPhone(m.mobile))}</a>` : (m.phone ? `<a href="tel:${esc(m.phone.replace(/\D/g, ''))}">${esc(fmtPhone(m.phone))}</a> <span style="opacity:.5;font-size:var(--t-2xs)">home</span>` : '<span style="opacity:.4">—</span>')}</td>
+        <td style="text-align:left">${m.email ? `<a href="mailto:${esc(m.email)}">${esc(m.email)}</a>` : '<span style="color:var(--up)">missing</span>'}</td>
+        <td style="text-align:left;white-space:nowrap"><select class="member-player" data-mid="${esc(m.id)}" style="max-width:170px;padding:4px 6px;background:var(--bg);color:var(--fg);border:1px solid ${m.matchHow === 'surname' ? '#f59e0b' : 'var(--rule)'};border-radius:2px;font-family:'DM Sans',sans-serif;font-size:var(--t-sm);"><option value="">— not a player —</option>${rosterOpts.map(n => `<option value="${esc(n)}"${n === m.player ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select><div style="font-size:var(--t-2xs);opacity:.6;margin-top:2px">${how(m)}</div></td>
+        <td>${r && r.mn ? r.mn : '<span style="opacity:.35">·</span>'}</td><td>${r && r.snips ? r.snips : '<span style="opacity:.35">·</span>'}</td>
+        <td><button class="sf-btn sf-tool member-del" data-mid="${esc(m.id)}" title="Remove" style="padding:3px 9px">×</button></td>
+      </tr>`; }).join('') : `<tr><td colspan="8" style="padding:22px;font-style:italic">${all.length ? 'No members match this filter.' : 'No members yet — paste the club list above.'}</td></tr>`}</tbody>
+    </table></div></div>
+    ${unmatchedPlayers.length ? `<div class="panel" style="margin-top:16px"><div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;margin-bottom:6px;">Players with no member record <span style="font-family:'JetBrains Mono',monospace;font-style:normal;font-size:var(--t-sm);opacity:.7">${unmatchedPlayers.length}</span></div><div style="font-size:var(--t-sm);margin-bottom:10px;">Played this year but aren’t on the list (guests, juniors, or a name that didn’t match). Pick them in a member’s <em>Player</em> dropdown if they’re the same person.</div><div class="online-row" style="margin-top:0">${unmatchedPlayers.map(r => `<span class="online-chip"><span>${esc(r.name)}</span><span class="online-when">${r.mn ? `MN ${r.mn}` : ''}${r.mn && r.snips ? ' · ' : ''}${r.snips ? `Snips ${r.snips}` : ''}</span></span>`).join('')}</div></div>` : ''}
+    <div class="player-note" style="margin-top:12px">Contact details are stored in Firestore <code>members</code> and are readable only by ${ADMIN_EMAIL}. Visitors never see this section.</div>`;
+  host.querySelectorAll('[data-mf]').forEach(b => b.addEventListener('click', () => { membersFilter = b.dataset.mf; renderMembers(); }));
+  const sr = document.getElementById('membersSearch'); if (sr) { sr.addEventListener('input', () => { membersSearch = sr.value; const y = window.scrollY; renderMembers(); window.scrollTo(0, y); const el = document.getElementById('membersSearch'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }); }
+  const ib = document.getElementById('membersImportBtn'); if (ib) ib.addEventListener('click', () => importMembers(document.getElementById('membersPaste').value));
+  host.querySelectorAll('.member-player').forEach(sel => sel.addEventListener('change', () => setMemberPlayer(sel.dataset.mid, sel.value)));
+  host.querySelectorAll('.member-del').forEach(b => b.addEventListener('click', () => deleteMember(b.dataset.mid)));
+  const cp = document.getElementById('membersCopyEmails'); if (cp) cp.addEventListener('click', async () => {
+    const txt = emails.join(', ');
+    try { await navigator.clipboard.writeText(txt); cp.textContent = `Copied ${emails.length}`; } catch (e) { window.prompt('Copy these addresses:', txt); }
+    setTimeout(() => { cp.textContent = `Copy ${emails.length} email${emails.length === 1 ? '' : 's'}`; }, 2000);
+  });
+  const cs = document.getElementById('membersCsv'); if (cs) cs.addEventListener('click', () => {
+    const q = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+    const rows = [['Last', 'First', 'Status', 'Phone', 'Mobile', 'Email', 'Player', 'Men’s Night rounds', 'Snips rounds']].concat(list.map(m => { const r = m.player ? roster.get(m.player) : null; return [m.last, m.first, m.status, m.phone, m.mobile, m.email, m.player || '', r ? r.mn : 0, r ? r.snips : 0]; }));
+    const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `springbank-members-${membersFilter}.csv`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  });
+}
+
+// =================================================================
 // RENDER ALL
 // =================================================================
 function renderAll() {
@@ -5286,6 +5521,7 @@ async function initFirebase() {
     if (!isAdmin() && state.eventId === 'activity') switchEvent('season');
     if (isAdmin()) hideEntryGate(); else showEntryGate(false);
     if (typeof updateVisitorFooter === 'function') updateVisitorFooter();
+    if (typeof renderMembersPage === 'function') renderMembersPage();
     if (!currentUser) startActivity();   // signed out of admin → fall back to an anonymous visitor session
     // Scroll to the admin panel only on a real sign-in click — i.e. after
     // the initial restore has happened, and we went from logged-out to in.
