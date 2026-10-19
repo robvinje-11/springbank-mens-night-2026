@@ -6,7 +6,16 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v7.8   Every Round: tapping a round opens its scorecard inline, right
+  v7.9   Activity tab: "Clear activity log" button (admin only) wipes
+         every logged event and the visitor list, with a confirm.
+         "SI" is now "HC" (hole handicap) everywhere. Hole-chart
+         comparisons are tinted chips (green easier / red harder); on
+         phones the PI line under each bar is larger with gridlines
+         stopping at the bars.
+  v7.8   Hole charts: "+/-" beside every Playing Index — vs the card's
+         hole handicap on all charts, plus vs 2026 (the field's PI) on
+         the Player chart. Green = played easier, red = harder.
+  v7.7   Every Round: tapping a round opens its scorecard inline, right
          under that row (caret + highlight); Expand all / Collapse all
          buttons above the list; Best & Worst cards and trend dots open
          the round in the list. Player hole chart labels the rank as
@@ -807,6 +816,9 @@
   .rounds-tools { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .sf-btn.sf-tool { animation: none; border-width: 1.5px; opacity: 0.9; }
   .sf-btn.sf-tool:disabled { opacity: 0.4; cursor: default; }
+  .sf-btn.sf-danger { animation: none; border-color: var(--up); color: var(--up); }
+  .sf-btn.sf-danger:hover { background: rgba(217,78,61,0.1); }
+  .sf-btn.sf-danger:disabled { opacity: 0.5; cursor: default; }
   .player-sc { min-width: 520px; }
   .player-trend { width: 100%; height: auto; display: block; }
   .ace-banner { display: flex; align-items: center; gap: 18px; margin: -24px 0 44px; padding: 18px 22px; border: 1.5px solid var(--ace); border-radius: 3px; background: var(--ace-bg); }
@@ -1606,7 +1618,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v7.8</div>
+    <div class="splash-version">v7.9</div>
   </div>
 </div>
 
@@ -1641,7 +1653,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v7.8</div>
+  <div class="masthead-version">v7.9</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -1779,7 +1791,7 @@
   <div class="panel">
     <div class="chart-legend" id="holeChartLegend">
       <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--ink)"></span> Par line</div>
-      <div style="flex-basis:100%;line-height:1.5;"><strong style="font-family:'JetBrains Mono',monospace">PI</strong> = Playing Index — how the hole actually ranked in this view (1 = hardest). <strong>vs SI</strong> is PI minus the card’s stroke index: <span style="color:var(--up);font-weight:700">negative / red</span> = played harder than rated, <span style="color:var(--down);font-weight:700">positive / green</span> = easier.</div>
+      <div style="flex-basis:100%;line-height:1.5;"><strong style="font-family:'JetBrains Mono',monospace">PI</strong> = Playing Index — how the hole actually ranked in this view (1 = hardest). <strong>vs HC</strong> is PI minus the card’s hole handicap: <span style="color:var(--up);font-weight:700">negative / red</span> = played harder than rated, <span style="color:var(--down);font-weight:700">positive / green</span> = easier.</div>
     </div>
     <div class="hole-chart"><svg id="holeChart" viewBox="0 0 640 720" preserveAspectRatio="xMidYMid meet"></svg></div>
   </div>
@@ -1842,7 +1854,7 @@
         <table class="holes-table" id="easiestTable"></table>
       </div>
     </div>
-    <div class="player-note" style="margin-top:14px;"><strong>PI = Playing Index</strong> — the hole’s rank by how it actually played in this view (1 = hardest). <strong>vs SI</strong> is PI minus the card’s stroke index: <span style="color:var(--up);font-weight:700">negative</span> = played harder than rated, <span style="color:var(--down);font-weight:700">positive</span> = easier.
+    <div class="player-note" style="margin-top:14px;"><strong>PI = Playing Index</strong> — the hole’s rank by how it actually played in this view (1 = hardest). <strong>vs HC</strong> is PI minus the card’s hole handicap: <span style="color:var(--up);font-weight:700">negative</span> = played harder than rated, <span style="color:var(--down);font-weight:700">positive</span> = easier.
     </div>
 </section>
 
@@ -3020,9 +3032,9 @@ function renderInsights() {
   const items_ = [
     ...(aceCard ? [aceCard] : []),
     { cls: 'red', title: tp + 'Hardest hole',
-      body: `<strong>Hole ${hardest.hole}</strong> (par ${hardest.par}, SI ${hardest.si}) played to <strong>${hardest.avg.toFixed(2)}</strong> — <strong>+${hardest.delta.toFixed(2)} over par</strong>.` },
+      body: `<strong>Hole ${hardest.hole}</strong> (par ${hardest.par}, HC ${hardest.si}) played to <strong>${hardest.avg.toFixed(2)}</strong> — <strong>+${hardest.delta.toFixed(2)} over par</strong>.` },
     { cls: 'green', title: tp + 'Easiest hole',
-      body: `<strong>Hole ${easiest.hole}</strong> (par ${easiest.par}, SI ${easiest.si}) averaged <strong>${easiest.avg.toFixed(2)}</strong>, only <strong>+${easiest.delta.toFixed(2)}</strong>.` },
+      body: `<strong>Hole ${easiest.hole}</strong> (par ${easiest.par}, HC ${easiest.si}) averaged <strong>${easiest.avg.toFixed(2)}</strong>, only <strong>+${easiest.delta.toFixed(2)}</strong>.` },
     { cls: 'green', title: tp + (ytdMode() ? 'Top YTD gross (avg)' + minNote : 'Round of the day (gross)'),
       body: ytdMode()
         ? `<strong>${bestGross.name}</strong> (HC ${bestGross.hc}) owns the lowest scoring average — <strong>${bestGross.avgGross.toFixed(1)} gross</strong> over ${bestGross.rounds} round${bestGross.rounds===1?'':'s'}.`
@@ -3182,16 +3194,16 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
   const fAxis = isMobile ? 16 : 14;   // axis-scale font
   const fVal  = isMobile ? 18 : 15;   // over-par value font
   // Phones: the PI line sits UNDER the bar (full-width bars), so rows are taller.
-  const rowH  = isMobile ? 64 : 42;   // row height
-  const barH  = isMobile ? 30 : 32;   // bar thickness
+  const rowH  = isMobile ? 76 : 42;   // row height
+  const barH  = isMobile ? 32 : 32;   // bar thickness
   const charW = fHole * 0.6;          // monospace char width estimate
 
   // Widest label, e.g. "10 P3·SI18" — column auto-fits it.
   const labelChars = (s) => s.replace('\u2003','').length;
-  const labels = COURSE.par.map((p,i) => `${i+1}\u2003P${p}\u00b7SI${COURSE.si[i]}`);
+  const labels = COURSE.par.map((p,i) => `${i+1}\u2003P${p}\u00b7HC${COURSE.si[i]}`);
   const widestChars = Math.max(...labels.map(labelChars));
   const labelW = Math.ceil(widestChars * charW + fHole) + 6;
-  const fPI = isMobile ? 15 : 13;
+  const fPI = isMobile ? 17 : 13;
   // On a player's chart the label is personal: "Rob’s Playing Index" ("Rob’s PI" on phones).
   const piLbl = (compareAvgs ? `${seriesLabel}\u2019s ` : '') + (isMobile ? 'PI' : 'Playing Index');
   // Right of the rank: "+/-" vs the card's SI, and (player chart) vs the 2026 season's PI.
@@ -3199,7 +3211,7 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
   const sgn = d => d === 0 ? '=' : (d > 0 ? '+' : '\u2212') + Math.abs(d);
   // Any easier (positive) = green, any harder (negative) = red, equal = plain ink.
   const dFill = d => d < 0 ? 'var(--up)' : d > 0 ? 'var(--down)' : 'var(--fg)';
-  const siTag = isMobile ? 'SI' : 'vs SI', yrTag = isMobile ? '\u201926' : 'vs 2026';
+  const siTag = isMobile ? 'HC' : 'vs HC', yrTag = isMobile ? '\u201926' : 'vs 2026';
   const extraChars = (siTag.length + 5) + (cpi ? (yrTag.length + 5) : 0);
   const piW = isMobile ? 0 : Math.ceil(fPI * 0.6 * (piLbl.length + 4 + extraChars)) + 10;   // desktop: room for the label right of the longest bar
   const pad = { l: 2, r: 12 + piW, t: isMobile ? 40 : 36, b: 12 };
@@ -3218,7 +3230,12 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
   for (let v = 0; v <= maxOver; v += 0.5) {
     const x = axisX + (v / maxOver) * plotW;
     const isZero = v === 0;
-    html += `<line x1="${x}" y1="${pad.t - 9}" x2="${x}" y2="${H - pad.b}" stroke="${isZero?'var(--fg)':'rgba(var(--fg-rgb),0.14)'}" stroke-width="${isZero?2:1}" ${isZero?'stroke-dasharray="4 4"':''} opacity="${isZero?0.9:1}"/>`;
+    if (isMobile) {
+      // phones: gridlines only behind the bars, so they don't cut through the PI line below each bar
+      for (let i = 0; i < 18; i++) { const ry = rowY(i); html += `<line x1="${x}" y1="${ry - 4}" x2="${x}" y2="${ry + barH + 4}" stroke="${isZero?'var(--fg)':'rgba(var(--fg-rgb),0.14)'}" stroke-width="${isZero?2:1}" ${isZero?'stroke-dasharray="4 4"':''} opacity="${isZero?0.9:1}"/>`; }
+    } else {
+      html += `<line x1="${x}" y1="${pad.t - 9}" x2="${x}" y2="${H - pad.b}" stroke="${isZero?'var(--fg)':'rgba(var(--fg-rgb),0.14)'}" stroke-width="${isZero?2:1}" ${isZero?'stroke-dasharray="4 4"':''} opacity="${isZero?0.9:1}"/>`;
+    }
     html += `<text x="${x}" y="${pad.t - 15}" text-anchor="middle" font-family="JetBrains Mono" font-size="${fAxis}" font-weight="700" fill="var(--fg)">+${v.toFixed(1)}</text>`;
   }
 
@@ -3228,7 +3245,7 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
     const val = over[i];
     const barW = Math.max(2, (val / maxOver) * plotW);
     const midY = y + barH/2;
-    const tooltip = `Hole ${i+1} · ${seriesLabel} avg ${avgs[i].toFixed(2)} (${val>=0?'+':''}${val.toFixed(2)}) · PI ${pi[i]} (SI ${COURSE.si[i]})${cpi ? ` · ${compareLabel} PI ${cpi[i]}` : ''}`;
+    const tooltip = `Hole ${i+1} · ${seriesLabel} avg ${avgs[i].toFixed(2)} (${val>=0?'+':''}${val.toFixed(2)}) · PI ${pi[i]} (HC ${COURSE.si[i]})${cpi ? ` · ${compareLabel} PI ${cpi[i]}` : ''}`;
 
     // hole label, anchored hard to the card's left edge
     html += `<text x="${pad.l}" y="${midY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fHole}" font-weight="700" fill="var(--fg)">${labels[i]}</text>`;
@@ -3246,14 +3263,29 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
     html += `<text x="${valX}" y="${midY}" dominant-baseline="central" text-anchor="${valAnchor}" font-family="JetBrains Mono" font-size="${fVal}" font-weight="700" fill="var(--fg)">${valStr}</text>`;
 
     // Playing Index — just right of the bar (or of the outside value). Tinted when it disagrees with SI.
-    const piX = isMobile ? axisX + 2 : (fitsInside ? axisX + barW : valX + fVal * 0.6 * valStr.length) + 12;
-    const piY = isMobile ? y + barH + 4 + fPI * 0.7 : midY;
+    const piX = isMobile ? pad.l + 4 : (fitsInside ? axisX + barW : valX + fVal * 0.6 * valStr.length) + 12;
+    const piY = isMobile ? y + barH + 6 + fPI * 0.85 : midY;
     // Tint: vs the card's SI on the main tabs; vs the season's PI on a player chart.
     // The rank itself stays in plain ink; the +/- figures carry the colour.
     const piFill = 'var(--fg)';
     const dSI = pi[i] - COURSE.si[i], dYr = cpi ? pi[i] - cpi[i] : null;
-    const sub = (tag, d) => `<tspan dx="${fPI * 0.6}" font-size="${fPI - 1}" font-weight="600" fill="var(--fg)" opacity="0.6">· ${tag}</tspan><tspan dx="${fPI * 0.35}" font-size="${fPI - 1}" font-weight="700" fill="${dFill(d)}">${sgn(d)}</tspan>`;
-    html += `<text x="${piX}" y="${piY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fPI}" font-weight="700" fill="${piFill}" opacity="0.95"><title>Playing Index ${pi[i]} · card SI ${COURSE.si[i]} (${sgn(dSI)})${cpi ? ` · ${compareLabel} PI ${cpi[i]} (${sgn(dYr)})` : ''} — negative = played harder than rated</title>${piLbl} ${pi[i]}${sub(siTag, dSI)}${cpi ? sub(yrTag, dYr) : ''}</text>`;
+    // Comparison chips: "vs HC −3" / "vs 2026 +7" in a tinted pill — green
+    // = played easier than the reference, red = harder, grey = same rank.
+    const chipF = fPI - 1, cw = chipF * 0.62, chipH = chipF + 8;
+    const chipBg = d => d < 0 ? 'rgba(217,78,61,0.14)' : d > 0 ? 'rgba(42,140,92,0.16)' : 'rgba(var(--fg-rgb),0.08)';
+    const rankStr = `${piLbl} ${pi[i]}`;
+    let cx = piX + rankStr.length * fPI * 0.6 + (isMobile ? 12 : 8);
+    const chip = (tag, d) => {
+      const txt = `${tag} ${sgn(d)}`;
+      const w = Math.ceil(txt.length * cw) + 14;
+      const out = `<g><rect x="${cx}" y="${piY - chipH/2}" width="${w}" height="${chipH}" rx="${chipH/2}" fill="${chipBg(d)}" stroke="${dFill(d)}" stroke-opacity="${d === 0 ? 0.25 : 0.55}" stroke-width="1"/>
+        <text x="${cx + w/2}" y="${piY}" dominant-baseline="central" text-anchor="middle" font-family="JetBrains Mono" font-size="${chipF}" font-weight="700" fill="${dFill(d)}">${txt}</text></g>`;
+      cx += w + 6;
+      return out;
+    };
+    html += `<text x="${piX}" y="${piY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fPI}" font-weight="700" fill="${piFill}" opacity="0.95"><title>Playing Index ${pi[i]} · card HC ${COURSE.si[i]} (${sgn(dSI)})${cpi ? ` · ${compareLabel} PI ${cpi[i]} (${sgn(dYr)})` : ''} — negative = played harder than rated</title>${rankStr}</text>`;
+    html += chip(siTag, dSI);
+    if (cpi) html += chip(yrTag, dYr);
   }
 
   svg.innerHTML = html;
@@ -3330,14 +3362,14 @@ function renderHolesTables() {
   const easiest = [...holes].sort((a,b) => a.delta - b.delta).slice(0, 9);
 
   const piH = '<span class="pi-word">Playing Index</span><span class="pi-abbr">PI</span>';
-  const head = `<thead><tr><th>Hole</th><th>Par·SI</th><th>Avg</th><th>+/-</th><th>${piH}</th><th>vs SI</th>${ytdMode() ? '' : '<th>Dbl+</th>'}</tr></thead>`;
+  const head = `<thead><tr><th>Hole</th><th>Par·HC</th><th>Avg</th><th>+/-</th><th>${piH}</th><th>vs HC</th>${ytdMode() ? '' : '<th>Dbl+</th>'}</tr></thead>`;
   const row = h => `<tr>
     <td class="hole-num">${h.hole}</td>
-    <td class="hole-par-si">P${h.par} · SI${h.si}</td>
+    <td class="hole-par-si">P${h.par} · HC${h.si}</td>
     <td class="hole-avg">${h.avg.toFixed(2)}</td>
     <td class="hole-delta ${h.delta < 0 ? 'under' : ''}">${h.delta>=0?'+':''}${h.delta.toFixed(2)}</td>
     <td class="hole-avg">${h.pi}</td>
-    <td class="hole-delta ${h.vsSI < 0 ? '' : h.vsSI > 0 ? 'under' : 'even'}" title="Playing Index ${h.pi} minus stroke index ${h.si}">${h.vsSI === 0 ? '=' : (h.vsSI > 0 ? '+' : '') + h.vsSI}</td>
+    <td class="hole-delta ${h.vsSI < 0 ? '' : h.vsSI > 0 ? 'under' : 'even'}" title="Playing Index ${h.pi} minus hole handicap ${h.si}">${h.vsSI === 0 ? '=' : (h.vsSI > 0 ? '+' : '') + h.vsSI}</td>
     ${ytdMode() ? '' : `<td>${h.doubles}</td>`}
   </tr>`;
 
@@ -3657,9 +3689,9 @@ let playerChartMode = 'gross'; // Player tab hole chart: 'gross' | 'net'
 
 const PAR_TOTAL_ = COURSE.par.reduce((a,b) => a+b, 0);
 const SI_GROUPS = [
-  { key: 'hard', label: 'SI 1–6 · hardest', test: si => si <= 6 },
-  { key: 'mid',  label: 'SI 7–12',          test: si => si >= 7 && si <= 12 },
-  { key: 'easy', label: 'SI 13–18 · easiest', test: si => si >= 13 },
+  { key: 'hard', label: 'HC 1–6 · hardest', test: si => si <= 6 },
+  { key: 'mid',  label: 'HC 7–12',          test: si => si >= 7 && si <= 12 },
+  { key: 'easy', label: 'HC 13–18 · easiest', test: si => si >= 13 },
 ];
 const DIST_ROWS = [
   { key: 'albatrosses', label: 'Albatross', color: '#facc15' },
@@ -3821,10 +3853,10 @@ function renderPlayerPage() {
     <div class="section-head"><span class="num">P.04</span><h2>Hole by Hole</h2><span class="sub">Your average vs par on every hole — gross and net — beside the field</span></div>
     <div class="panel" style="padding:18px 20px;">
       <div class="player-scroll"><table class="holes-table player-holes">
-        <thead><tr><th>Hole</th><th>Par·SI</th><th>Gross avg</th><th>vs par</th><th>Your <span class="pi-word">Playing Index</span><span class="pi-abbr">PI</span></th><th>Net avg</th><th>vs par</th><th>Field</th><th>Field <span class="pi-word">Playing Index</span><span class="pi-abbr">PI</span></th><th>${bracketName.split(' ')[0]}</th><th>You − field</th></tr></thead>
+        <thead><tr><th>Hole</th><th>Par·HC</th><th>Gross avg</th><th>vs par</th><th>Your <span class="pi-word">Playing Index</span><span class="pi-abbr">PI</span></th><th>Net avg</th><th>vs par</th><th>Field</th><th>Field <span class="pi-word">Playing Index</span><span class="pi-abbr">PI</span></th><th>${bracketName.split(' ')[0]}</th><th>You − field</th></tr></thead>
         <tbody>${holeRows.map((h, i) => `<tr>
           <td class="hole-num">${h.hole}</td>
-          <td class="hole-par-si">P${h.par} · SI${h.si}</td>
+          <td class="hole-par-si">P${h.par} · HC${h.si}</td>
           <td class="hole-avg">${h.gAvg.toFixed(2)}</td>
           <td><div class="pb-cell">${bar(h.g)}<span class="hole-delta ${h.g < 0 ? 'under' : ''}">${pSigned(h.g, 2)}</span></div></td>
           <td class="hole-avg pi-cell ${piMe[i] - h.si <= -4 ? 'over' : piMe[i] - h.si >= 4 ? 'under' : ''}"><span class="pi-word">Playing Index</span><span class="pi-abbr">PI</span> ${piMe[i]}</td>
@@ -3836,7 +3868,7 @@ function renderPlayerPage() {
           <td class="hole-delta ${h.g - h.fg < -1e-9 ? 'under' : 'over-field'}">${pSigned(h.g - h.fg, 2)}</td>
         </tr>`).join('')}</tbody>
       </table></div>
-      <div class="player-note">Bars show strokes over (red) or under (green) par. "You − field" negative means you beat the field average on that hole. <strong>PI = Playing Index</strong> — how the hole actually ranked by gross average this season (1 = hardest); SI is the card’s rating. Your PI in <span style="color:var(--up)">red</span> played much harder for you than its SI, <span style="color:var(--down)">green</span> much easier.</div>
+      <div class="player-note">Bars show strokes over (red) or under (green) par. "You − field" negative means you beat the field average on that hole. <strong>PI = Playing Index</strong> — how the hole actually ranked by gross average this season (1 = hardest); HC is the card’s hole handicap. Your PI in <span style="color:var(--up)">red</span> played much harder for you than its HC, <span style="color:var(--down)">green</span> much easier.</div>
     </div>`;
 
   // ----- 3b. hole chart (same as the main tabs, for this player) -----
@@ -3845,7 +3877,7 @@ function renderPlayerPage() {
     <div class="section-head"><span class="num">P.05</span><h2>Hole by Hole — Your Average vs Par</h2><span class="sub">Your ${pcMode} strokes over par on every hole — your Playing Index beside the 2026 field’s</span></div>
     <div class="section-filter" id="playerChartModeBar"><span class="sf-label">Score</span><button class="sf-btn${pcMode==='gross'?' active':''}" data-pcm="gross">Gross</button><button class="sf-btn${pcMode==='net'?' active':''}" data-pcm="net">Net</button></div>
     <div class="panel" style="padding:16px 12px 10px;">
-      <div class="chart-legend" style="display:block;line-height:1.5;"><span class="legend-item" style="display:inline-flex;margin-right:14px;"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--ink)"></span> Par line</span><span><strong style="font-family:'JetBrains Mono',monospace">PI</strong> = Playing Index — how the hole ranked for you (1 = hardest). <strong>vs SI</strong> is your PI minus the card’s stroke index; <strong>vs 2026</strong> is your PI minus the whole field’s PI in this view. <span style="color:var(--up);font-weight:700">Red</span> = you played it harder than the card’s SI (or than the field), <span style="color:var(--down);font-weight:700">green</span> = easier.</span></div>
+      <div class="chart-legend" style="display:block;line-height:1.5;"><span class="legend-item" style="display:inline-flex;margin-right:14px;"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--ink)"></span> Par line</span><span><strong style="font-family:'JetBrains Mono',monospace">PI</strong> = Playing Index — how the hole ranked for you (1 = hardest). <strong>vs HC</strong> is your PI minus the card’s hole handicap; <strong>vs 2026</strong> is your PI minus the whole field’s PI in this view. <span style="color:var(--up);font-weight:700">Red</span> = you played it harder than the card’s hole handicap (or than the field), <span style="color:var(--down);font-weight:700">green</span> = easier.</span></div>
       <svg class="hole-chart" id="playerHoleChart" preserveAspectRatio="xMidYMin meet"></svg>
     </div>`;
 
@@ -3933,9 +3965,9 @@ function renderPlayerPage() {
       <td class="hole-delta ${r.me - r.fd < -1e-9 ? 'under' : 'over-field'}">${pSigned(r.me - r.fd, 2)}</td></tr>`).join('')}
   </tbody></table></div><div class="player-note">${unit}</div>`;
   const sec7 = `
-    <div class="section-head"><span class="num">P.09</span><h2>Hard Holes vs Easy Holes</h2><span class="sub">Strokes over par by stroke-index group, and front vs back</span></div>
+    <div class="section-head"><span class="num">P.09</span><h2>Hard Holes vs Easy Holes</h2><span class="sub">Strokes over par by hole-handicap group, and front vs back</span></div>
     <div class="grid-2">
-      <div class="panel player-cmp-panel" style="padding:18px 20px;">${cmpTable(siRows, 'Average strokes over par per hole in each SI group.')}</div>
+      <div class="panel player-cmp-panel" style="padding:18px 20px;">${cmpTable(siRows, 'Average strokes over par per hole in each hole-handicap group.')}</div>
       <div class="panel player-cmp-panel" style="padding:18px 20px;">${cmpTable(fbRows, 'Average strokes over par per nine (front par 36, back par 35).')}</div>
     </div>`;
 
@@ -3954,8 +3986,8 @@ function renderPlayerPage() {
     return vals.length ? mean(vals) * 100 : NaN;
   })();
   const headlines = [
-    { cls: 'red', title: 'Your hardest hole', body: `<strong>Hole ${hardest.hole}</strong> (par ${hardest.par}, SI ${hardest.si}) costs you <strong>${pSigned(hardest.g, 2)}</strong> a round — field is ${pSigned(hardest.fg, 2)} there.` },
-    { cls: 'green', title: 'Your easiest hole', body: `<strong>Hole ${easiest.hole}</strong> (par ${easiest.par}, SI ${easiest.si}) — you average <strong>${pSigned(easiest.g, 2)}</strong>, field ${pSigned(easiest.fg, 2)}.` },
+    { cls: 'red', title: 'Your hardest hole', body: `<strong>Hole ${hardest.hole}</strong> (par ${hardest.par}, HC ${hardest.si}) costs you <strong>${pSigned(hardest.g, 2)}</strong> a round — field is ${pSigned(hardest.fg, 2)} there.` },
+    { cls: 'green', title: 'Your easiest hole', body: `<strong>Hole ${easiest.hole}</strong> (par ${easiest.par}, HC ${easiest.si}) — you average <strong>${pSigned(easiest.g, 2)}</strong>, field ${pSigned(easiest.fg, 2)}.` },
     { cls: 'green', title: 'Where you beat the field', body: `<strong>Hole ${beatsField.hole}</strong>: you ${pSigned(beatsField.g, 2)} vs field ${pSigned(beatsField.fg, 2)} — <strong>${Math.abs(beatsField.g - beatsField.fg).toFixed(2)} strokes better</strong>.` },
     { cls: 'red', title: 'Where the field beats you', body: `<strong>Hole ${fieldBeats.hole}</strong>: you ${pSigned(fieldBeats.g, 2)} vs field ${pSigned(fieldBeats.fg, 2)} — <strong>${Math.abs(fieldBeats.g - fieldBeats.fg).toFixed(2)} strokes worse</strong>.` },
     { cls: '', title: 'Longest par-or-better streak', body: streak.e ? `<strong>${streak.len} holes</strong> in a row at par or better — ${fmtLeagueDate(streak.e.week.date)} (${srcTag(streak.e.week)}, gross ${streak.e.round.gross}).` : 'No par-or-better holes yet.' },
@@ -4084,7 +4116,7 @@ function renderRoundCardTables(scores, hc, opts) {
     const back = from === 9;
     return `<table class="scorecard-table ringer-table round-card-table"><thead><tr><th class="ringer-lbl">${back ? 'Back' : 'Front'}</th>${COURSE.par.slice(from, from+9).map((_, k) => `<th>${from+k+1}</th>`).join('')}<th>${back ? 'In' : 'Out'}</th><th>${back ? 'Tot' : ''}</th></tr></thead><tbody>
       <tr><th>Par</th>${COURSE.par.slice(from, from+9).map(p => `<td>${p}</td>`).join('')}<td>${back ? 35 : 36}</td><td>${back ? 71 : ''}</td></tr>
-      <tr><th>SI</th>${COURSE.si.slice(from, from+9).map(v => `<td class="si-cell">${v}</td>`).join('')}<td></td><td></td></tr>
+      <tr><th>HC</th>${COURSE.si.slice(from, from+9).map(v => `<td class="si-cell">${v}</td>`).join('')}<td></td><td></td></tr>
       <tr><th>Gross</th>${scores.slice(from, from+9).map((v, k) => cell(v, from+k, true)).join('')}<td><strong>${sum(scores, from, from+9)}</strong></td><td>${back ? `<strong>${sum(scores, 0, 18)}</strong>` : ''}</td></tr>
       <tr><th>Net</th>${net.slice(from, from+9).map((v, k) => cell(v, from+k, false)).join('')}<td><strong>${sum(net, from, from+9)}</strong></td><td>${back ? `<strong>${sum(net, 0, 18)}</strong>` : ''}</td></tr>
     </tbody></table>`;
@@ -4440,7 +4472,7 @@ function drawActivity() {
   host.innerHTML = `
     <div class="section-filter"><span class="sf-label">Range</span>
       ${['7', '30', 'all'].map(r => `<button class="sf-btn${activityRange === r ? ' active' : ''}" data-ar="${r}">${r === 'all' ? 'All time' : 'Last ' + r + ' days'}</button>`).join('')}
-      <button class="sf-btn" id="activityRefresh" style="margin-left:auto">Refresh</button>
+      <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap"><button class="sf-btn" id="activityRefresh">Refresh</button><button class="sf-btn sf-danger" id="activityClear" title="Delete every logged event and the visitor list">Clear activity log</button></span>
     </div>
     <div class="panel player-hero" style="margin-bottom:28px">
       <div class="pk-grid">
@@ -4473,6 +4505,38 @@ function drawActivity() {
     <div class="player-note" style="margin-top:12px">Your own admin-signed-in browsing is never logged. Visitors sign in anonymously to write events; only ${ADMIN_EMAIL} can read them.</div>`;
   host.querySelectorAll('[data-ar]').forEach(b => b.addEventListener('click', () => { activityRange = b.dataset.ar; drawActivity(); }));
   const rf = document.getElementById('activityRefresh'); if (rf) rf.addEventListener('click', () => { loadActivity(true).then(drawActivity); });
+  const cl = document.getElementById('activityClear'); if (cl) cl.addEventListener('click', clearActivityLog);
+}
+
+// Admin only (Firestore rules enforce it too): wipe every logged event and
+// the visitor list. Visitors' devices keep their saved name, so their next
+// visit simply starts a fresh record. Deletes in batches of 400.
+async function clearActivityLog() {
+  if (!isAdmin() || !db) return;
+  const n = ACTIVITY.events.length, v = ACTIVITY.visitors.length;
+  if (!confirm(`Clear the activity log?\n\nThis permanently deletes ${n.toLocaleString()} logged event${n === 1 ? '' : 's'} and ${v} visitor record${v === 1 ? '' : 's'}. League scores are not affected.\n\nThis cannot be undone.`)) return;
+  const btn = document.getElementById('activityClear'); if (btn) { btn.disabled = true; btn.textContent = 'Clearing…'; }
+  const wipe = async (name) => {
+    let total = 0;
+    for (;;) {
+      const snap = await db.collection(name).limit(400).get();
+      if (snap.empty || !snap.docs.length) break;
+      const batch = db.batch(); snap.docs.forEach(d => batch.delete(d.ref)); await batch.commit();
+      total += snap.docs.length;
+      if (snap.docs.length < 400) break;
+    }
+    return total;
+  };
+  try {
+    const a = await wipe('activity'); const b = await wipe('visitors');
+    ACTIVITY = { visitors: [], events: [], loadedAt: 0 };
+    await loadActivity(true); drawActivity();
+    const host = document.getElementById('activityBody');
+    if (host) host.insertAdjacentHTML('afterbegin', `<div class="player-note act-cleared" style="margin:0 0 14px;color:var(--fg);font-weight:700">Activity log cleared — ${a.toLocaleString()} event${a === 1 ? '' : 's'} and ${b} visitor record${b === 1 ? '' : 's'} deleted.</div>`);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Clear activity log'; }
+    alert('Couldn’t clear the log: ' + (e.message || e) + '\nCheck the Firestore rules allow ' + ADMIN_EMAIL + ' to delete activity and visitors.');
+  }
 }
 
 // =================================================================
