@@ -6,6 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v6.3   Phones: slimmer page gutters; scorecards and the Ringer Board
+         fit a sideways phone with zero horizontal scroll; in portrait a
+         "turn your phone sideways" hint appears above wide cards.
   v6.2   Every scorecard you tap (Player tab and the standings on the
          Men's Night / Snips tabs) now uses the Ringer Board layout:
          Front/Back tables, Par · SI · Gross · Net, red-ring notation.
@@ -734,6 +737,51 @@
   .round-card-table .ringer-cell { position: relative; }
   .scorecard-inline .player-scroll { overflow-x: auto; }
   .ringer-panel { padding: 22px 24px; }
+  /* ===== PHONES ===== */
+  .rotate-hint { display: none; }
+  /* Portrait phone: tighter page gutters; wide tables scroll a little and say so. */
+  @media (max-width: 1024px) and (orientation: portrait) {
+    .rotate-hint { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding: 8px 12px; font-size: var(--t-sm); font-weight: 600; border: 1px dashed var(--rule); border-radius: 3px; color: var(--ink); }
+    .rotate-hint::before { content: '\21BB'; font-size: 16px; line-height: 1; }
+    .ringer-table { min-width: 540px !important; width: 540px !important; table-layout: fixed; }
+    .player-scroll { overflow-x: auto; }
+    .ringer-table th, .ringer-table td { padding: 4px 1px; font-size: var(--t-sm); min-width: 0; }
+    .ringer-table th:first-child { width: 44px; } .ringer-table th:nth-last-child(-n+2) { width: 34px; }
+    .ringer-table th.ringer-lbl { font-size: 9px; letter-spacing: 0.04em; }
+    .ringer-cell .ringer-v { width: 22px; height: 22px; font-size: 12px; }
+    .ringer-when { font-size: 8.5px; letter-spacing: 0; }
+    .round-card-table .si-cell { font-size: 9.5px; }
+    .player-rounds th, .player-rounds td, .player-holes th, .player-holes td { padding: 6px 4px; font-size: var(--t-sm); }
+    .player-table th, .player-table td { padding: 8px 5px; }
+  }
+  /* Any phone/tablet width: no 48px gutters, slimmer panels. */
+  @media (max-width: 1024px) {
+    main { padding: 20px 14px 48px; }
+    header.masthead, .week-bar { padding-left: 14px; padding-right: 14px; }
+    .panel, .ringer-panel, .player-panel-grid { padding: 14px 12px; }
+    .player-sc-wrap { padding: 14px 12px; }
+    tr.scorecard-inline > td.scorecard-inline-cell { padding: 14px 10px !important; }
+    .ringer-cell { padding: 6px 2px 5px !important; }
+    .round-card-table .ringer-cell { padding: 4px 2px !important; }
+  }
+  /* Landscape phone: every scorecard and the Ringer Board fit the screen — zero horizontal scroll. */
+  @media (max-width: 1024px) and (orientation: landscape) {
+    .ringer-table { min-width: 0 !important; width: 100%; table-layout: fixed; }
+    .ringer-table th, .ringer-table td { padding: 4px 1px; font-size: var(--t-sm); min-width: 0; }
+    .ringer-table th:first-child { width: 42px; } .ringer-table th:nth-last-child(-n+2) { width: 34px; }
+    .ringer-table th.ringer-lbl { font-size: 9px; letter-spacing: 0.04em; }
+    .ringer-cell .ringer-v { width: 22px; height: 22px; font-size: 12px; }
+    .ringer-when { font-size: 8.5px; letter-spacing: 0; }
+    .round-card-table .si-cell { font-size: 9.5px; }
+    .round-card-table .stroke-dot { top: 1px; right: 1px; width: 5px; height: 5px; }
+    .ringer-head { margin-bottom: 8px; } .ringer-total .pk-big { font-size: 28px; }
+    /* other wide tables: compact so they fit on most phones held sideways */
+    .player-holes { min-width: 0; } .player-rounds { min-width: 0; } .player-cmp { min-width: 0; }
+    .player-rounds th, .player-rounds td, .player-holes th, .player-holes td { padding: 6px 4px; font-size: var(--t-sm); }
+    .pb-cell { min-width: 84px; }
+    .player-table th, .player-table td { padding: 8px 5px; }
+    .holes-table th, .holes-table td { padding: 6px 4px; }
+  }
   .ringer-card + .ringer-card { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--rule); }
   .ringer-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
   .ringer-title { font-family: 'Fraunces', serif; font-style: italic; font-size: 22px; }
@@ -1267,8 +1315,6 @@
   }
 
   @media (max-width: 700px) {
-    header.masthead, .week-bar { padding-left: 20px; padding-right: 20px; }
-    main { padding: 24px 20px 48px; }
     .meta { text-align: left; margin-top: 16px; }
     .meta .row { justify-content: flex-start; }
   }
@@ -1424,7 +1470,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v6.2</div>
+    <div class="splash-version">v6.3</div>
   </div>
 </div>
 
@@ -1459,7 +1505,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v6.2</div>
+  <div class="masthead-version">v6.3</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -3801,7 +3847,7 @@ function renderRoundCardTables(scores, hc, opts) {
       <tr><th>Net</th>${net.slice(from, from+9).map((v, k) => cell(v, from+k, false)).join('')}<td><strong>${sum(net, from, from+9)}</strong></td><td>${back ? `<strong>${sum(net, 0, 18)}</strong>` : ''}</td></tr>
     </tbody></table>`;
   };
-  return `<div class="player-scroll">${nine(0)}</div><div class="player-scroll" style="margin-top:8px">${nine(9)}</div>`;
+  return `<div class="rotate-hint">Turn your phone sideways to see the whole card</div><div class="player-scroll">${nine(0)}</div><div class="player-scroll" style="margin-top:8px">${nine(9)}</div>`;
 }
 
 // Ringer board: best score on every hole across the season, gross and net,
@@ -3836,6 +3882,7 @@ function renderRingerBoard(mine, srcTag) {
   return `
     <div class="section-head"><span class="num">P.02</span><h2>Ringer Board</h2><span class="sub">Your best score on every hole this season, stitched into one card</span></div>
     <div class="panel ringer-panel">
+      <div class="rotate-hint">Turn your phone sideways to see the whole board</div>
       ${card(g, 'Gross', tot.g, realBestG)}
       ${card(n, 'Net', tot.n, realBestN)}
       <div class="player-note">Each cell is your lowest score on that hole across ${mine.length} round${mine.length===1?'':'s'}; the small date is when you did it (earliest if tied — tap a cell for details). Net uses the strokes you received that day.</div>
