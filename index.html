@@ -6,7 +6,11 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v7.9   Hole-chart chips read "vs HC" / "vs ’26" on every screen
+  v7.9   Kevin Heise (Course GM) on the Welcome list. Standings
+         scorecards keep their header and key in view while the wide
+         table scrolls on phones. Picking your name (or signing out of
+         admin) always lands on the 2026 Season, at the top.
+         Hole-chart chips read "vs HC" / "vs ’26" on every screen
          (’26 instead of 2026); under-par holes show "−0.14" not "+-0.14".
          Scorecard key on phones: two roomy columns (no overlap on the
          Albatross ring); Snips cards no longer repeat the date.
@@ -814,6 +818,8 @@
   .player-round-detail > td { padding: 0 0 6px !important; background: rgba(var(--fg-rgb),0.03); white-space: normal; }
   .player-round-detail .player-sc-wrap { margin: 6px 0 8px; box-shadow: none; }
   .rr-sticky { position: sticky; left: 0; box-sizing: border-box; max-width: 100%; }
+  tr.scorecard-inline > td.scorecard-inline-cell > .rr-sticky { padding: 0 28px; margin-left: -28px; }
+  @media (max-width: 1024px) { tr.scorecard-inline > td.scorecard-inline-cell > .rr-sticky { padding: 0 10px; margin-left: -10px; } }
   .player-round-row.open td { background: rgba(var(--fg-rgb),0.07); font-weight: 700; }
   .rr-caret { display: inline-block; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 7px solid currentColor; opacity: 0.55; margin-right: 7px; transition: transform .18s ease; vertical-align: middle; }
   .player-round-row.open .rr-caret { transform: rotate(90deg); opacity: 1; }
@@ -3669,8 +3675,9 @@ function openScorecard(name) {
   const scoreTr = document.createElement('tr');
   scoreTr.id = 'inline-scorecard-row';
   scoreTr.className = 'scorecard-inline';
-  scoreTr.innerHTML = `<td colspan="${colCount}" class="scorecard-inline-cell">${body}</td>`;
+  scoreTr.innerHTML = `<td colspan="${colCount}" class="scorecard-inline-cell"><div class="rr-sticky">${body}</div></td>`;
   row.parentNode.insertBefore(scoreTr, row.nextSibling);
+  fitRoundStickies();
   row.classList.add('scorecard-open');
 
   document.getElementById('scorecardClose').addEventListener('click', (e) => {
@@ -4213,9 +4220,9 @@ function renderPlayerScorecard(e) {
 }
 
 function fitRoundStickies() {
-  document.querySelectorAll('#playerBody .rr-sticky').forEach(el => {
-    const sc = el.closest('.player-scroll');
-    if (sc) el.style.width = sc.clientWidth + 'px';
+  document.querySelectorAll('.rr-sticky').forEach(el => {
+    const sc = el.closest('.player-scroll, .player-table-wrap');
+    if (sc) el.style.width = Math.max(0, sc.clientWidth - (sc.classList.contains('player-table-wrap') ? 0 : 0)) + 'px';
   });
 }
 window.addEventListener('resize', fitRoundStickies);
@@ -4275,8 +4282,10 @@ function saveVisitor(v) { visitor = v; try { localStorage.setItem(VISITOR_KEY, J
 function titleCase(s) { return String(s || '').trim().replace(/\s+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
 
 // Roster for the type-ahead: every name across both events.
+// Non-players who are welcome on the entry list (club staff, management).
+const GATE_GUESTS = ['Kevin Heise'];
 function rosterNames() {
-  const names = new Set();
+  const names = new Set(GATE_GUESTS);
   ['mensNight', 'snips'].forEach(ev => {
     const src = Array.isArray(CLOUD[ev]) ? CLOUD[ev] : EVENTS[ev].baseWeeks;
     src.forEach(w => (w.players || []).forEach(p => { const n = canonicalName(p[0]); if (!isExcludedPlayer(n)) names.add(n); }));
@@ -4357,6 +4366,9 @@ function submitEntryGate() {
   const renamed = visitor && visitor.name && visitor.name !== name;
   saveVisitor({ id: existing, first, last, name });
   hideEntryGate();
+  // Every visitor starts on the 2026 Season, at the top of the page
+  if (state.eventId !== 'season') switchEvent('season');
+  try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); } catch (e) { window.scrollTo(0, 0); }
   upsertVisitor();
   track('visit', renamed ? 'renamed' : 'start');
   updateVisitorFooter();
@@ -5112,7 +5124,7 @@ async function initFirebase() {
     currentUser = user || null;
     applyAdminUI();
     renderStoredWeeks();
-    if (!isAdmin() && state.eventId === 'activity') switchEvent('mensNight');
+    if (!isAdmin() && state.eventId === 'activity') switchEvent('season');
     if (isAdmin()) hideEntryGate(); else showEntryGate(false);
     if (!currentUser) startActivity();   // signed out of admin → fall back to an anonymous visitor session
     // Scroll to the admin panel only on a real sign-in click — i.e. after
