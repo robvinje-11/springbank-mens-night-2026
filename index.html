@@ -6,6 +6,10 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v8.1   Welcome screen is players-only: the name must be picked from
+         the 2026 roster (anyone who played a Men's Night or Snips
+         round, plus club staff on the guest list). Typed-in names
+         that aren't on the list are no longer accepted.
   v8.0   Version now bumps on every push (the v7.9 badge had covered
          ten separate updates — sorry). No functional change from
          v7.9.9 except the badge.
@@ -1542,7 +1546,7 @@
     <div class="gate-picked" id="gatePicked"></div>
     <div class="gate-error" id="gateError"></div>
     <button class="gate-btn" id="gateGo">Open the dashboard</button>
-    <div class="gate-note">Your name only helps the league see who’s enjoying the dashboard. Nothing else is collected, and viewing never changes any results.</div>
+    <div class="gate-note">For 2026 Men’s Night and Weekend Snips players. Your name only helps the league see who’s enjoying the dashboard — nothing else is collected, and viewing never changes any results.</div>
   </div>
 </div>
 <div class="ptr" id="ptr"><div class="ptr-inner"><span class="ptr-spinner"></span><span id="ptrText">Pull to refresh</span></div></div>
@@ -1694,7 +1698,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v8.0</div>
+    <div class="splash-version">v8.1</div>
   </div>
 </div>
 
@@ -1729,7 +1733,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v8.0</div>
+  <div class="masthead-version">v8.1</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -4469,8 +4473,9 @@ function submitEntryGate() {
   const name = exact || (gateMatches.length === 1 ? gateMatches[0] : (gatePick && gatePick.toLowerCase() === typed.toLowerCase() ? gatePick : typed));
   const { first, last } = gateSplit(name);
   const onRoster = rosterNames().some(n => n === name);
-  // A roster name is always fine (some are single words); a hand-typed guest needs first + last.
-  if (!onRoster && (first.length < 2 || last.length < 2)) { err.textContent = gateMatches.length > 1 ? 'Pick your name from the list, or type more of it.' : 'Please pick your name, or type your full name.'; return; }
+  // Players only: the name must be on the 2026 roster (anyone who played a
+  // Men's Night or Snips round, plus the few staff on GATE_GUESTS).
+  if (!onRoster) { err.textContent = gateMatches.length > 1 ? 'Pick your name from the list.' : 'Only 2026 Men\u2019s Night and Snips players can open the dashboard \u2014 pick your name from the list. Not there? Ask Rob.'; return; }
   const existing = visitor && visitor.id ? visitor.id : uuid();
   const renamed = visitor && visitor.name && visitor.name !== name;
   saveVisitor({ id: existing, first, last, name });
