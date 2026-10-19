@@ -6,6 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v6.2   Every scorecard you tap (Player tab and the standings on the
+         Men's Night / Snips tabs) now uses the Ringer Board layout:
+         Front/Back tables, Par · SI · Gross · Net, red-ring notation.
   v6.1   Tab order: 2026 Season · Men's Night · Weekend Snips · Player.
   v6.0   Dates parsed robustly (mixed formats like "Jun 7th", "May 23",
          "Jun 13th, 2026" all sort correctly); pooled rounds, trend
@@ -722,6 +725,14 @@
   .insight-card.ace .insight-title { color: var(--ace); }
   .score-cell.ringer-cell.ace .ringer-v, .ringer-cell.eagle.ace .ringer-v, .ringer-cell.albatross.ace .ringer-v { box-shadow: 0 0 0 1.6px var(--ace), 0 0 0 3.2px var(--bg), 0 0 0 4.8px var(--ace), 0 0 0 6.4px var(--bg), 0 0 0 8px var(--ace); color: var(--ace); font-weight: 700; }
   @media (max-width: 640px) { .ace-banner { gap: 12px; padding: 14px; } .ace-mark { width: 44px; height: 44px; font-size: 24px; } .ace-title { font-size: 20px; } }
+  .round-card-table .si-cell { font-size: var(--t-xs); opacity: 0.85; }
+  .round-card-table .ringer-cell { padding: 6px 4px !important; }
+  .round-card-table .ringer-cell .ringer-v { margin: 1px 0; }
+  .round-card-table .ringer-cell.eagle .ringer-v { margin: 4px 0; }
+  .round-card-table .ringer-cell.albatross .ringer-v, .round-card-table .ringer-cell.ace .ringer-v { margin: 7px 0; }
+  .round-card-table .stroke-dot { top: 2px; right: 3px; }
+  .round-card-table .ringer-cell { position: relative; }
+  .scorecard-inline .player-scroll { overflow-x: auto; }
   .ringer-panel { padding: 22px 24px; }
   .ringer-card + .ringer-card { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--rule); }
   .ringer-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -741,6 +752,12 @@
   .ringer-cell.eagle .ringer-v     { box-shadow: 0 0 0 1.6px var(--ring-red), 0 0 0 3.2px var(--bg), 0 0 0 4.8px var(--ring-red); }
   .ringer-cell.albatross .ringer-v { box-shadow: 0 0 0 1.6px var(--ring-red), 0 0 0 3.2px var(--bg), 0 0 0 4.8px var(--ring-red), 0 0 0 6.4px var(--bg), 0 0 0 8px var(--ring-red); }
   .ringer-cell.birdie .ringer-when, .ringer-cell.eagle .ringer-when, .ringer-cell.albatross .ringer-when { color: var(--ink); }
+  /* Over par: square outlines (bogey one, double+ two), no fill — the classic card notation. */
+  .ringer-cell.bogey, .ringer-cell.double { background: transparent !important; color: var(--ink) !important; box-shadow: none !important; border-radius: 0 !important; }
+  .ringer-cell.bogey .ringer-v, .ringer-cell.double .ringer-v { border-radius: 2px; }
+  .ringer-cell.bogey .ringer-v  { box-shadow: 0 0 0 1.6px var(--ink); }
+  .ringer-cell.double .ringer-v { box-shadow: 0 0 0 1.6px var(--ink), 0 0 0 3.2px var(--bg), 0 0 0 4.8px var(--ink); margin: 5px 0 6px; }
+  .round-card-table .ringer-cell.double .ringer-v { margin: 4px 0; }
   .ringer-v { display: block; font-size: 15px; line-height: 1.1; }
   .ringer-when { display: block; font-size: var(--t-2xs); letter-spacing: 0.02em; font-family: 'DM Sans', sans-serif; margin-top: 3px; white-space: nowrap; }
   @media (max-width: 640px) { .ringer-total .pk-big { font-size: 30px; } }
@@ -1407,7 +1424,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v6.1</div>
+    <div class="splash-version">v6.2</div>
   </div>
 </div>
 
@@ -1442,7 +1459,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v6.1</div>
+  <div class="masthead-version">v6.2</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -3343,90 +3360,15 @@ function openScorecard(name) {
 
   // For each round, render a scorecard table
   rounds.forEach(({ week, round }) => {
-    // Per-hole strokes received based on this round's weekly HC + course SI
-    const strokes = COURSE.si.map(si => strokesOnHole(round.hc, si));
-    const netScores = round.scores.map((s, i) => s - strokes[i]);
-    const netFront = netScores.slice(0, 9).reduce((a, b) => a + b, 0);
-    const netBack  = netScores.slice(9).reduce((a, b) => a + b, 0);
-
-    const grossCells = round.scores.map((s, i) => {
-      const cls = scoreClass(s, COURSE.par[i]);
-      const dot = strokes[i] > 0
-        ? `<span class="stroke-dot" title="${strokes[i]} stroke${strokes[i] > 1 ? 's' : ''} on this hole"></span>`
-        : '';
-      return `<td class="score-cell ${cls}" title="Hole ${i+1} · Par ${COURSE.par[i]} · Gross ${s}">${s}${dot}</td>`;
-    });
-
-    const netCells = netScores.map((s, i) => {
-      const cls = scoreClass(s, COURSE.par[i]);
-      return `<td class="score-cell ${cls}" title="Hole ${i+1} · Par ${COURSE.par[i]} · Net ${s}">${s}</td>`;
-    });
-
-    const frontGross = grossCells.slice(0, 9).join('');
-    const backGross  = grossCells.slice(9).join('');
-    const frontNet   = netCells.slice(0, 9).join('');
-    const backNet    = netCells.slice(9).join('');
-
     body += `
       <div style="margin-bottom:20px;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-          <div style="font-family:'Fraunces',serif;font-style:italic;font-size:16px;color:var(--brass);">${viewDisplayName(week, {full:true})}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:var(--t-md);color:var(--muted);">
-            Gross <strong style="color:var(--ink)">${round.gross}</strong> ·
-            Net <strong style="color:var(--ink)">${round.net}</strong> ·
-            ${currentEvent().scoring === 'vsPar'
-              ? `vs Par G ${round.gp === 0 ? 'E' : (round.gp > 0 ? '+'+round.gp : round.gp)} · vs Par N ${round.np === 0 ? 'E' : (round.np > 0 ? '+'+round.np : round.np)}`
-              : `G.Pts ${round.gp} · N.Pts ${round.np}`}
-          </div>
+        <div class="ringer-head" style="margin-bottom:10px;">
+          <div class="ringer-title" style="font-size:18px;">${viewDisplayName(week, {full:true})}</div>
+          <div class="ringer-total"><span class="pk-big ${(round.gross - 71) < 0 ? 'under' : (round.gross - 71) > 0 ? 'over' : 'even'}" style="font-size:30px;">${round.gross}</span><span class="pk-lbl">${currentEvent().scoring === 'vsPar'
+              ? `${round.gp === 0 ? 'E' : (round.gp > 0 ? '+'+round.gp : round.gp)} vs par · net ${round.net} (${round.np === 0 ? 'E' : (round.np > 0 ? '+'+round.np : round.np)})`
+              : `net ${round.net} · G.Pts ${round.gp} · N.Pts ${round.np}`}</span></div>
         </div>
-        <div class="scorecard-grid">
-          <table class="scorecard-table">
-            <thead>
-              <tr>
-                <th class="label">Hole</th>
-                ${[...Array(9)].map((_,i)=>`<th>${i+1}</th>`).join('')}
-                <th class="total">Out</th>
-                ${[...Array(9)].map((_,i)=>`<th>${i+10}</th>`).join('')}
-                <th class="total">In</th>
-                <th class="total">Tot</th>
-              </tr>
-              <tr>
-                <th class="label">Par</th>
-                ${COURSE.par.slice(0,9).map(p=>`<th>${p}</th>`).join('')}
-                <th class="total">36</th>
-                ${COURSE.par.slice(9).map(p=>`<th>${p}</th>`).join('')}
-                <th class="total">35</th>
-                <th class="total">71</th>
-              </tr>
-              <tr>
-                <th class="label">SI</th>
-                ${COURSE.si.slice(0,9).map(p=>`<th style="color:var(--muted);font-weight:400;">${p}</th>`).join('')}
-                <th class="total">—</th>
-                ${COURSE.si.slice(9).map(p=>`<th style="color:var(--muted);font-weight:400;">${p}</th>`).join('')}
-                <th class="total">—</th>
-                <th class="total">—</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="label">Gross</td>
-                ${frontGross}
-                <td class="total">${round.front}</td>
-                ${backGross}
-                <td class="total">${round.back}</td>
-                <td class="total">${round.gross}</td>
-              </tr>
-              <tr>
-                <td class="label">Net</td>
-                ${frontNet}
-                <td class="total">${netFront}</td>
-                ${backNet}
-                <td class="total">${netBack}</td>
-                <td class="total">${round.net}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        ${renderRoundCardTables(round.scores, round.hc)}
         <div class="scorecard-summary">
           ${(() => {
             const sMode = sectionMode.standings;
@@ -3836,6 +3778,32 @@ function renderAceBanner(aces, srcTag, withName) {
   </div>`;
 }
 
+// One scorecard look everywhere: the Ringer Board layout (Front/Back tables,
+// Par · SI · Gross · Net rows, Out/In/Tot, red-ring notation, no fills).
+// A hole-in-one gets the gold triple ring. Stroke dots mark strokes received.
+function renderRoundCardTables(scores, hc, opts) {
+  opts = opts || {};
+  const strokes = COURSE.si.map(si => strokesOnHole(hc, si));
+  const net = scores.map((s, i) => s - strokes[i]);
+  const sum = (arr, a, b) => arr.slice(a, b).reduce((x, y) => x + y, 0);
+  const cell = (v, i, isGross) => {
+    const cls = scoreClass(v, COURSE.par[i]);
+    const ace = isGross && v === 1 ? ' ace' : '';
+    const dot = isGross && strokes[i] > 0 ? `<span class="stroke-dot" title="${strokes[i]} stroke${strokes[i] > 1 ? 's' : ''} received"></span>` : '';
+    return `<td class="score-cell ringer-cell ${cls}${ace}" title="Hole ${i+1} · par ${COURSE.par[i]} · ${isGross ? 'gross' : 'net'} ${v}"><span class="ringer-v">${v}</span>${dot}</td>`;
+  };
+  const nine = (from) => {
+    const back = from === 9;
+    return `<table class="scorecard-table ringer-table round-card-table"><thead><tr><th class="ringer-lbl">${back ? 'Back' : 'Front'}</th>${COURSE.par.slice(from, from+9).map((_, k) => `<th>${from+k+1}</th>`).join('')}<th>${back ? 'In' : 'Out'}</th><th>${back ? 'Tot' : ''}</th></tr></thead><tbody>
+      <tr><th>Par</th>${COURSE.par.slice(from, from+9).map(p => `<td>${p}</td>`).join('')}<td>${back ? 35 : 36}</td><td>${back ? 71 : ''}</td></tr>
+      <tr><th>SI</th>${COURSE.si.slice(from, from+9).map(v => `<td class="si-cell">${v}</td>`).join('')}<td></td><td></td></tr>
+      <tr><th>Gross</th>${scores.slice(from, from+9).map((v, k) => cell(v, from+k, true)).join('')}<td><strong>${sum(scores, from, from+9)}</strong></td><td>${back ? `<strong>${sum(scores, 0, 18)}</strong>` : ''}</td></tr>
+      <tr><th>Net</th>${net.slice(from, from+9).map((v, k) => cell(v, from+k, false)).join('')}<td><strong>${sum(net, from, from+9)}</strong></td><td>${back ? `<strong>${sum(net, 0, 18)}</strong>` : ''}</td></tr>
+    </tbody></table>`;
+  };
+  return `<div class="player-scroll">${nine(0)}</div><div class="player-scroll" style="margin-top:8px">${nine(9)}</div>`;
+}
+
 // Ringer board: best score on every hole across the season, gross and net,
 // with where each best came from. Stacked: gross card over net card.
 function renderRingerBoard(mine, srcTag) {
@@ -3874,20 +3842,12 @@ function renderRingerBoard(mine, srcTag) {
     </div>`;
 }
 
-// A single round's scorecard (gross + net rows), same cell styling as standings.
+// A single round's scorecard on the Player tab — same look as the Ringer Board.
 function renderPlayerScorecard(e) {
   const r = e.round;
-  const strokes = COURSE.si.map(si => strokesOnHole(r.hc, si));
-  const net = r.scores.map((s,i) => s - strokes[i]);
-  const cell = (s, i) => `<td class="score-cell ${scoreClass(s, COURSE.par[i])}">${s}${strokes[i] > 0 && s === r.scores[i] ? '<span class="stroke-dot"></span>' : ''}</td>`;
-  const nineHdr = (from) => `<tr><th></th>${COURSE.par.slice(from, from+9).map((_,k) => `<th>${from+k+1}</th>`).join('')}<th>${from ? 'In' : 'Out'}</th></tr>`;
-  const parRow = (from) => `<tr><th>Par</th>${COURSE.par.slice(from, from+9).map(p => `<td>${p}</td>`).join('')}<td>${from ? 35 : 36}</td></tr>`;
-  const siRow = (from) => `<tr><th>SI</th>${COURSE.si.slice(from, from+9).map(s => `<td>${s}</td>`).join('')}<td></td></tr>`;
-  const scoreRow = (lbl, arr, from, isGross) => `<tr><th>${lbl}</th>${arr.slice(from, from+9).map((s,k) => isGross ? cell(s, from+k) : `<td class="score-cell ${scoreClass(s, COURSE.par[from+k])}">${s}</td>`).join('')}<td><strong>${arr.slice(from, from+9).reduce((a,b)=>a+b,0)}</strong></td></tr>`;
-  const nine = from => `<table class="scorecard-table player-sc"><thead>${nineHdr(from)}</thead><tbody>${parRow(from)}${siRow(from)}${scoreRow('Gross', r.scores, from, true)}${scoreRow('Net', net, from, false)}</tbody></table>`;
   return `<div class="panel player-sc-wrap">
-    <div class="scorecard-head"><div class="scorecard-name">${esc(r.name)} <span class="hc">${fmtLeagueDate(e.week.date)} · ${e.week.label} · HC ${r.hc}</span></div><div class="pk-val">${r.gross} <span class="pk-sub" style="display:inline">(${pSignedInt(r.gp)}) · net ${r.net} (${pSignedInt(r.np)})</span></div></div>
-    <div class="player-scroll">${nine(0)}</div><div class="player-scroll" style="margin-top:10px">${nine(9)}</div>
+    <div class="ringer-head"><div><div class="ringer-title">${esc(r.name)}</div><div class="player-hero-meta" style="margin-top:4px">${fmtLeagueDate(e.week.date)} · ${e.week.label} · HC ${r.hc}</div></div><div class="ringer-total"><span class="pk-big ${pCls(r.gp)}">${r.gross}</span><span class="pk-lbl">${pSignedInt(r.gp)} vs par · net ${r.net} (${pSignedInt(r.np)})</span></div></div>
+    ${renderRoundCardTables(r.scores, r.hc)}
   </div>`;
 }
 
