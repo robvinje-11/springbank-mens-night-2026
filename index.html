@@ -6,7 +6,10 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v7.9   Footer says "Signed in as admin" while you're signed in (the
+  v7.9   Activity tab: live "Online now" panel — who is viewing right
+         now (green pulsing chips) and who was on in the last 30 min;
+         visitors send a quiet once-a-minute heartbeat while the tab
+         is open. Footer says "Signed in as admin" while you're signed in (the
          visitor name only applies when signed out). Phones: Course Speaks
          tables and the week tabs scroll inside their panels so the page
          never scrolls sideways. Admin sign-in: "Forgot password?" emails a Firebase reset link
@@ -847,6 +850,19 @@
   .sf-btn.sf-tool { animation: none; border-width: 1.5px; opacity: 0.9; }
   .sf-btn.sf-tool:disabled { opacity: 0.4; cursor: default; }
   .sf-btn.sf-danger { animation: none; border-color: var(--up); color: var(--up); }
+  .online-panel { padding: 14px 18px; }
+  .online-head { display: flex; align-items: center; gap: 8px; font-size: var(--t-lg); }
+  .online-sub { font-size: var(--t-sm); font-weight: 600; opacity: 0.7; }
+  .online-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--down); box-shadow: 0 0 0 0 rgba(42,140,92,0.5); animation: onlinePulse 1.8s ease-out infinite; flex-shrink: 0; }
+  .online-dot.off { background: rgba(var(--fg-rgb),0.3); box-shadow: none; animation: none; }
+  @keyframes onlinePulse { 0% { box-shadow: 0 0 0 0 rgba(42,140,92,0.55); } 100% { box-shadow: 0 0 0 9px rgba(42,140,92,0); } }
+  .online-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .online-chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border: 1.5px solid var(--rule); border-radius: 999px; font-size: var(--t-md); font-weight: 600; }
+  .online-chip.on { border-color: var(--down); background: rgba(42,140,92,0.08); }
+  .online-chip .online-dot { width: 8px; height: 8px; }
+  .online-when { font-family: 'JetBrains Mono', monospace; font-size: var(--t-xs); opacity: 0.7; }
+  .online-recent { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--rule-soft); }
+  .online-recent .online-row { margin-top: 6px; }
   .sf-btn.sf-danger:hover { background: rgba(217,78,61,0.1); }
   .sf-btn.sf-danger:disabled { opacity: 0.5; cursor: default; }
   .player-sc { min-width: 520px; }
@@ -2534,6 +2550,7 @@ function switchEvent(newId) {
   if (!EVENTS[newId]) return;
   if (newId === 'activity' && !isAdmin()) return;
   if (typeof closeScorecard === 'function') closeScorecard();
+  if (typeof stopOnlineWatch === 'function') stopOnlineWatch();
   state.eventId = newId;
   if (typeof playerName !== 'undefined') { playerName = null; roundsFilter = 'all'; if (typeof expandedRounds !== 'undefined') expandedRounds.clear(); }   // Player tab never remembers a pick
   recomputeAll();
@@ -4505,6 +4522,18 @@ function upsertVisitor() {
     visits: firebase.firestore.FieldValue.increment(1),
   }, { merge: true }).catch(() => {});
 }
+// Presence heartbeat: while the tab is visible, stamp lastSeen every 60s so
+// the admin's "Online now" panel can show who is viewing right now. Only
+// lastSeen changes (merge), so the visitor record stays within the rules.
+const ONLINE_WINDOW_MS = 3 * 60 * 1000;
+function heartbeat() {
+  if (!activityReady || !db || !visitor || isAdmin()) return;
+  if (document.visibilityState && document.visibilityState !== 'visible') return;
+  db.collection('visitors').doc(visitor.id).set({ lastSeen: Date.now() }, { merge: true }).catch(() => {});
+}
+setInterval(heartbeat, 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') heartbeat(); });
+
 // Called once Firebase is up: anonymous sign-in for visitors, then flush.
 async function startActivity() {
   if (!auth || !db) return;
@@ -4603,6 +4632,7 @@ function drawActivity() {
       ${['7', '30', 'all'].map(r => `<button class="sf-btn${activityRange === r ? ' active' : ''}" data-ar="${r}">${r === 'all' ? 'All time' : 'Last ' + r + ' days'}</button>`).join('')}
       <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap"><button class="sf-btn" id="activityRefresh">Refresh</button><button class="sf-btn sf-danger" id="activityClear" title="Delete every logged event and the visitor list">Clear activity log</button></span>
     </div>
+    <div class="panel online-panel" id="onlineNow" style="margin-bottom:18px"><div class="online-head"><span class="online-dot"></span><strong>Online now</strong> <span class="online-sub">checking…</span></div></div>
     <div class="panel player-hero" style="margin-bottom:28px">
       <div class="pk-grid">
         ${kpi('Unique visitors', uniq(evs), activityRange === 'all' ? 'all time' : `last ${activityRange} days · ${uniq(allEvs)} all time`)}
@@ -4635,6 +4665,33 @@ function drawActivity() {
   host.querySelectorAll('[data-ar]').forEach(b => b.addEventListener('click', () => { activityRange = b.dataset.ar; drawActivity(); }));
   const rf = document.getElementById('activityRefresh'); if (rf) rf.addEventListener('click', () => { loadActivity(true).then(drawActivity); });
   const cl = document.getElementById('activityClear'); if (cl) cl.addEventListener('click', clearActivityLog);
+  startOnlineWatch();
+}
+
+// Live "who's viewing right now": listens to visitor records seen in the
+// last 30 minutes and re-renders every 20s so the "x min ago" stays honest.
+let onlineUnsub = null, onlineTick = null, onlineDocs = [];
+function startOnlineWatch() {
+  stopOnlineWatch();
+  if (!isAdmin() || !db) return;
+  const cut = Date.now() - 30 * 60 * 1000;
+  onlineUnsub = db.collection('visitors').where('lastSeen', '>=', cut).onSnapshot(
+    snap => { onlineDocs = snap.docs.map(d => d.data()); drawOnlineNow(); },
+    () => { const el = document.getElementById('onlineNow'); if (el) el.querySelector('.online-sub').textContent = 'presence unavailable'; });
+  onlineTick = setInterval(drawOnlineNow, 20000);
+}
+function stopOnlineWatch() { if (onlineUnsub) { try { onlineUnsub(); } catch (e) {} } onlineUnsub = null; if (onlineTick) clearInterval(onlineTick); onlineTick = null; }
+function drawOnlineNow() {
+  const el = document.getElementById('onlineNow'); if (!el) { stopOnlineWatch(); return; }
+  const now = Date.now();
+  const ago = t => { const m = Math.round((now - t) / 60000); return m < 1 ? 'just now' : m === 1 ? '1 min ago' : `${m} min ago`; };
+  const live = onlineDocs.filter(v => now - (v.lastSeen || 0) <= ONLINE_WINDOW_MS).sort((a, b) => b.lastSeen - a.lastSeen);
+  const recent = onlineDocs.filter(v => now - (v.lastSeen || 0) > ONLINE_WINDOW_MS).sort((a, b) => b.lastSeen - a.lastSeen);
+  const chip = (v, on) => `<span class="online-chip${on ? ' on' : ''}" title="${esc(v.name || '')} · ${v.device || ''} · last seen ${ago(v.lastSeen)}"><span class="online-dot${on ? '' : ' off'}"></span>${esc(v.name || 'Unknown')}<span class="online-when">${on ? (v.device === 'mobile' ? '📱' : '💻') : ago(v.lastSeen)}</span></span>`;
+  el.innerHTML = `
+    <div class="online-head"><span class="online-dot${live.length ? '' : ' off'}"></span><strong>Online now</strong> <span class="online-sub">${live.length ? `${live.length} viewing` : 'nobody right now'} · updates live · you aren’t counted</span></div>
+    ${live.length ? `<div class="online-row">${live.map(v => chip(v, true)).join('')}</div>` : ''}
+    ${recent.length ? `<div class="online-recent"><span class="sf-label">Last 30 min</span><div class="online-row">${recent.map(v => chip(v, false)).join('')}</div></div>` : ''}`;
 }
 
 // Admin only (Firestore rules enforce it too): wipe every logged event and
