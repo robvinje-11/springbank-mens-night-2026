@@ -6,6 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v5.3   Borders around the four event tabs; un-selected tabs and
+         filter pills pulse gently so it's obvious they can be tapped
+         (respects reduced-motion settings).
   v5.2   Share button in the masthead (native share sheet on phones,
          email draft + copied link on desktop). Pull down from the top
          of the page on a phone to refresh.
@@ -523,13 +526,24 @@
     font-size: 22px;
     font-weight: 400;
     background: transparent;
-    border: none;
+    border: 1px solid rgba(255,255,255,0.45);
     color: var(--ink-soft);
     cursor: pointer;
     transition: all 0.2s ease;
     border-radius: 3px;
     text-align: center;
   }
+  .event-switcher { gap: 6px; }
+  /* Gentle pulse on every un-selected tab and filter pill — a nudge that they're tappable. */
+  @keyframes pillPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.0); border-color: rgba(255,255,255,0.45); }
+    50%      { box-shadow: 0 0 0 4px rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.85); }
+  }
+  .event-btn:not(.active),
+  .week-tab:not(.active),
+  .sf-btn:not(.active) { animation: pillPulse 2.6s ease-in-out infinite; }
+  .event-btn:not(.active):hover, .week-tab:not(.active):hover, .sf-btn:not(.active):hover { animation: none; }
+  @media (prefers-reduced-motion: reduce) { .event-btn, .week-tab, .sf-btn { animation: none !important; } }
   /* Player tab: hide every normal section, show only the player page */
   body.event-player main > section { display: none !important; }
   body.event-player main > section#playerSection { display: block !important; }
@@ -1257,7 +1271,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v5.2</div>
+    <div class="splash-version">v5.3</div>
   </div>
 </div>
 
@@ -1292,7 +1306,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v5.2</div>
+  <div class="masthead-version">v5.3</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
