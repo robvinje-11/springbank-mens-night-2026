@@ -6,7 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v7.9   "Playing Index" spelled out on phones too (chart widens a touch
+  v7.9   Phones: a "Turn your phone sideways" reminder (animated phone)
+         on the first visit and after 12+ hours away; dismisses on tap
+         or when the phone is turned. "Playing Index" spelled out on phones too (chart widens a touch
          for long names). Kevin Heise (Course GM) on the Welcome list. Standings
          scorecards keep their header and key in view while the wide
          table scrolls on phones. Picking your name (or signing out of
@@ -722,6 +724,19 @@
   #activitySection { display: none; }
   .entry-gate { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(9,21,41,0.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
   body.gated { overflow: hidden; }
+  /* Rotate reminder for phones (portrait): shown on first visit and after a long break */
+  .rotate-pop { position: fixed; inset: 0; z-index: 8900; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(9,21,41,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+  .rotate-pop.show { display: flex; }
+  .rotate-card { width: 100%; max-width: 340px; background: var(--paper); color: var(--ink); border: 1px solid var(--rule); border-radius: 6px; padding: 26px 22px 20px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.35); animation: slideDown .3s ease; }
+  .rotate-phone { width: 46px; height: 82px; margin: 4px auto 16px; border: 3px solid var(--fg); border-radius: 9px; position: relative; animation: phoneTurn 2.4s ease-in-out infinite; transform-origin: center; }
+  .rotate-phone::before { content: ''; position: absolute; left: 50%; bottom: 5px; width: 14px; height: 3px; margin-left: -7px; border-radius: 2px; background: var(--fg); opacity: 0.6; }
+  .rotate-phone::after { content: ''; position: absolute; inset: 9px 5px 13px; border-radius: 3px; background: rgba(var(--fg-rgb),0.12); }
+  @keyframes phoneTurn { 0%, 25% { transform: rotate(0deg); } 55%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
+  .rotate-title { font-family: 'Fraunces', serif; font-style: italic; font-size: 24px; margin-bottom: 8px; }
+  .rotate-sub { font-size: var(--t-body); line-height: 1.5; color: var(--ink-soft); margin-bottom: 18px; }
+  .rotate-btn { width: 100%; padding: 12px; border: 0; border-radius: 3px; background: var(--fg); color: var(--bg); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; font-size: var(--t-sm); cursor: pointer; }
+  @media (prefers-reduced-motion: reduce) { .rotate-phone { animation: none; transform: rotate(-90deg); } }
+  @media (orientation: landscape), (min-width: 1025px) { .rotate-pop.show { display: none; } }
   .gate-card { width: 100%; max-width: 460px; background: var(--paper); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px; padding: 30px 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
   .gate-kicker { font-size: var(--t-xs); letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
   .gate-title { font-family: 'Fraunces', serif; font-style: italic; font-size: 32px; line-height: 1.05; margin-bottom: 8px; }
@@ -1471,6 +1486,14 @@
 </style>
 </head>
 <body>
+<div class="rotate-pop" id="rotatePop" role="dialog" aria-label="Turn your phone sideways">
+  <div class="rotate-card">
+    <div class="rotate-phone"></div>
+    <div class="rotate-title">Turn your phone sideways</div>
+    <div class="rotate-sub">Scorecards, the Ringer Board and the hole charts fit the screen edge-to-edge in landscape — no side-scrolling.</div>
+    <button class="rotate-btn" id="rotateGotIt">Got it</button>
+  </div>
+</div>
 <div class="entry-gate" id="entryGate" style="display:none">
   <div class="gate-card">
     <div class="gate-kicker">Springbank Links · 2026 Season</div>
@@ -4353,7 +4376,12 @@ function gateKey(e) {
 }
 function showEntryGate(force) {
   const gate = document.getElementById('entryGate'); if (!gate) return;
-  if (!force && (visitor || isAdmin())) { gate.style.display = 'none'; return; }
+  if (!force && (visitor || isAdmin())) {
+    gate.style.display = 'none';
+    // Returning visitor: remind them once the splash has cleared
+    if (!rotateHintQueued) { rotateHintQueued = true; setTimeout(() => maybeRotateHint(), document.getElementById('splash') ? 6600 : 400); }
+    return;
+  }
   const input = document.getElementById('gateName');
   gatePick = visitor ? visitor.name : null; gateActive = -1;
   input.value = visitor ? visitor.name : '';
@@ -4381,10 +4409,37 @@ function submitEntryGate() {
   // Every visitor starts on the 2026 Season, at the top of the page
   if (state.eventId !== 'season') switchEvent('season');
   try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); } catch (e) { window.scrollTo(0, 0); }
+  setTimeout(() => maybeRotateHint(), 350);
   upsertVisitor();
   track('visit', renamed ? 'renamed' : 'start');
   updateVisitorFooter();
 }
+// ---------- rotate reminder (phones, portrait) ----------
+// Shown once per device on the first visit, and again after 12+ hours away.
+// Dismissed by the button, a tap outside the card, or turning the phone.
+const ROTATE_GAP_MS = 12 * 60 * 60 * 1000;
+let rotateHintQueued = false;
+function maybeRotateHint(force) {
+  const pop = document.getElementById('rotatePop'); if (!pop) return false;
+  const portraitPhone = (window.innerWidth || 1025) <= 1024 && (window.innerHeight || 0) > (window.innerWidth || 0) && (('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0);
+  if (!force && !portraitPhone) return false;
+  let last = 0; try { last = parseInt(localStorage.getItem('sbl-rotate-seen') || '0', 10) || 0; } catch (e) {}
+  if (!force && Date.now() - last < ROTATE_GAP_MS) return false;
+  pop.classList.add('show');
+  try { localStorage.setItem('sbl-rotate-seen', String(Date.now())); } catch (e) {}
+  const close = () => { pop.classList.remove('show'); window.removeEventListener('orientationchange', close); window.removeEventListener('resize', onResize); clearTimeout(t); };
+  const onResize = () => { if ((window.innerWidth || 0) > (window.innerHeight || 0)) close(); };
+  const t = setTimeout(close, 9000);
+  document.getElementById('rotateGotIt').onclick = close;
+  pop.onclick = e => { if (e.target === pop) close(); };
+  window.addEventListener('orientationchange', close);
+  window.addEventListener('resize', onResize);
+  return true;
+}
+// Keep the "last seen" clock ticking while the app is open, so the
+// reminder only comes back after a real break, not mid-session.
+setInterval(() => { try { if (localStorage.getItem('sbl-rotate-seen')) localStorage.setItem('sbl-rotate-seen', String(Date.now())); } catch (e) {} }, 5 * 60 * 1000);
+
 function hideEntryGate() { const g = document.getElementById('entryGate'); if (g) g.style.display = 'none'; document.body.classList.remove('gated'); }
 function updateVisitorFooter() {
   const el = document.getElementById('visitorFooter'); if (!el) return;
