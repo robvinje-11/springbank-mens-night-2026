@@ -6,6 +6,11 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v5.7   Hole-in-ones get a gold callout: a banner at the top of the
+         player's page, a gold "Hole in one" card leading the Headlines
+         on every tab, and a gold triple ring on the Ringer Board.
+  v5.6   Ringer Board cells use classic card notation: red ring for
+         birdie, double ring eagle, triple ring albatross, no fill.
   v5.5   Player tab: Ringer Board — best score on every hole across
          the season, gross card stacked over net card, each cell dated,
          with Out / In / Total vs par and how much the ringer beats the
@@ -325,6 +330,9 @@
     --dbl-text: #c2463b;
     --field-dim: rgba(10,31,68,0.55);
     --chip-text: #ffffff;      /* text on coloured score chips, both themes */
+    --ring-red: #d6453a;       /* scorecard ring colour */
+    --ace: #a07a00;            /* hole-in-one gold */
+    --ace-bg: rgba(250,204,21,0.10);
     --logo-bg: #091529;        /* the logo JPEG has navy baked in */
   }
   [data-theme="dark"] {
@@ -359,6 +367,9 @@
     --field-dim: rgba(255,255,255,0.55);
     --chip-text: #ffffff;
     --logo-bg: #091529;
+    --ring-red: #ff6b5e;
+    --ace: #facc15;
+    --ace-bg: rgba(250,204,21,0.08);
     --tint-a: 0.06; --tint-b: 0.05;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -677,6 +688,15 @@
   .player-sc-wrap { margin-top: 14px; }
   .player-sc { min-width: 520px; }
   .player-trend { width: 100%; height: auto; display: block; }
+  .ace-banner { display: flex; align-items: center; gap: 18px; margin: -24px 0 44px; padding: 18px 22px; border: 1.5px solid var(--ace); border-radius: 3px; background: var(--ace-bg); }
+  .ace-mark { flex-shrink: 0; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-size: 30px; color: var(--ace); box-shadow: 0 0 0 2px var(--ace), 0 0 0 5px var(--ace-bg), 0 0 0 7px var(--ace), 0 0 0 10px var(--ace-bg), 0 0 0 12px var(--ace); margin: 0 10px; }
+  .ace-title { font-family: 'Fraunces', serif; font-style: italic; font-size: 24px; color: var(--ace); line-height: 1.1; margin-bottom: 6px; }
+  .ace-list { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+  .ace-item strong { color: var(--ace); }
+  .insight-card.ace { border-left-color: var(--ace); background: var(--ace-bg); grid-column: 1 / -1; }
+  .insight-card.ace .insight-title { color: var(--ace); }
+  .score-cell.ringer-cell.ace .ringer-v, .ringer-cell.eagle.ace .ringer-v, .ringer-cell.albatross.ace .ringer-v { box-shadow: 0 0 0 1.6px var(--ace), 0 0 0 3.2px var(--bg), 0 0 0 4.8px var(--ace), 0 0 0 6.4px var(--bg), 0 0 0 8px var(--ace); color: var(--ace); font-weight: 700; }
+  @media (max-width: 640px) { .ace-banner { gap: 12px; padding: 14px; } .ace-mark { width: 44px; height: 44px; font-size: 24px; } .ace-title { font-size: 20px; } }
   .ringer-panel { padding: 22px 24px; }
   .ringer-card + .ringer-card { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--rule); }
   .ringer-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -686,8 +706,14 @@
   .ringer-table { min-width: 640px; width: 100%; table-layout: fixed; }
   .ringer-table th:first-child { width: 64px; } .ringer-table th:nth-last-child(-n+2) { width: 46px; }
   .ringer-table th.ringer-lbl { text-align: left; font-family: 'DM Sans', sans-serif; letter-spacing: 0.1em; text-transform: uppercase; font-size: 10px; }
-  .ringer-cell { padding: 6px 4px !important; }
-  .ringer-cell.birdie, .ringer-cell.eagle, .ringer-cell.albatross { border-radius: 6px; }
+  .ringer-cell { padding: 7px 4px 6px !important; }
+  /* Ringer cells: classic card notation — red rings, no fill. 1 ring birdie, 2 eagle, 3 albatross. */
+  .ringer-cell.birdie, .ringer-cell.eagle, .ringer-cell.albatross { background: transparent !important; color: var(--ink) !important; box-shadow: none !important; border-radius: 0 !important; }
+  .ringer-cell .ringer-v { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; }
+  .ringer-cell.birdie .ringer-v    { box-shadow: 0 0 0 1.6px var(--ring-red); }
+  .ringer-cell.eagle .ringer-v     { box-shadow: 0 0 0 1.6px var(--ring-red), 0 0 0 3.2px var(--bg), 0 0 0 4.8px var(--ring-red); }
+  .ringer-cell.albatross .ringer-v { box-shadow: 0 0 0 1.6px var(--ring-red), 0 0 0 3.2px var(--bg), 0 0 0 4.8px var(--ring-red), 0 0 0 6.4px var(--bg), 0 0 0 8px var(--ring-red); }
+  .ringer-cell.birdie .ringer-when, .ringer-cell.eagle .ringer-when, .ringer-cell.albatross .ringer-when { color: var(--ink); }
   .ringer-v { display: block; font-size: 15px; line-height: 1.1; }
   .ringer-when { display: block; font-size: 8.5px; letter-spacing: 0.02em; opacity: 0.75; font-family: 'DM Sans', sans-serif; margin-top: 2px; white-space: nowrap; }
   @media (max-width: 640px) { .ringer-total .pk-big { font-size: 30px; } }
@@ -1354,7 +1380,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v5.5</div>
+    <div class="splash-version">v5.7</div>
   </div>
 </div>
 
@@ -1389,7 +1415,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v5.5</div>
+  <div class="masthead-version">v5.7</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -2708,7 +2734,16 @@ function renderInsights() {
       body: `<strong>${totalDoubles}</strong> double${totalDoubles===1?'':'s'}-or-worse from the ${capName} bracket — <strong>${dblPct}%</strong> of their holes.` };
   }
 
+  // Aces in this view (gross 1). YTD items carry their weeks; week items are rounds.
+  const aceEntries = ytdMode()
+    ? items.flatMap(a => (a.weeks || []).map(w => ({ week: { date: (WEEKS.find(x => x.id === w.id) || {}).date || '', source: (WEEKS.find(x => x.id === w.id) || {}).source }, round: w.round })))
+    : items.map(r => ({ week: { date: state.view.date || '', source: WEEKS.find(x => x.id === state.view.id)?.source }, round: r }));
+  const aces = findAces(aceEntries);
+  const aceCard = aces.length ? { cls: 'ace', title: `Hole in one${aces.length > 1 ? 's' : ''}`,
+    body: aces.map(a => `<strong>${a.e.round.name}</strong> aced <strong>Hole ${a.hole}</strong>${a.e.week.date ? ` on ${a.e.week.date}` : ''}`).join('<br>') } : null;
+
   const items_ = [
+    ...(aceCard ? [aceCard] : []),
     { cls: 'red', title: tp + 'Hardest hole',
       body: `<strong>Hole ${hardest.hole}</strong> (par ${hardest.par}, SI ${hardest.si}) played to <strong>${hardest.avg.toFixed(2)}</strong> — <strong>+${hardest.delta.toFixed(2)} over par</strong>.` },
     { cls: 'green', title: tp + 'Easiest hole',
@@ -3704,7 +3739,8 @@ function renderPlayerPage() {
     </table></div></div>`;
 
   const secR = renderRingerBoard(mine, srcTag);
-  host.innerHTML = sec1 + secR + sec2 + sec3 + sec4 + sec5 + sec6 + sec7 + sec8 + sec9;
+  const secAce = renderAceBanner(findAces(mine), srcTag, false);
+  host.innerHTML = sec1 + secAce + secR + sec2 + sec3 + sec4 + sec5 + sec6 + sec7 + sec8 + sec9;
 
   // wire scorecard taps
   const openRound = rid => {
@@ -3718,6 +3754,23 @@ function renderPlayerPage() {
   };
   host.querySelectorAll('.player-round-card, .player-round-row').forEach(el => el.addEventListener('click', () => openRound(el.dataset.rid)));
   host.querySelectorAll('.trend-dot').forEach(el => el.addEventListener('click', () => openRound(el.dataset.rid)));
+}
+
+// Hole-in-ones (gross 1) across a list of {week, round} entries.
+function findAces(entries) {
+  const out = [];
+  entries.forEach(e => e.round.scores.forEach((s, i) => { if (s === 1) out.push({ e, hole: i + 1, par: COURSE.par[i] }); }));
+  return out.sort((a, b) => Date.parse(a.e.week.date) - Date.parse(b.e.week.date));
+}
+function renderAceBanner(aces, srcTag, withName) {
+  if (!aces.length) return '';
+  return `<div class="ace-banner">
+    <div class="ace-mark">1</div>
+    <div class="ace-body">
+      <div class="ace-title">Hole in one${aces.length > 1 ? 's' : ''}!</div>
+      <div class="ace-list">${aces.map(a => `<span class="ace-item">${withName ? `<strong>${esc(a.e.round.name)}</strong> · ` : ''}Hole ${a.hole} (par ${a.par}) · ${a.e.week.date} · ${srcTag(a.e.week)}</span>`).join('')}</div>
+    </div>
+  </div>`;
 }
 
 // Ringer board: best score on every hole across the season, gross and net,
@@ -3739,7 +3792,7 @@ function renderRingerBoard(mine, srcTag) {
   const tot = { g: sum(g,0,18), n: sum(n,0,18) };
   const dateShort = d => String(d || '').replace(/,?\s*\d{4}$/, '');
   const card = (arr, label, total, realBest) => {
-    const cell = (h, i) => `<td class="score-cell ringer-cell ${scoreClass(h.v, COURSE.par[i])}" title="Hole ${i+1} · ${h.v} on ${h.e.week.date} (${srcTag(h.e.week)})${h.ties > 1 ? ` · matched ${h.ties}×` : ''}"><span class="ringer-v">${h.v}</span><span class="ringer-when">${dateShort(h.e.week.date)}</span></td>`;
+    const cell = (h, i) => `<td class="score-cell ringer-cell ${scoreClass(h.v, COURSE.par[i])}${h.v === 1 ? ' ace' : ''}" title="Hole ${i+1} · ${h.v} on ${h.e.week.date} (${srcTag(h.e.week)})${h.ties > 1 ? ` · matched ${h.ties}×` : ''}"><span class="ringer-v">${h.v}</span><span class="ringer-when">${dateShort(h.e.week.date)}</span></td>`;
     const nine = (from) => `<table class="scorecard-table ringer-table"><thead><tr><th class="ringer-lbl">${from ? 'Back' : 'Front'}</th>${COURSE.par.slice(from, from+9).map((_,k) => `<th>${from+k+1}</th>`).join('')}<th>${from ? 'In' : 'Out'}</th><th>${from ? 'Tot' : ''}</th></tr></thead><tbody>
       <tr><th>Par</th>${COURSE.par.slice(from, from+9).map(p => `<td>${p}</td>`).join('')}<td>${from ? 35 : 36}</td><td>${from ? 71 : ''}</td></tr>
       <tr><th>Best</th>${arr.slice(from, from+9).map((h,k) => cell(h, from+k)).join('')}<td><strong>${sum(arr, from, from+9)}</strong></td><td>${from ? `<strong>${total}</strong>` : ''}</td></tr>
