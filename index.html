@@ -6,6 +6,13 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v7.0   Visitors & Activity. First-time visitors enter first + last
+         name (remembered on that device; "Not you?" link in the
+         footer). Every meaningful tap is logged to Firestore via
+         anonymous sign-in. Admin-only Activity tab: unique visitors,
+         visits by day, who’s looking, most-viewed players, scorecards,
+         tabs, filters, cards, share/theme, recent feed. Admin is now
+         strictly the email sign-in (anonymous visitors are not admins).
   v6.8   The Course Speaks: Playing Index and "vs SI" (PI minus stroke
          index) columns on both tables, with a note.
   v6.7   "Playing Index" spelled out on desktop; "PI" on phones.
@@ -659,7 +666,9 @@
     border-radius: 3px;
     text-align: center;
   }
-  .event-switcher { gap: 6px; }
+  .event-switcher { gap: 6px; flex-wrap: wrap; }
+  .event-btn { min-width: 0; flex: 1 1 120px; }
+  @media (max-width: 640px) { .event-btn { flex: 1 1 40%; padding: 12px 8px; font-size: 17px; } }
   /* Gentle pulse on every un-selected tab and filter pill — a nudge that they're tappable. */
   @keyframes pillPulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(var(--fg-rgb),0.0); border-color: rgba(var(--fg-rgb),0.45); }
@@ -670,6 +679,27 @@
   .sf-btn:not(.active) { animation: pillPulse 2.6s ease-in-out infinite; }
   .event-btn:not(.active):hover, .week-tab:not(.active):hover, .sf-btn:not(.active):hover { animation: none; }
   @media (prefers-reduced-motion: reduce) { .event-btn, .week-tab, .sf-btn { animation: none !important; } }
+  body.event-activity main > section { display: none !important; }
+  body.event-activity main > section#activitySection { display: block !important; }
+  #activitySection { display: none; }
+  .entry-gate { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(9,21,41,0.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  body.gated { overflow: hidden; }
+  .gate-card { width: 100%; max-width: 460px; background: var(--paper); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px; padding: 30px 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+  .gate-kicker { font-size: var(--t-xs); letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+  .gate-title { font-family: 'Fraunces', serif; font-style: italic; font-size: 32px; line-height: 1.05; margin-bottom: 8px; }
+  .gate-sub { font-size: var(--t-lg); font-weight: 600; margin-bottom: 18px; }
+  .gate-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .gate-row input { width: 100%; padding: 12px 14px; font-size: 16px; font-family: 'DM Sans', sans-serif; font-weight: 600; color: var(--ink); background: var(--bg); border: 1px solid var(--rule); border-radius: 3px; }
+  .gate-row input:focus { outline: 2px solid var(--fg); outline-offset: 1px; }
+  .gate-error { min-height: 18px; margin: 8px 0 4px; font-size: var(--t-sm); font-weight: 600; color: var(--up); }
+  .gate-btn { width: 100%; padding: 13px 18px; margin-top: 6px; background: var(--fg); color: var(--bg); border: none; border-radius: 3px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+  .gate-note { margin-top: 14px; font-size: var(--t-xs); font-weight: 600; opacity: 0.8; line-height: 1.5; }
+  .visitor-footer { margin-top: 10px; font-size: var(--t-sm); font-weight: 600; }
+  .visitor-footer a { color: var(--fg); text-decoration: underline; }
+  .dist-row.act-row { grid-template-columns: 150px 1fr 40px; }
+  .act-lbl { font-size: var(--t-sm); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 640px) { .dist-row.act-row { grid-template-columns: 110px 1fr 34px; } }
+  @media (max-width: 480px) { .gate-row { grid-template-columns: 1fr; } .gate-card { padding: 24px 18px; } }
   /* Player tab: hide every normal section, show only the player page */
   body.event-player main > section { display: none !important; }
   body.event-player main > section#playerSection { display: block !important; }
@@ -1371,6 +1401,21 @@
 </style>
 </head>
 <body>
+<div class="entry-gate" id="entryGate" style="display:none">
+  <div class="gate-card">
+    <div class="gate-kicker">Springbank Links · 2026 Season</div>
+    <div class="gate-title">Who’s looking?</div>
+    <div class="gate-sub">Enter your name once on this device to open the dashboard.</div>
+    <div class="gate-row">
+      <input type="text" id="gateFirst" placeholder="First name" autocomplete="given-name" list="rosterList">
+      <input type="text" id="gateLast" placeholder="Last name" autocomplete="family-name">
+    </div>
+    <datalist id="rosterList"></datalist>
+    <div class="gate-error" id="gateError"></div>
+    <button class="gate-btn" id="gateGo">Open the dashboard</button>
+    <div class="gate-note">Used only so the league can see who’s using the dashboard. Nothing else is collected.</div>
+  </div>
+</div>
 <div class="ptr" id="ptr"><div class="ptr-inner"><span class="ptr-spinner"></span><span id="ptrText">Pull to refresh</span></div></div>
 <!-- ============================================================
      SPLASH SCREEN — auto-dismisses after 5.8s
@@ -1520,7 +1565,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v6.8</div>
+    <div class="splash-version">v7.0</div>
   </div>
 </div>
 
@@ -1555,7 +1600,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v6.8</div>
+  <div class="masthead-version">v7.0</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -1589,6 +1634,7 @@
   <button class="event-btn active" data-event="mensNight">Men&rsquo;s Night</button>
   <button class="event-btn" data-event="snips">Weekend Snips</button>
   <button class="event-btn" data-event="player">Player</button>
+  <button class="event-btn admin-only" data-event="activity" style="display:none">Activity</button>
 </div>
 
 <div class="week-bar">
@@ -1791,6 +1837,15 @@
   <div class="scorecard-wrap" id="scorecardWrap" style="display:none"></div>
 </section>
 
+<section id="activitySection">
+  <div class="section-head">
+    <span class="num">A.00</span>
+    <h2>Activity</h2>
+    <span class="sub">Who’s using the dashboard and what they look at — admin only</span>
+  </div>
+  <div id="activityBody"></div>
+</section>
+
 <section id="playerSection">
   <div class="section-head">
     <span class="num">P.01</span>
@@ -1853,6 +1908,7 @@
 
 <footer>
   <div>Springbank Links League Dashboard · Par 71 · Multi-week tracker · Built for SmartGolf data</div>
+  <div class="visitor-footer" id="visitorFooter"></div>
   <div style="margin-top:14px;">
     <button id="adminToggleBtn" style="background:transparent;border:1px solid rgba(var(--fg-rgb),0.22);color:var(--fg);padding:6px 16px;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:var(--t-sm);letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;opacity:0.65;transition:opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.65">Admin</button>
   </div>
@@ -1900,7 +1956,7 @@ let currentUser = null;              // signed-in admin (or null)
 const CLOUD = { mensNight: null, snips: null };  // weeks arrays from Firestore
 
 // ----- Admin state -------------------------------------------------
-function isAdmin() { return !!currentUser; }
+function isAdmin() { return !!currentUser && !currentUser.isAnonymous; }
 
 function applyAdminUI() {
   const admin = isAdmin();
@@ -2128,7 +2184,11 @@ EVENTS.player = {
   id: 'player', name: 'Player', splashSubtitle: '2026 Season · Player', mastheadTitle: 'Player',
   mastheadSubtitle: 'One player\u2019s 2026 season', scoring: 'vsPar', viewLabel: 'Round', baseWeeks: [],
 };
-const POOLED_EVENTS = { season: true, player: true };
+EVENTS.activity = {
+  id: 'activity', name: 'Activity', splashSubtitle: 'Activity', mastheadTitle: 'Activity',
+  mastheadSubtitle: 'Who\u2019s using the dashboard', scoring: 'vsPar', viewLabel: 'Round', baseWeeks: [],
+};
+const POOLED_EVENTS = { season: true, player: true, activity: true };
 
 // Season/Player-tab sub-filter: 'all' | 'mensNight' | 'snips'
 let seasonFilter = 'all';
@@ -2345,6 +2405,7 @@ function recomputeAll() {
 function switchEvent(newId) {
   if (newId === state.eventId) return;
   if (!EVENTS[newId]) return;
+  if (newId === 'activity' && !isAdmin()) return;
   if (typeof closeScorecard === 'function') closeScorecard();
   state.eventId = newId;
   if (typeof playerName !== 'undefined') { playerName = null; roundsFilter = 'all'; }   // Player tab never remembers a pick
@@ -2366,6 +2427,7 @@ function applyEventChrome() {
   document.body.classList.toggle('scoring-quota', ev.scoring === 'quota');
   document.body.classList.toggle('event-season', ev.id === 'season');
   document.body.classList.toggle('event-player', ev.id === 'player');
+  document.body.classList.toggle('event-activity', ev.id === 'activity');
   document.querySelectorAll('.event-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.event === state.eventId);
   });
@@ -2456,6 +2518,7 @@ function setView(v) {
 
 function renderWeekTabs() {
   const host = document.getElementById('weekTabs');
+  if (state.eventId === 'activity') { host.innerHTML = ''; document.getElementById('weekCount').textContent = WEEKS.length; document.getElementById('uniquePlayers').textContent = YTD.length; return; }
   if (state.eventId === 'player') { renderPlayerPicker(host); return; }
   if (state.eventId === 'season') {
     // Season tab: no week picker — the bar becomes the All / Men's Night /
@@ -4041,11 +4104,229 @@ function renderPlayerTrend(mine, fieldAvgG) {
 }
 
 // =================================================================
+// VISITORS & ACTIVITY
+//   • Entry screen: first + last name, remembered per device.
+//   • Every meaningful tap is logged to Firestore (`activity`), one doc
+//     per visitor in `visitors`. Visitors sign in anonymously so the
+//     rules can require auth; admin (email sign-in) is never logged.
+//   • Admin-only "Activity" tab summarises it all.
+// =================================================================
+const ADMIN_EMAIL = 'robvinje@me.com';
+const VISITOR_KEY = 'sbl-visitor';
+let visitor = null;            // { id, first, last, name }
+let visitId = null;            // one per page load
+let activityReady = false;     // anonymous auth done & db available
+const activityQueue = [];      // events captured before Firestore is ready
+let ACTIVITY = { visitors: [], events: [], loadedAt: 0 };
+let activityRange = '30';      // '7' | '30' | 'all'
+
+function uuid() { return (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'v-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+function loadVisitor() { try { const v = JSON.parse(localStorage.getItem(VISITOR_KEY) || 'null'); if (v && v.id && v.first) visitor = v; } catch (e) {} return visitor; }
+function saveVisitor(v) { visitor = v; try { localStorage.setItem(VISITOR_KEY, JSON.stringify(v)); } catch (e) {} }
+function titleCase(s) { return String(s || '').trim().replace(/\s+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
+
+// Roster for the type-ahead: every name across both events.
+function rosterNames() {
+  const names = new Set();
+  ['mensNight', 'snips'].forEach(ev => {
+    const src = Array.isArray(CLOUD[ev]) ? CLOUD[ev] : EVENTS[ev].baseWeeks;
+    src.forEach(w => (w.players || []).forEach(p => { const n = canonicalName(p[0]); if (!isExcludedPlayer(n)) names.add(n); }));
+  });
+  return [...names].sort();
+}
+
+// ---------- entry screen ----------
+function showEntryGate(force) {
+  const gate = document.getElementById('entryGate'); if (!gate) return;
+  if (!force && (visitor || isAdmin())) { gate.style.display = 'none'; return; }
+  const dl = document.getElementById('rosterList');
+  if (dl) dl.innerHTML = rosterNames().map(n => `<option value="${esc(n)}"></option>`).join('');
+  const f = document.getElementById('gateFirst'), l = document.getElementById('gateLast');
+  if (visitor) { f.value = visitor.first; l.value = visitor.last; }
+  document.getElementById('gateError').textContent = '';
+  gate.style.display = 'flex';
+  document.body.classList.add('gated');
+  setTimeout(() => f.focus(), 50);
+}
+function hideEntryGate() { const g = document.getElementById('entryGate'); if (g) g.style.display = 'none'; document.body.classList.remove('gated'); }
+function submitEntryGate() {
+  const first = titleCase(document.getElementById('gateFirst').value), last = titleCase(document.getElementById('gateLast').value);
+  const err = document.getElementById('gateError');
+  if (first.length < 2 || last.length < 2) { err.textContent = 'Please enter your first and last name.'; return; }
+  const existing = visitor && visitor.id ? visitor.id : uuid();
+  const renamed = visitor && visitor.name && visitor.name !== `${first} ${last}`;
+  saveVisitor({ id: existing, first, last, name: `${first} ${last}` });
+  hideEntryGate();
+  upsertVisitor();
+  track('visit', renamed ? 'renamed' : 'start');
+  updateVisitorFooter();
+}
+function updateVisitorFooter() {
+  const el = document.getElementById('visitorFooter'); if (!el) return;
+  el.innerHTML = visitor ? `Viewing as <strong>${esc(visitor.name)}</strong> · <a href="#" id="changeNameLink">Not you? Change name</a>` : '';
+  const a = document.getElementById('changeNameLink'); if (a) a.addEventListener('click', e => { e.preventDefault(); showEntryGate(true); });
+}
+
+// ---------- logging ----------
+function track(type, label, meta) {
+  if (isAdmin()) return;                               // the owner's own browsing never counts
+  const ev = { type, label: String(label || '').slice(0, 120), meta: meta ? JSON.parse(JSON.stringify(meta)) : null,
+    ts: Date.now(), visitId, visitorId: visitor ? visitor.id : null, visitor: visitor ? visitor.name : null,
+    tab: state.eventId, ua: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop' };
+  activityQueue.push(ev);
+  flushActivity();
+}
+function flushActivity() {
+  if (!activityReady || !db || !activityQueue.length) return;
+  const batch = activityQueue.splice(0, activityQueue.length);
+  batch.forEach(ev => { if (!ev.visitorId && visitor) { ev.visitorId = visitor.id; ev.visitor = visitor.name; } });
+  batch.forEach(ev => db.collection('activity').add(ev).catch(() => {}));
+}
+function upsertVisitor() {
+  if (!activityReady || !db || !visitor || isAdmin()) return;
+  db.collection('visitors').doc(visitor.id).set({
+    id: visitor.id, first: visitor.first, last: visitor.last, name: visitor.name, lastSeen: Date.now(),
+    device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+    visits: firebase.firestore.FieldValue.increment(1),
+  }, { merge: true }).catch(() => {});
+}
+// Called once Firebase is up: anonymous sign-in for visitors, then flush.
+async function startActivity() {
+  if (!auth || !db) return;
+  visitId = uuid();
+  try { if (!auth.currentUser) await auth.signInAnonymously(); } catch (e) { console.warn('Anonymous sign-in unavailable — activity logging off until it is enabled in Firebase.', e && e.code); return; }
+  activityReady = true;
+  if (visitor && !isAdmin()) { upsertVisitor(); track('visit', 'start'); }
+  flushActivity();
+}
+// Light-touch hooks on the existing UI (delegated so re-rendered sections keep working).
+function wireActivityHooks() {
+  document.addEventListener('click', e => {
+    const t = e.target.closest('button, a, tr, .player-round-card, .player-chip, .insight-card, .trend-dot, .week-tab, .sf-btn, .event-btn');
+    if (!t || document.getElementById('entryGate')?.contains(t) || t.closest('#adminSection, #loginModal, #activitySection')) return;
+    if (t.classList.contains('event-btn')) return track('tab', t.dataset.event);
+    if (t.classList.contains('week-tab')) return track('view', t.dataset.src ? 'source:' + t.dataset.src : 'week:' + (t.textContent || '').trim());
+    if (t.classList.contains('sf-btn')) { const sec = t.closest('.section-filter'); return track('filter', (sec?.dataset.section || sec?.id || 'filter') + ':' + (t.dataset.bracket || t.dataset.mode || t.dataset.rf || t.dataset.pcm || t.textContent.trim())); }
+    if (t.classList.contains('player-chip')) return track('player', t.dataset.name);
+    if (t.classList.contains('player-round-card')) return track('card', 'best-worst:' + (t.querySelector('.insight-title')?.textContent || '').trim(), { player: playerName });
+    if (t.classList.contains('insight-card')) return track('card', 'headline:' + (t.querySelector('.insight-title')?.textContent || '').trim());
+    if (t.classList.contains('trend-dot')) return track('scorecard', 'trend:' + playerName);
+    if (t.id === 'shareBtn') return track('share', 'share');
+    if (t.id === 'themeBtn') return track('theme', document.documentElement.getAttribute('data-theme') === 'dark' ? 'to-light' : 'to-dark');
+    if (t.tagName === 'TR' && t.classList.contains('player-round-row')) return track('scorecard', 'round:' + playerName, { rid: t.dataset.rid });
+    if (t.tagName === 'TR' && t.dataset.name && t.closest('#playerTableBody')) return track('scorecard', 'standings:' + t.dataset.name);
+    if (t.tagName === 'A' && t.href && !t.href.startsWith(location.origin)) return track('link', t.href);
+  }, true);
+  document.addEventListener('change', e => {
+    if (e.target.id === 'playerSelect' && e.target.value) track('player', e.target.value);
+    if (e.target.id === 'weekSelect') track('view', 'week:' + e.target.selectedOptions[0]?.textContent.trim());
+  }, true);
+}
+
+// ---------- admin: load + render ----------
+async function loadActivity(force) {
+  if (!isAdmin() || !db) return;
+  if (!force && Date.now() - ACTIVITY.loadedAt < 60000) return;
+  const [vs, es] = await Promise.all([
+    db.collection('visitors').get(),
+    db.collection('activity').orderBy('ts', 'desc').limit(6000).get(),
+  ]);
+  ACTIVITY = { visitors: vs.docs.map(d => d.data()), events: es.docs.map(d => d.data()), loadedAt: Date.now() };
+}
+function renderActivityPage() {
+  const host = document.getElementById('activityBody'); if (!host) return;
+  if (!isAdmin()) { host.innerHTML = '<div class="panel player-empty"><div class="player-empty-title">Admin only</div><div class="player-empty-sub">Sign in with the Admin button in the footer.</div></div>'; return; }
+  host.innerHTML = '<div class="panel player-empty"><div class="player-empty-sub">Loading activity…</div></div>';
+  loadActivity().then(drawActivity).catch(e => { host.innerHTML = `<div class="panel player-empty"><div class="player-empty-title">Couldn’t load activity</div><div class="player-empty-sub">${esc(e.message || e)}<br>Check the Firestore rules allow <code>${ADMIN_EMAIL}</code> to read <code>visitors</code> and <code>activity</code>.</div></div>`; });
+}
+function drawActivity() {
+  const host = document.getElementById('activityBody'); if (!host) return;
+  const now = Date.now(), day = 86400000;
+  const since = activityRange === 'all' ? 0 : now - parseInt(activityRange, 10) * day;
+  const evs = ACTIVITY.events.filter(e => e.ts >= since && e.visitorId);
+  const allEvs = ACTIVITY.events.filter(e => e.visitorId);
+  const uniq = arr => new Set(arr.map(e => e.visitorId)).size;
+  const startOfDay = t => { const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+  const today = startOfDay(now);
+  const visits = evs.filter(e => e.type === 'visit');
+  const kpi = (lbl, val, sub) => `<div class="pk"><div class="pk-lbl">${lbl}</div><div class="pk-val">${val}</div>${sub ? `<div class="pk-sub">${sub}</div>` : ''}</div>`;
+  const count = (arr, key) => { const m = new Map(); arr.forEach(e => { const k = key(e); if (k == null || k === '') return; m.set(k, (m.get(k) || 0) + 1); }); return [...m.entries()].sort((a, b) => b[1] - a[1]); };
+  const bars = (rows, max, fmt) => rows.length ? rows.map(([k, n]) => `<div class="dist-row act-row"><div class="act-lbl" title="${esc(fmt ? fmt(k) : k)}">${esc(fmt ? fmt(k) : k)}</div><div class="dist-row-track"><div class="dist-row-fill nonzero" style="width:${n / max * 100}%;background:#6f9fd8"></div></div><div class="dist-row-val">${n}</div></div>`).join('') : '<div class="player-note">Nothing yet.</div>';
+  const card = (title, sub, inner) => `<div class="dist-card"><div class="dist-card-title">${title}</div>${sub ? `<div class="dist-card-sub">${sub}</div>` : ''}<div class="dist-rows" style="grid-template-columns:1fr">${inner}</div></div>`;
+  const tabName = k => ({ mensNight: "Men’s Night", snips: 'Weekend Snips', season: '2026 Season', player: 'Player', activity: 'Activity' })[k] || k;
+  const fmtWhen = t => { const d = new Date(t); return `${DOW_[d.getDay()]} ${MON_[d.getMonth()]} ${d.getDate()} · ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`; };
+
+  // visits by day (last 30 days, or whole range if 'all')
+  const days = []; const span = activityRange === 'all' ? Math.min(90, Math.ceil((now - Math.min(...allEvs.map(e => e.ts), now)) / day) + 1) : parseInt(activityRange, 10);
+  for (let i = span - 1; i >= 0; i--) { const d0 = today - i * day; const dayVisits = visits.filter(e => e.ts >= d0 && e.ts < d0 + day); days.push({ d0, visits: dayVisits.length, uniq: uniq(dayVisits) }); }
+  const maxDay = Math.max(1, ...days.map(d => d.visits));
+  const W = 760, H = 180, L = 30, B = 34, T = 12, bw = (W - L - 10) / days.length;
+  const svg = `<svg viewBox="0 0 ${W} ${H}" class="player-trend" preserveAspectRatio="xMidYMid meet">
+    ${days.map((d, i) => { const h = d.visits / maxDay * (H - T - B); const x = L + i * bw; return `<rect x="${x + 1}" y="${H - B - h}" width="${Math.max(1, bw - 2)}" height="${h}" fill="#6f9fd8" rx="2"><title>${new Date(d.d0).toDateString()}: ${d.visits} visits · ${d.uniq} people</title></rect>${d.visits ? `<text x="${x + bw / 2}" y="${H - B - h - 4}" text-anchor="middle" font-size="10" font-family="JetBrains Mono" fill="var(--fg)">${d.visits}</text>` : ''}${(days.length <= 31 || i % 7 === 0) && (days.length <= 14 || i % Math.ceil(days.length / 10) === 0) ? `<text x="${x + bw / 2}" y="${H - 14}" text-anchor="middle" font-size="10" font-family="DM Sans" fill="var(--fg)" opacity=".8">${MON_[new Date(d.d0).getMonth()]} ${new Date(d.d0).getDate()}</text>` : ''}`; }).join('')}
+    <line x1="${L}" x2="${W - 10}" y1="${H - B}" y2="${H - B}" stroke="rgba(var(--fg-rgb),0.3)"/>
+  </svg>`;
+
+  // top viewers
+  const byVisitor = new Map();
+  allEvs.forEach(e => { const v = byVisitor.get(e.visitorId) || { name: e.visitor || '(unknown)', visits: 0, visitsInRange: 0, events: 0, last: 0, first: Infinity, inRange: 0 }; if (e.type === 'visit') { v.visits++; if (e.ts >= since) v.visitsInRange++; } v.events++; v.last = Math.max(v.last, e.ts); v.first = Math.min(v.first, e.ts); if (e.ts >= since) v.inRange++; if (e.visitor) v.name = e.visitor; byVisitor.set(e.visitorId, v); });
+  const viewers = [...byVisitor.values()].sort((a, b) => b.inRange - a.inRange || b.last - a.last);
+
+  const playersViewed = count(evs.filter(e => e.type === 'player'), e => e.label);
+  const scorecards = count(evs.filter(e => e.type === 'scorecard'), e => e.label.replace(/^(standings|round|trend):/, ''));
+  const tabs = count(evs.filter(e => e.type === 'tab'), e => tabName(e.label));
+  const views = count(evs.filter(e => e.type === 'view'), e => e.label.replace(/^source:/, 'filter: ').replace(/^week:/, ''));
+  const secName = { dist: 'Distribution', insights: 'Headlines', movers: 'Movers', holes: 'Course Speaks', standings: 'Standings', holeChart: 'Hole chart', roundsFilterBar: 'Every Round', playerChartModeBar: 'Player chart' };
+  const filters = count(evs.filter(e => e.type === 'filter'), e => { const [sec, val] = e.label.split(':'); return `${secName[sec] || sec} · ${val}`; });
+  const cards = count(evs.filter(e => e.type === 'card'), e => e.label.replace(/^(headline|best-worst):/, ''));
+  const misc = count(evs.filter(e => ['share', 'theme', 'link', 'refresh'].includes(e.type)), e => `${e.type}: ${e.label}`);
+  const devices = count(evs.filter(e => e.type === 'visit'), e => e.ua || 'unknown');
+  const recent = evs.slice(0, 60);
+
+  host.innerHTML = `
+    <div class="section-filter"><span class="sf-label">Range</span>
+      ${['7', '30', 'all'].map(r => `<button class="sf-btn${activityRange === r ? ' active' : ''}" data-ar="${r}">${r === 'all' ? 'All time' : 'Last ' + r + ' days'}</button>`).join('')}
+      <button class="sf-btn" id="activityRefresh" style="margin-left:auto">Refresh</button>
+    </div>
+    <div class="panel player-hero" style="margin-bottom:28px">
+      <div class="pk-grid">
+        ${kpi('Unique visitors', uniq(evs), activityRange === 'all' ? 'all time' : `last ${activityRange} days · ${uniq(allEvs)} all time`)}
+        ${kpi('Visits', visits.length, `${visits.filter(e => e.ts >= today).length} today · ${uniq(visits.filter(e => e.ts >= today))} people`)}
+        ${kpi('Taps logged', evs.length, `${(evs.length / Math.max(1, visits.length)).toFixed(1)} per visit`)}
+        ${kpi('Player pages opened', evs.filter(e => e.type === 'player').length, `${playersViewed.length} different players`)}
+        ${kpi('Scorecards opened', evs.filter(e => e.type === 'scorecard').length, devices.map(([k, n]) => `${k} ${n}`).join(' · ') || '')}
+      </div>
+    </div>
+    <div class="section-head"><span class="num">A.01</span><h2>Visits by Day</h2><span class="sub">Each visit = a page open by a named visitor</span></div>
+    <div class="panel" style="padding:16px 12px 6px">${svg}</div>
+    <div class="section-head" style="margin-top:44px"><span class="num">A.02</span><h2>Who’s Looking</h2><span class="sub">Every named visitor, most active in range first</span></div>
+    <div class="panel" style="padding:18px 20px"><div class="player-scroll"><table class="holes-table player-rounds" style="min-width:560px"><thead><tr><th>#</th><th style="text-align:left">Visitor</th><th>Visits (range)</th><th>Visits (all)</th><th>Taps (all)</th><th>First seen</th><th>Last seen</th></tr></thead><tbody>
+      ${viewers.map((v, i) => `<tr><td>${i + 1}</td><td style="text-align:left">${esc(v.name)}</td><td>${v.visitsInRange}</td><td>${v.visits}</td><td>${v.events}</td><td style="white-space:nowrap">${fmtWhen(v.first)}</td><td style="white-space:nowrap">${fmtWhen(v.last)}</td></tr>`).join('') || '<tr><td colspan="7" style="padding:20px;font-style:italic">No visitors yet.</td></tr>'}
+    </tbody></table></div></div>
+    <div class="section-head" style="margin-top:44px"><span class="num">A.03</span><h2>What They Look At</h2><span class="sub">Counts in range</span></div>
+    <div class="player-panel-grid"><div class="dist-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+      ${card('Most-viewed players', 'Player tab picks', bars(playersViewed.slice(0, 12), playersViewed[0]?.[1] || 1))}
+      ${card('Scorecards opened', 'by player', bars(scorecards.slice(0, 12), scorecards[0]?.[1] || 1))}
+      ${card('Tabs', 'tab switches', bars(tabs, tabs[0]?.[1] || 1))}
+      ${card('Views & filters', 'week picks, source filter, bracket / gross-net pills', bars([...views, ...filters].sort((a, b) => b[1] - a[1]).slice(0, 14), Math.max(views[0]?.[1] || 1, filters[0]?.[1] || 1)))}
+      ${card('Cards tapped', 'headlines & best / worst rounds', bars(cards.slice(0, 12), cards[0]?.[1] || 1))}
+      ${card('Share, theme & links', '', bars(misc.slice(0, 10), misc[0]?.[1] || 1))}
+    </div></div>
+    <div class="section-head" style="margin-top:44px"><span class="num">A.04</span><h2>Recent Activity</h2><span class="sub">Latest ${recent.length} events in range</span></div>
+    <div class="panel" style="padding:18px 20px"><div class="player-scroll"><table class="holes-table player-rounds" style="min-width:560px"><thead><tr><th style="text-align:left">When</th><th style="text-align:left">Visitor</th><th style="text-align:left">Did</th><th style="text-align:left">On tab</th><th>Device</th></tr></thead><tbody>
+      ${recent.map(e => `<tr><td style="text-align:left;white-space:nowrap">${fmtWhen(e.ts)}</td><td style="text-align:left">${esc(e.visitor || '')}</td><td style="text-align:left">${esc(e.type)} · ${esc(e.label)}</td><td style="text-align:left">${tabName(e.tab)}</td><td>${e.ua || ''}</td></tr>`).join('') || '<tr><td colspan="5" style="padding:20px;font-style:italic">Nothing yet.</td></tr>'}
+    </tbody></table></div></div>
+    <div class="player-note" style="margin-top:12px">Your own admin-signed-in browsing is never logged. Visitors sign in anonymously to write events; only ${ADMIN_EMAIL} can read them.</div>`;
+  host.querySelectorAll('[data-ar]').forEach(b => b.addEventListener('click', () => { activityRange = b.dataset.ar; drawActivity(); }));
+  const rf = document.getElementById('activityRefresh'); if (rf) rf.addEventListener('click', () => { loadActivity(true).then(drawActivity); });
+}
+
+// =================================================================
 // RENDER ALL
 // =================================================================
 function renderAll() {
   renderWeekTabs();
   if (state.eventId === 'player') { renderPlayerPage(); return; }
+  if (state.eventId === 'activity') { renderActivityPage(); return; }
   renderKpis();
   renderBracketProfiles();
   renderInsights();
@@ -4559,6 +4840,7 @@ let firstCloudRender = false;
 
 function onCloudUpdate() {
   recomputeAll();
+  const dl = document.getElementById('rosterList'); if (dl && document.getElementById('entryGate')?.style.display !== 'none') dl.innerHTML = rosterNames().map(n => `<option value="${esc(n)}"></option>`).join('');
   // Guard: if the current week view was deleted remotely, fall back
   if (state.view.kind === 'week' && !ALL_VIEWS.some(v => v.id === state.view.id)) {
     state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
@@ -4596,6 +4878,9 @@ async function initFirebase() {
     currentUser = user || null;
     applyAdminUI();
     renderStoredWeeks();
+    if (!isAdmin() && state.eventId === 'activity') switchEvent('mensNight');
+    if (isAdmin()) hideEntryGate(); else showEntryGate(false);
+    if (!currentUser) startActivity();   // signed out of admin → fall back to an anonymous visitor session
     // Scroll to the admin panel only on a real sign-in click — i.e. after
     // the initial restore has happened, and we went from logged-out to in.
     if (authStateInitialized && currentUser && !wasLoggedIn) {
@@ -4615,6 +4900,9 @@ async function initFirebase() {
       }
     } catch (e) { console.error('Seed check failed for ' + evId, e); }
   }
+
+  // Visitors: anonymous sign-in so activity events can be written
+  startActivity();
 
   // Live listeners — any change to the data re-renders for every viewer
   ['mensNight', 'snips'].forEach(evId => {
@@ -4658,6 +4946,14 @@ async function initFirebase() {
   document.querySelectorAll('.event-btn').forEach(btn => {
     btn.addEventListener('click', () => switchEvent(btn.dataset.event));
   });
+
+  // Visitor identity + activity hooks
+  loadVisitor();
+  showEntryGate(false);
+  updateVisitorFooter();
+  document.getElementById('gateGo').addEventListener('click', submitEntryGate);
+  ['gateFirst', 'gateLast'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') submitEntryGate(); }));
+  wireActivityHooks();
 
   // Render once with built-in seed data so the page isn't blank while
   // we connect to Firebase; cloud data replaces it the moment it loads.
@@ -4736,6 +5032,7 @@ async function initFirebase() {
       if (!pulling) { startY = null; return; }
       if (dist >= THRESHOLD) {
         el.classList.add('loading'); txt.textContent = 'Refreshing…'; el.style.height = '56px';
+        try { track('refresh', 'pull'); } catch (e) {}
         setTimeout(() => location.reload(), 250);
       } else {
         el.style.height = '0px';

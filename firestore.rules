@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Admin = your email, signed in with email/password (not anonymous)
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'robvinje@me.com'
+        && request.auth.token.firebase.sign_in_provider == 'password';
+    }
+    function signedIn() { return request.auth != null; }
+
+    // League scores: anyone can read, only the admin can write
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Visitor records: visitors (anonymous sign-in) may create/update ONLY
+    // their own record with the expected fields; only the admin can read.
+    match /visitors/{visitorId} {
+      allow read: if isAdmin();
+      allow create, update: if signedIn()
+        && request.resource.data.keys().hasOnly(['id','first','last','name','lastSeen','device','visits'])
+        && request.resource.data.id == visitorId
+        && request.resource.data.name is string && request.resource.data.name.size() <= 80
+        && request.resource.data.first is string && request.resource.data.first.size() <= 40
+        && request.resource.data.last is string && request.resource.data.last.size() <= 40;
+      allow delete: if isAdmin();
+    }
+
+    // Activity events: append-only for any signed-in user (anonymous
+    // visitors included); readable and deletable only by the admin.
+    match /activity/{eventId} {
+      allow read: if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['type','label','meta','ts','visitId','visitorId','visitor','tab','ua'])
+        && request.resource.data.type is string && request.resource.data.type.size() <= 20
+        && request.resource.data.label is string && request.resource.data.label.size() <= 120
+        && request.resource.data.ts is number
+        && (request.resource.data.visitor == null || (request.resource.data.visitor is string && request.resource.data.visitor.size() <= 80));
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // Anything else: locked
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
