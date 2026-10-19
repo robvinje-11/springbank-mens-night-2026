@@ -6,6 +6,7 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v7.1   Entry screen reworded: "Welcome!".
   v7.0   Visitors & Activity. First-time visitors enter first + last
          name (remembered on that device; "Not you?" link in the
          footer). Every meaningful tap is logged to Firestore via
@@ -1404,8 +1405,8 @@
 <div class="entry-gate" id="entryGate" style="display:none">
   <div class="gate-card">
     <div class="gate-kicker">Springbank Links · 2026 Season</div>
-    <div class="gate-title">Who’s looking?</div>
-    <div class="gate-sub">Enter your name once on this device to open the dashboard.</div>
+    <div class="gate-title">Welcome!</div>
+    <div class="gate-sub">Tell us who you are — just once on this device — and the 2026 season is yours to explore.</div>
     <div class="gate-row">
       <input type="text" id="gateFirst" placeholder="First name" autocomplete="given-name" list="rosterList">
       <input type="text" id="gateLast" placeholder="Last name" autocomplete="family-name">
@@ -1413,7 +1414,7 @@
     <datalist id="rosterList"></datalist>
     <div class="gate-error" id="gateError"></div>
     <button class="gate-btn" id="gateGo">Open the dashboard</button>
-    <div class="gate-note">Used only so the league can see who’s using the dashboard. Nothing else is collected.</div>
+    <div class="gate-note">Your name only helps the league see who’s enjoying the dashboard. Nothing else is collected, and viewing never changes any results.</div>
   </div>
 </div>
 <div class="ptr" id="ptr"><div class="ptr-inner"><span class="ptr-spinner"></span><span id="ptrText">Pull to refresh</span></div></div>
@@ -1565,7 +1566,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v7.0</div>
+    <div class="splash-version">v7.1</div>
   </div>
 </div>
 
@@ -1600,7 +1601,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v7.0</div>
+  <div class="masthead-version">v7.1</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
