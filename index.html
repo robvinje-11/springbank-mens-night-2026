@@ -6,7 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v7.9   Activity tab: "Clear activity log" button (admin only) wipes
+  v7.9   Scorecard key on phones: two roomy columns (no overlap on the
+         Albatross ring); Snips cards no longer repeat the date.
+         Activity tab: "Clear activity log" button (admin only) wipes
          every logged event and the visitor list, with a confirm.
          "SI" is now "HC" (hole handicap) everywhere. Hole-chart
          comparisons are tinted chips (green easier / red harder); on
@@ -869,7 +871,13 @@
   .ace-pulse, .rk-item.rk-ace .rk-lbl { display: inline-block; transform-origin: left center; animation: acePulse 1.6s ease-in-out infinite; }
   .ace-mark, .rk-glyph.ace .rk-g, .ringer-cell.ace .ringer-v { animation: aceRingPulse 1.6s ease-in-out infinite; }
   @media (prefers-reduced-motion: reduce) { .ace-pulse, .rk-item.rk-ace .rk-lbl, .ace-mark, .rk-glyph.ace .rk-g, .ringer-cell.ace .ringer-v { animation: none !important; } }
-  @media (max-width: 640px) { .round-key { grid-template-columns: repeat(3, 1fr); gap: 10px 6px; } .rk-val { font-size: 17px; } .rk-glyph { width: 30px; } }
+  @media (max-width: 640px) {
+    .round-key { grid-template-columns: repeat(2, 1fr); gap: 14px 16px; padding-top: 18px; margin-top: 18px; }
+    .rk-item { gap: 12px; }
+    .rk-glyph { width: 40px; height: 40px; }
+    .rk-lbl { letter-spacing: 0.08em; white-space: nowrap; }
+    .rk-val { font-size: 19px; }
+  }
   /* ===== PHONES ===== */
   .rotate-hint { display: none; }
   /* Portrait phone: tighter page gutters; wide tables scroll a little and say so. */
@@ -4187,11 +4195,16 @@ function renderRingerBoard(mine, srcTag) {
     </div>`;
 }
 
+// "Men’s Night · Week 6" or "Snips" (a Snips label is just its date, which the card already shows).
+function roundEventLabel(w) {
+  const short = (w.label || '').replace(/^(Men’s Night|Snips) · /, '');
+  return w.source === 'mensNight' ? `Men\u2019s Night · ${short}` : w.source === 'snips' ? 'Snips' : (w.label || '');
+}
 // A single round's scorecard on the Player tab — same look as the Ringer Board.
 function renderPlayerScorecard(e) {
   const r = e.round;
   return `<div class="panel player-sc-wrap">
-    <div class="ringer-head"><div><div class="ringer-title">${esc(r.name)}</div><div class="player-hero-meta" style="margin-top:4px">${fmtLeagueDate(e.week.date)} · ${e.week.label} · HC ${r.hc}</div></div><div class="ringer-total"><span class="pk-big ${pCls(r.gp)}">${r.gross}</span><span class="pk-lbl">${pSignedInt(r.gp)} vs par · net ${r.net} (${pSignedInt(r.np)})</span></div></div>
+    <div class="ringer-head"><div><div class="ringer-title">${esc(r.name)}</div><div class="player-hero-meta" style="margin-top:4px">${fmtLeagueDate(e.week.date)} · ${roundEventLabel(e.week)} · HC ${r.hc}</div></div><div class="ringer-total"><span class="pk-big ${pCls(r.gp)}">${r.gross}</span><span class="pk-lbl">${pSignedInt(r.gp)} vs par · net ${r.net} (${pSignedInt(r.np)})</span></div></div>
     ${renderRoundCardTables(r.scores, r.hc)}
     ${renderRoundKey(r.scores)}
   </div>`;
