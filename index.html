@@ -6,6 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v8.5   Members: stray non-player records from earlier imports are
+         deleted on load; the entry list auto-publishes whenever it is
+         out of step with the members on file.
   v8.4   Welcome list = members who played (+ Kevin & Cam Heise). The
          Members section publishes a names-only entry list to
          events/roster (auto after import or a match change; also a
@@ -1710,7 +1713,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v8.4</div>
+    <div class="splash-version">v8.5</div>
   </div>
 </div>
 
@@ -1745,7 +1748,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v8.4</div>
+  <div class="masthead-version">v8.5</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -4847,7 +4850,23 @@ async function loadMembers(force) {
   if (!isAdmin() || !db) return;
   if (!force && Date.now() - MEMBERS.loadedAt < 60000) return;
   const snap = await db.collection('members').get();
-  MEMBERS = { list: snap.docs.map(d => d.data()), loadedAt: Date.now() };
+  let list = snap.docs.map(d => d.data());
+  // Policy: only members matched to a 2026 player (or staff guests) are kept.
+  // Anything else that slipped in from an earlier import is deleted now.
+  const isGuest = m => GATE_GUESTS.some(g => g.toLowerCase() === (m.name || '').toLowerCase());
+  const stray = list.filter(m => !m.player && !isGuest(m));
+  if (stray.length) {
+    try {
+      for (let i = 0; i < stray.length; i += 400) { const b = db.batch(); stray.slice(i, i + 400).forEach(m => b.delete(db.collection('members').doc(m.id))); await b.commit(); }
+      list = list.filter(m => m.player || isGuest(m));
+      MEMBERS.purged = stray.length;
+    } catch (e) { console.warn('members purge failed', e); }
+  }
+  MEMBERS = Object.assign({}, MEMBERS, { list, loadedAt: Date.now() });
+  // Keep the Welcome-screen entry list in step with the members on file.
+  const want = entryRosterFromMembers();
+  const have = Array.isArray(CLOUD.roster) ? CLOUD.roster : [];
+  if (want.length > GATE_GUESTS.length && (want.length !== have.length || want.some(n => !have.includes(n)))) { try { await publishEntryRoster(); } catch (e) { console.warn('roster publish failed', e); } }
 }
 // Import / update from a paste. Existing player matches the admin set by hand are kept.
 async function importMembers(text) {
@@ -4969,6 +4988,7 @@ function renderMembers() {
         <span id="membersImportResult" style="font-size:var(--t-sm);"></span>
       </div>
     </div>
+    ${MEMBERS.purged ? `<div class="player-note" style="margin:0 0 12px;color:var(--up);font-weight:700">Removed ${MEMBERS.purged} member record${MEMBERS.purged === 1 ? '' : 's'} that had no 2026 rounds — their contact details are no longer stored.</div>` : ''}
     <div class="panel" style="margin-bottom:16px;padding:14px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
       <span class="online-dot${Array.isArray(CLOUD.roster) && CLOUD.roster.length ? '' : ' off'}"></span>
       <div style="flex:1;min-width:220px"><strong>Welcome-screen entry list:</strong> ${Array.isArray(CLOUD.roster) && CLOUD.roster.length ? `<strong>${CLOUD.roster.length}</strong> names published — only these (members who played, plus ${GATE_GUESTS.join(' & ')}) can open the dashboard.` : `<span style="color:var(--up)">not published yet</span> — until it is, every 2026 player can get in.`} <span style="opacity:.7">Names only; no contact details are published.</span></div>
