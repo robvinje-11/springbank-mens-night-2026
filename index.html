@@ -6,6 +6,19 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v5.0   New "2026 Season" tab pools every Men's Night and Weekend Snips
+         round into one Year-to-Date view, with an All / Men's Night /
+         Snips filter in place of the week picker. Shows the six hole-
+         by-hole analytics sections (bracket scoring, distribution,
+         headlines, hole chart, how they scored, the course speaks);
+         Movers, Standings and Admin stay on the event tabs. Players
+         entered under two spellings are merged (Robert/Bob Laycock,
+         Jon/Jonathan Yumol, Michael/Mike Speca, Steve/Steven Ironside,
+         Bruce McCartney). In every Year-to-Date view, player headlines
+         (top gross/net avg, birdie leader, steadiest card) now require
+         4+ rounds. "How They Made Their Score" is now six labelled
+         horizontal bars per bracket (count + % of holes) instead of a
+         stacked bar, so eagles and birdies are readable.
   v4.9   Weekend Snips now accepts the Robbie Golf Live "Copy scorecard"
          text directly — paste it as-is. Auto-detected alongside the
          tab-separated export; handles groups that start on the back
@@ -480,6 +493,9 @@
     border-radius: 3px;
     text-align: center;
   }
+  body.event-season #moversSection,
+  body.event-season #standingsSection,
+  body.event-season #adminSection { display: none !important; }
   .event-btn:hover { color: var(--ink); background: rgba(255,255,255,0.04); }
   .event-btn.active {
     background: #ffffff;
@@ -616,6 +632,14 @@
   .dist-seg.par { background: #62d4a1; color: #0a1f44; }
   .dist-seg.bogey { background: #f59e0b; color: #0a1f44; }
   .dist-seg.double { background: #4a2628; color: #ffffff; }
+  .dist-rows { display: flex; flex-direction: column; gap: 7px; margin-top: 4px; }
+  .dist-row { display: grid; grid-template-columns: 62px 1fr 108px; align-items: center; gap: 10px; }
+  .dist-row-label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); font-family: 'DM Sans', sans-serif; }
+  .dist-row-track { height: 16px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+  .dist-row-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+  .dist-row-fill.nonzero { min-width: 3px; }
+  .dist-row-val { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--ink); text-align: right; white-space: nowrap; }
+  .dist-row-val span { color: var(--ink-soft); margin-left: 7px; }
   .dist-legend {
     display: flex; justify-content: center; flex-wrap: wrap;
     gap: 12px; font-size: 11px; color: var(--ink-soft); margin-top: 20px;
@@ -1129,7 +1153,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v4.9</div>
+    <div class="splash-version">v5.0</div>
   </div>
 </div>
 
@@ -1164,7 +1188,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v4.9</div>
+  <div class="masthead-version">v5.0</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1187,6 +1211,7 @@
 <div class="event-switcher">
   <button class="event-btn active" data-event="mensNight">Men&rsquo;s Night</button>
   <button class="event-btn" data-event="snips">Weekend Snips</button>
+  <button class="event-btn" data-event="season">2026 Season</button>
 </div>
 
 <div class="week-bar">
@@ -1310,7 +1335,7 @@
   </div>
   <div class="panel">
     <div class="dist-grid" id="distGrid"></div>
-    <div class="dist-legend">
+    <div class="dist-legend" style="display:none;">
       <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#facc15"></span> Albatross</div>
       <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#b48dd9"></span> Eagle</div>
       <div class="dist-legend-item"><span class="dist-legend-swatch" style="background:#ff6b5e"></span> Birdie</div>
@@ -1355,7 +1380,7 @@
   </div>
 </section>
 
-<section>
+<section id="standingsSection">
   <div class="section-head">
     <span class="num">No. 08</span>
     <h2 id="standingsHeading">Player Standings</h2>
@@ -1695,7 +1720,43 @@ const EVENTS = {
       },
     ]
   },  // end snips
+
+  // Virtual event: Men's Night + Weekend Snips pooled. No data of its own —
+  // rebuildWeeks() assembles it from the two real events' cloud documents.
+  season: {
+    id: 'season',
+    name: "2026 Season",
+    splashSubtitle: "2026 Season · Men's Night + Snips",
+    mastheadTitle: "2026 Season",
+    mastheadSubtitle: "Men's Night + Weekend Snips combined",
+    scoring: "vsPar",
+    viewLabel: "Round",
+    baseWeeks: [],
+  },
 };
+
+// Season-tab sub-filter: 'all' | 'mensNight' | 'snips'
+let seasonFilter = 'all';
+const SEASON_SOURCES = { mensNight: "Men\u2019s Night", snips: "Snips" };
+
+// Players who appear under more than one spelling across the two events.
+// Keys are the variants as entered; values are the display name.
+const PLAYER_ALIASES = {
+  "Bob Laycock":      "Robert Laycock",
+  "Jonathan Yumol":   "Jon Yumol",
+  "Mike Speca":       "Michael Speca",
+  "Steven Ironside":  "Steve Ironside",
+  "Bruce Mccartney":  "Bruce McCartney",
+};
+function canonicalName(name) {
+  const n = String(name || '').trim();
+  return PLAYER_ALIASES[n] || n;
+}
+
+// Player-level headlines (top gross/net averages, steadiest card, birdie
+// leader) in any Year-to-Date view only consider players with at least
+// this many rounds, so a one-off 68 doesn't own the season.
+const HEADLINE_MIN_ROUNDS = 4;
 
 // `WEEKS` holds the active event's weeks. It is rebuilt by rebuildWeeks()
 // from the event's baseWeeks merged with any admin-stored weeks (additions
@@ -1706,7 +1767,8 @@ let WEEKS = [];
 // NORMALIZE — turn array tuples into objects with derived fields
 // =================================================================
 function normalizeRound(arr) {
-  const [name, , scores, gross, net, gp, np] = arr;
+  const [rawName, , scores, gross, net, gp, np] = arr;
+  const name = canonicalName(rawName);
   const hc = gross - net;  // WEEKLY HC = Gross - Net (whole number by construction)
   const front = scores.slice(0,9).reduce((a,b)=>a+b,0);
   const back  = scores.slice(9).reduce((a,b)=>a+b,0);
@@ -1747,12 +1809,39 @@ function buildWeekRounds(players) {
 // data) so the dashboard still renders something.
 function rebuildWeeks() {
   const ev = currentEvent();
+  if (ev.id === 'season') { rebuildSeasonWeeks(); return; }
   const cloud = CLOUD[ev.id];
   const source = Array.isArray(cloud) ? cloud : ev.baseWeeks;
   WEEKS = source
     .map(w => ({ id: w.id, label: w.label, date: w.date, players: w.players, savedAt: w.savedAt }))
     .sort((a,b) => a.id - b.id);
   WEEKS.forEach(w => { w.rounds = buildWeekRounds(w.players); });
+}
+
+// Season tab: pool every round from both events (honouring seasonFilter).
+// Ids are offset per source so they never collide; the list is ordered by
+// calendar date. Each round's gp/np is re-expressed as vs-par so Men's
+// Night quota points and Snips vs-par never get mixed in one number.
+function rebuildSeasonWeeks() {
+  const PAR_TOTAL = COURSE.par.reduce((a,b) => a+b, 0);
+  const pooled = [];
+  Object.keys(SEASON_SOURCES).forEach((evId, idx) => {
+    if (seasonFilter !== 'all' && seasonFilter !== evId) return;
+    const cloud = CLOUD[evId];
+    const source = Array.isArray(cloud) ? cloud : EVENTS[evId].baseWeeks;
+    source.forEach(w => pooled.push({
+      id: (idx + 1) * 1000 + w.id,
+      label: `${SEASON_SOURCES[evId]} · ${w.label}`,
+      date: w.date, players: w.players, savedAt: w.savedAt, source: evId,
+    }));
+  });
+  const t = d => { const n = Date.parse(d); return isNaN(n) ? 0 : n; };
+  WEEKS = pooled.sort((a,b) => (t(a.date) - t(b.date)) || (a.id - b.id));
+  WEEKS.forEach(w => {
+    w.rounds = buildWeekRounds(w.players).map(r => ({
+      ...r, gp: r.gross - PAR_TOTAL, np: r.net - PAR_TOTAL, source: w.source,
+    }));
+  });
 }
 
 // =================================================================
@@ -1833,7 +1922,7 @@ let adminOverwriteId = null;
 function recomputeAll() {
   rebuildWeeks();
   YTD = buildYTD();
-  ALL_VIEWS = WEEKS.map(w => ({ kind: 'week', id: w.id, label: w.label, date: w.date }))
+  ALL_VIEWS = (state.eventId === 'season' ? [] : WEEKS.map(w => ({ kind: 'week', id: w.id, label: w.label, date: w.date })))
     .concat([{ kind: 'ytd', id: 'ytd', label: 'Year to Date' }]);
 }
 
@@ -1860,6 +1949,7 @@ function applyEventChrome() {
   const ev = currentEvent();
   document.body.classList.toggle('scoring-vsPar', ev.scoring === 'vsPar');
   document.body.classList.toggle('scoring-quota', ev.scoring === 'quota');
+  document.body.classList.toggle('event-season', ev.id === 'season');
   document.querySelectorAll('.event-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.event === state.eventId);
   });
@@ -1950,6 +2040,25 @@ function setView(v) {
 
 function renderWeekTabs() {
   const host = document.getElementById('weekTabs');
+  if (state.eventId === 'season') {
+    // Season tab: no week picker — the bar becomes the All / Men's Night /
+    // Snips source filter. Everything below is always Year-to-Date.
+    const opts = [['all', 'All Rounds'], ['mensNight', "Men\u2019s Night"], ['snips', 'Weekend Snips']];
+    host.innerHTML = opts.map(([k, lbl]) =>
+      `<button class="week-tab${k === seasonFilter ? ' active ytd' : ''}" data-src="${k}">${lbl}</button>`
+    ).join('');
+    host.querySelectorAll('.week-tab').forEach(btn => btn.addEventListener('click', () => {
+      if (btn.dataset.src === seasonFilter) return;
+      seasonFilter = btn.dataset.src;
+      closeScorecard();
+      recomputeAll();
+      state.view = ALL_VIEWS[0];
+      renderAll();
+    }));
+    document.getElementById('weekCount').textContent = WEEKS.length;
+    document.getElementById('uniquePlayers').textContent = YTD.length;
+    return;
+  }
   const weekViews = ALL_VIEWS.filter(v => v.kind === 'week');
   const ytdView = ALL_VIEWS.find(v => v.kind === 'ytd');
 
@@ -2307,19 +2416,25 @@ function renderInsights() {
   const hardest = [...holeAvgs].sort((a,b) => b.delta - a.delta)[0];
   const easiest = [...holeAvgs].sort((a,b) => a.delta - b.delta)[0];
 
-  const bestNet = [...items].sort((a,b) => getNet(a) - getNet(b))[0];
-  const bestGross = [...items].sort((a,b) => getGross(a) - getGross(b))[0];
+  // In YTD views, player-level headlines only consider regulars
+  // (HEADLINE_MIN_ROUNDS+). Falls back to everyone if nobody qualifies yet.
+  const regulars = ytdMode() ? items.filter(r => r.rounds >= HEADLINE_MIN_ROUNDS) : items;
+  const pool = regulars.length ? regulars : items;
+  const minNote = (ytdMode() && regulars.length) ? ` · ${HEADLINE_MIN_ROUNDS}+ rounds` : '';
+
+  const bestNet = [...pool].sort((a,b) => getNet(a) - getNet(b))[0];
+  const bestGross = [...pool].sort((a,b) => getGross(a) - getGross(b))[0];
 
   // Birdie leader — birdies + eagles + albatrosses (the "red numbers")
   const birdieKey = r => ytdMode()
     ? (r.totalBirdies + r.totalEagles + r.totalAlbatrosses)
     : (r.birdies + r.eagles + r.albatrosses);
-  const birdieLeader = [...items].sort((a,b) => birdieKey(b) - birdieKey(a))[0];
+  const birdieLeader = [...pool].sort((a,b) => birdieKey(b) - birdieKey(a))[0];
   const blCount = birdieKey(birdieLeader);
 
   // Steadiest card — most pars (single round) / highest par rate (YTD)
   const parRate = r => ytdMode() ? (r.totalPars / (r.rounds * 18)) : (r.pars / 18);
-  const steadiest = [...items].sort((a,b) => parRate(b) - parRate(a))[0];
+  const steadiest = [...pool].sort((a,b) => parRate(b) - parRate(a))[0];
 
   const totalDoubles = items.reduce((s,r) => s + (ytdMode() ? r.totalDoubles : r.doubles), 0);
   const totalHoles = ytdMode()
@@ -2368,21 +2483,21 @@ function renderInsights() {
       body: `<strong>Hole ${hardest.hole}</strong> (par ${hardest.par}, SI ${hardest.si}) played to <strong>${hardest.avg.toFixed(2)}</strong> — <strong>+${hardest.delta.toFixed(2)} over par</strong>.` },
     { cls: 'green', title: tp + 'Easiest hole',
       body: `<strong>Hole ${easiest.hole}</strong> (par ${easiest.par}, SI ${easiest.si}) averaged <strong>${easiest.avg.toFixed(2)}</strong>, only <strong>+${easiest.delta.toFixed(2)}</strong>.` },
-    { cls: 'green', title: tp + (ytdMode() ? 'Top YTD gross (avg)' : 'Round of the day (gross)'),
+    { cls: 'green', title: tp + (ytdMode() ? 'Top YTD gross (avg)' + minNote : 'Round of the day (gross)'),
       body: ytdMode()
         ? `<strong>${bestGross.name}</strong> (HC ${bestGross.hc}) owns the lowest scoring average — <strong>${bestGross.avgGross.toFixed(1)} gross</strong> over ${bestGross.rounds} round${bestGross.rounds===1?'':'s'}.`
         : `<strong>${bestGross.name}</strong> (HC ${bestGross.hc}) posted the low gross — a <strong>${bestGross.gross}</strong> (net ${bestGross.net}).` },
-    { cls: 'green', title: tp + (ytdMode() ? 'Top YTD net (avg)' : 'Round of the day (net)'),
+    { cls: 'green', title: tp + (ytdMode() ? 'Top YTD net (avg)' + minNote : 'Round of the day (net)'),
       body: ytdMode()
         ? `<strong>${bestNet.name}</strong> (HC ${bestNet.hc}) sits on an avg net <strong>${bestNet.avgNet.toFixed(1)}</strong> across ${bestNet.rounds} round${bestNet.rounds===1?'':'s'}.`
         : `<strong>${bestNet.name}</strong> (HC ${bestNet.hc}) shot net <strong>${bestNet.net}</strong> — gross ${bestNet.gross} — for ${bestNet.np} net points.` },
-    { cls: '', title: tp + 'Birdie leader',
+    { cls: '', title: tp + 'Birdie leader' + minNote,
       body: blCount === 0
         ? `No birdies in this view yet — held to par or worse on every hole.`
         : (ytdMode()
             ? `<strong>${birdieLeader.name}</strong> has the most red numbers this season — <strong>${blCount} birdie${blCount===1?'':'s'} or better</strong>.`
             : `<strong>${birdieLeader.name}</strong> lit up the card with <strong>${blCount} birdie${blCount===1?'':'s'} or better</strong> — the most in${isAll ? ' the field' : ' the bracket'}.`) },
-    { cls: 'green', title: tp + 'Steadiest card',
+    { cls: 'green', title: tp + 'Steadiest card' + minNote,
       body: ytdMode()
         ? `<strong>${steadiest.name}</strong> pars <strong>${(steadiest.totalPars/(steadiest.rounds*18)*100).toFixed(0)}% of holes</strong> — the most consistent stick${isAll ? ' in the field' : ' in the bracket'}.`
         : `<strong>${steadiest.name}</strong> was metronomic — <strong>${steadiest.pars} par${steadiest.pars===1?'':'s'}</strong> with just ${steadiest.doubles} blow-up${steadiest.doubles===1?'':'s'} on the card.` },
@@ -2589,24 +2704,26 @@ function renderDistribution() {
     }
     const d = dMode === 'net' ? distributionNet(items) : distribution(items);
     const pct = n => d.total ? (n / d.total * 100) : 0;
+    const rows = [
+      { label: 'Albatross', n: d.albatrosses, color: '#facc15' },
+      { label: 'Eagle',     n: d.eagles,      color: '#b48dd9' },
+      { label: 'Birdie',    n: d.birdies,     color: '#ff6b5e' },
+      { label: 'Par',       n: d.pars,        color: '#62d4a1' },
+      { label: 'Bogey',     n: d.bogeys,      color: '#f59e0b' },
+      { label: 'Double+',   n: d.doubles,     color: '#8a4a4e' },
+    ];
+    const maxCount = Math.max(...rows.map(r => r.n), 0);
     return `
       <div class="dist-card">
         <div class="dist-card-title">${labels[b]}</div>
         <div class="dist-card-sub">${items.length} player${items.length===1?'':'s'} · ${d.total} holes</div>
-        <div class="dist-bar">
-          ${d.albatrosses ? `<div class="dist-seg albatross" style="width:${pct(d.albatrosses)}%;background:#facc15;color:#091529;" title="Albatross: ${d.albatrosses}">${d.albatrosses}</div>` : ''}
-          ${d.eagles ? `<div class="dist-seg eagle" style="width:${pct(d.eagles)}%" title="Eagles: ${d.eagles}">${d.eagles}</div>` : ''}
-          ${d.birdies ? `<div class="dist-seg birdie" style="width:${pct(d.birdies)}%" title="Birdies: ${d.birdies}">${d.birdies}</div>` : ''}
-          ${d.pars ? `<div class="dist-seg par" style="width:${pct(d.pars)}%" title="Pars: ${d.pars}">${d.pars}</div>` : ''}
-          ${d.bogeys ? `<div class="dist-seg bogey" style="width:${pct(d.bogeys)}%" title="Bogeys: ${d.bogeys}">${d.bogeys}</div>` : ''}
-          ${d.doubles ? `<div class="dist-seg double" style="width:${pct(d.doubles)}%" title="Double+: ${d.doubles}">${d.doubles}</div>` : ''}
-        </div>
-        <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--ink-soft);">
-          ${d.albatrosses ? `<span style="color:#facc15">${pct(d.albatrosses).toFixed(1)}</span> · ` : ''}<span style="color:#b48dd9">${pct(d.eagles).toFixed(1)}</span> ·
-          <span style="color:#ff6b5e">${pct(d.birdies).toFixed(1)}</span> ·
-          <span style="color:#62d4a1">${pct(d.pars).toFixed(1)}</span> ·
-          <span style="color:#f59e0b">${pct(d.bogeys).toFixed(1)}</span> ·
-          <span style="color:#ff8e84">${pct(d.doubles).toFixed(1)}</span>
+        <div class="dist-rows">
+          ${rows.map(r => `
+            <div class="dist-row">
+              <div class="dist-row-label">${r.label}</div>
+              <div class="dist-row-track"><div class="dist-row-fill${r.n ? ' nonzero' : ''}" style="width:${maxCount ? (r.n / maxCount * 100) : 0}%;background:${r.color};" title="${r.label}: ${r.n} (${pct(r.n).toFixed(1)}%)"></div></div>
+              <div class="dist-row-val">${r.n.toLocaleString()}<span>${pct(r.n).toFixed(1)}%</span></div>
+            </div>`).join('')}
         </div>
       </div>
     `;
@@ -3368,7 +3485,7 @@ function renderStoredWeeks() {
   const wrap = document.getElementById('storedWeeksWrap');
   const list = document.getElementById('storedWeeksList');
   if (!wrap || !list) return;
-  if (!WEEKS.length) { wrap.style.display = 'none'; return; }
+  if (!WEEKS.length || state.eventId === 'season') { wrap.style.display = 'none'; return; }
   wrap.style.display = '';
 
   list.innerHTML = WEEKS.map(w => {
@@ -3488,6 +3605,7 @@ document.getElementById('parseAddBtn').addEventListener('click', async () => {
   }
   if (!raw.trim()) { showParseResult('Paste box is empty.', 'error'); return; }
   if (!isAdmin()) { showParseResult('Please sign in as admin first.', 'error'); return; }
+  if (state.eventId === 'season') { showParseResult('Switch to Men\u2019s Night or Weekend Snips to add data.', 'error'); return; }
 
   const overwriting = adminOverwriteId != null;
   const targetId = overwriting ? adminOverwriteId : nextWeekId();
@@ -3542,7 +3660,7 @@ document.getElementById('adminCancelOverwriteBtn').addEventListener('click', () 
 });
 
 document.getElementById('adminEventSwitchBtn').addEventListener('click', () => {
-  switchEvent(state.eventId === 'mensNight' ? 'snips' : 'mensNight');
+  switchEvent(state.eventId === 'snips' ? 'mensNight' : 'snips');
   document.getElementById('adminSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
