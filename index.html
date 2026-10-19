@@ -6,7 +6,8 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v7.9   Kevin Heise (Course GM) on the Welcome list. Standings
+  v7.9   "Playing Index" spelled out on phones too (chart widens a touch
+         for long names). Kevin Heise (Course GM) on the Welcome list. Standings
          scorecards keep their header and key in view while the wide
          table scrolls on phones. Picking your name (or signing out of
          admin) always lands on the 2026 Season, at the top.
@@ -3205,7 +3206,7 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
   // with bigger fonts/bars so everything reads larger once the SVG is
   // shrunk to the screen — desktop keeps the roomier wide layout.
   const isMobile = (window.innerWidth || 1024) < 640;
-  const W   = isMobile ? 380 : 640;
+  let W     = isMobile ? 380 : 640;
   const fHole = isMobile ? 17 : 14;   // hole-label font
   const fAxis = isMobile ? 16 : 14;   // axis-scale font
   const fVal  = isMobile ? 18 : 15;   // over-par value font
@@ -3219,9 +3220,9 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
   const labels = COURSE.par.map((p,i) => `${i+1}\u2003P${p}\u00b7HC${COURSE.si[i]}`);
   const widestChars = Math.max(...labels.map(labelChars));
   const labelW = Math.ceil(widestChars * charW + fHole) + 6;
-  const fPI = isMobile ? 17 : 13;
-  // On a player's chart the label is personal: "Rob’s Playing Index" ("Rob’s PI" on phones).
-  const piLbl = (compareAvgs ? `${seriesLabel}\u2019s ` : '') + (isMobile ? 'PI' : 'Playing Index');
+  const fPI = isMobile ? 16 : 13;
+  // On a player's chart the label is personal: "Rob’s Playing Index".
+  const piLbl = (compareAvgs ? `${seriesLabel}\u2019s ` : '') + 'Playing Index';
   // Right of the rank: "+/-" vs the card's SI, and (player chart) vs the 2026 season's PI.
   // Sign = PI minus the reference: negative = played harder than rated/than the field, positive = easier.
   const sgn = d => d === 0 ? '=' : (d > 0 ? '+' : '\u2212') + Math.abs(d);
@@ -3230,6 +3231,17 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
   const siTag = 'vs HC', yrTag = 'vs \u201926';
   const extraChars = (siTag.length + 5) + (cpi ? (yrTag.length + 5) : 0);
   const piW = isMobile ? 0 : Math.ceil(fPI * 0.6 * (piLbl.length + 4 + extraChars)) + 10;   // desktop: room for the label right of the longest bar
+  // Phones: the PI line ("Rob’s Playing Index 18" + chips) must fit on one line.
+  // If a long name or two-digit deltas need more, widen the viewBox a little
+  // (the SVG shrinks to the screen, so everything scales down together).
+  if (isMobile) {
+    const chipF0 = fPI - 1, cw0 = chipF0 * 0.62;
+    const lineW = Math.max(...COURSE.par.map((_, i) => {
+      const chips = [`${siTag} ${sgn(pi[i] - COURSE.si[i])}`].concat(cpi ? [`${yrTag} ${sgn(pi[i] - cpi[i])}`] : []);
+      return 6 + `${piLbl} ${pi[i]}`.length * fPI * 0.6 + 12 + chips.reduce((a, t) => a + Math.ceil(t.length * cw0) + 14 + 6, 0);
+    }));
+    W = Math.max(W, Math.ceil(lineW) + 8);
+  }
   const pad = { l: 2, r: 12 + piW, t: isMobile ? 40 : 36, b: 12 };
   const gap = 14;                  // small break between the nines
   const H = pad.t + 18 * rowH + pad.b + gap;
