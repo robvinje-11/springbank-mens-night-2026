@@ -6,6 +6,13 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v5.1   New "Player" tab: pick any player and see their 2026 season
+         against their bracket and the field — season card, round-by-
+         round gross/net chart, hole-by-hole gross & net vs par, par
+         3/4/5 breakdown, score distribution, best & worst rounds
+         (dated, tap for scorecard), stroke-index groups, front vs
+         back, personal headlines, and every round listed. Uses the
+         same All / Men's Night / Snips filter as the Season tab.
   v5.0   New "2026 Season" tab pools every Men's Night and Weekend Snips
          round into one Year-to-Date view, with an All / Men's Night /
          Snips filter in place of the week picker. Shows the six hole-
@@ -493,6 +500,72 @@
     border-radius: 3px;
     text-align: center;
   }
+  /* Player tab: hide every normal section, show only the player page */
+  body.event-player main > section { display: none !important; }
+  body.event-player main > section#playerSection { display: block !important; }
+  #playerSection { display: none; }
+  .player-select { min-width: 220px; margin-left: 10px; }
+  @media (max-width: 640px) { .player-select { margin-left: 0; width: 100%; margin-top: 8px; } body.event-player .week-tabs, body.event-season .week-tabs { flex-wrap: wrap; } }
+  .player-empty { text-align: center; padding: 40px 24px; }
+  .player-empty-title { font-family: 'Fraunces', serif; font-style: italic; font-size: 26px; margin-bottom: 8px; }
+  .player-empty-sub { font-size: 13px; color: var(--ink-soft); opacity: 0.8; margin-bottom: 18px; }
+  .player-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .player-chip { padding: 8px 14px; background: var(--paper-2); border: 1px solid var(--rule); color: var(--ink); border-radius: 3px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; }
+  .player-chip span { margin-left: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; opacity: 0.6; }
+  .player-chip:hover { background: rgba(255,255,255,0.08); }
+  .player-hero { margin-bottom: 44px; }
+  .player-hero-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; padding-bottom: 18px; border-bottom: 1px solid var(--rule); margin-bottom: 20px; }
+  .player-hero-name { font-family: 'Fraunces', serif; font-size: 40px; line-height: 1; margin-bottom: 8px; }
+  .player-hero-meta { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); opacity: 0.85; }
+  .player-hero-vs { text-align: right; display: flex; flex-direction: column; gap: 2px; }
+  .pk-big { font-family: 'Fraunces', serif; font-size: 44px; line-height: 1; }
+  .pk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px 22px; }
+  .pk-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-bottom: 3px; }
+  .pk-val { font-family: 'Fraunces', serif; font-size: 26px; color: var(--ink); line-height: 1.1; }
+  .pk-sub { font-size: 11px; color: var(--ink-soft); opacity: 0.75; margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+  .under { color: #62d4a1; } .over { color: #ff8e84; } .even { color: var(--ink); }
+  .hole-delta.over-field { color: #ff8e84; }
+  .pb-cell { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+  .pb-track { position: relative; flex: 1; height: 10px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+  .pb-zero { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.4); }
+  .pb-fill { position: absolute; top: 0; bottom: 0; }
+  .pb-fill.pos { left: 50%; } .pb-fill.neg { right: 50%; }
+  .player-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .player-cmp-panel { min-width: 0; }
+  .player-holes, .player-cmp, .player-rounds { width: 100%; }
+  .player-holes { min-width: 760px; } .player-rounds { min-width: 820px; } .player-cmp { min-width: 420px; }
+  .player-holes td, .player-cmp td, .player-rounds td { white-space: nowrap; }
+  .player-holes td:nth-child(4), .player-holes td:nth-child(6) { width: 18%; }
+  .player-holes th, .player-cmp th, .player-rounds th { font-size: 10px; }
+  .player-note { font-size: 11px; color: var(--ink-soft); opacity: 0.7; margin-top: 10px; font-style: italic; }
+  .par-type-grid { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 900px) { .par-type-grid { grid-template-columns: 1fr; } }
+  .pc-big { font-family: 'Fraunces', serif; font-size: 34px; margin: 6px 0 12px; display: flex; align-items: baseline; gap: 10px; }
+  .pc-big-lbl { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft); opacity: 0.8; }
+  .pc-row { display: grid; grid-template-columns: 110px 1fr 56px; gap: 10px; align-items: center; margin-bottom: 7px; }
+  .pc-lbl { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+  .pc-track { height: 12px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+  .pc-fill { height: 100%; }
+  .pc-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; text-align: right; }
+  .player-dist-grid { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 900px) { .player-dist-grid { grid-template-columns: 1fr; } }
+  .dist-row.player-dist-row { grid-template-columns: 62px 1fr 96px 92px; }
+  @media (max-width: 640px) { .dist-row.player-dist-row { grid-template-columns: 62px 1fr 80px; } .dist-row.player-dist-row .dist-row-cmp { display: none; } }
+  #playerBody > .section-head { margin-top: 44px; }
+  .player-panel-grid { background: var(--paper); border: 1px solid var(--rule); padding: 28px 32px; border-radius: 2px; }
+  .dist-row-cmp { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-soft); opacity: 0.6; text-align: right; white-space: nowrap; }
+  .player-round-card { cursor: pointer; }
+  .player-round-card:hover { background: rgba(255,255,255,0.05); }
+  .prc-big { font-family: 'Fraunces', serif; font-size: 34px; line-height: 1; margin: 4px 0 8px; }
+  .prc-when { font-size: 11px; opacity: 0.75; font-family: 'JetBrains Mono', monospace; }
+  .prc-tap { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.45; margin-top: 8px; }
+  .player-round-row { cursor: pointer; }
+  .player-round-row:hover td { background: rgba(255,255,255,0.05); }
+  .player-sc-wrap { margin-top: 14px; }
+  .player-sc { min-width: 520px; }
+  .player-trend { width: 100%; height: auto; display: block; }
+  .trend-dot { cursor: pointer; }
+  .trend-dot:hover { r: 7; }
   body.event-season #moversSection,
   body.event-season #standingsSection,
   body.event-season #adminSection { display: none !important; }
@@ -1153,7 +1226,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v5.0</div>
+    <div class="splash-version">v5.1</div>
   </div>
 </div>
 
@@ -1188,7 +1261,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v5.0</div>
+  <div class="masthead-version">v5.1</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1212,6 +1285,7 @@
   <button class="event-btn active" data-event="mensNight">Men&rsquo;s Night</button>
   <button class="event-btn" data-event="snips">Weekend Snips</button>
   <button class="event-btn" data-event="season">2026 Season</button>
+  <button class="event-btn" data-event="player">Player</button>
 </div>
 
 <div class="week-bar">
@@ -1410,6 +1484,15 @@
     </table>
   </div>
   <div class="scorecard-wrap" id="scorecardWrap" style="display:none"></div>
+</section>
+
+<section id="playerSection">
+  <div class="section-head">
+    <span class="num">P.01</span>
+    <h2>Player Analytics</h2>
+    <span class="sub">One player’s 2026 season, measured against their bracket and the field</span>
+  </div>
+  <div id="playerBody"></div>
 </section>
 
 <section id="adminSection" class="admin-only" style="margin-top:48px;display:none;">
@@ -1735,7 +1818,14 @@ const EVENTS = {
   },
 };
 
-// Season-tab sub-filter: 'all' | 'mensNight' | 'snips'
+// Virtual event: same pooled data as the Season tab, rendered for one player.
+EVENTS.player = {
+  id: 'player', name: 'Player', splashSubtitle: '2026 Season · Player', mastheadTitle: 'Player',
+  mastheadSubtitle: 'One player\u2019s 2026 season', scoring: 'vsPar', viewLabel: 'Round', baseWeeks: [],
+};
+const POOLED_EVENTS = { season: true, player: true };
+
+// Season/Player-tab sub-filter: 'all' | 'mensNight' | 'snips'
 let seasonFilter = 'all';
 const SEASON_SOURCES = { mensNight: "Men\u2019s Night", snips: "Snips" };
 
@@ -1809,7 +1899,7 @@ function buildWeekRounds(players) {
 // data) so the dashboard still renders something.
 function rebuildWeeks() {
   const ev = currentEvent();
-  if (ev.id === 'season') { rebuildSeasonWeeks(); return; }
+  if (POOLED_EVENTS[ev.id]) { rebuildSeasonWeeks(); return; }
   const cloud = CLOUD[ev.id];
   const source = Array.isArray(cloud) ? cloud : ev.baseWeeks;
   WEEKS = source
@@ -1922,7 +2012,7 @@ let adminOverwriteId = null;
 function recomputeAll() {
   rebuildWeeks();
   YTD = buildYTD();
-  ALL_VIEWS = (state.eventId === 'season' ? [] : WEEKS.map(w => ({ kind: 'week', id: w.id, label: w.label, date: w.date })))
+  ALL_VIEWS = (POOLED_EVENTS[state.eventId] ? [] : WEEKS.map(w => ({ kind: 'week', id: w.id, label: w.label, date: w.date })))
     .concat([{ kind: 'ytd', id: 'ytd', label: 'Year to Date' }]);
 }
 
@@ -1933,6 +2023,7 @@ function switchEvent(newId) {
   if (!EVENTS[newId]) return;
   if (typeof closeScorecard === 'function') closeScorecard();
   state.eventId = newId;
+  if (typeof playerName !== 'undefined') playerName = null;   // Player tab never remembers a pick
   recomputeAll();
   state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
   adminOverwriteId = null;          // week ids differ per event — reset overwrite mode
@@ -1950,6 +2041,7 @@ function applyEventChrome() {
   document.body.classList.toggle('scoring-vsPar', ev.scoring === 'vsPar');
   document.body.classList.toggle('scoring-quota', ev.scoring === 'quota');
   document.body.classList.toggle('event-season', ev.id === 'season');
+  document.body.classList.toggle('event-player', ev.id === 'player');
   document.querySelectorAll('.event-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.event === state.eventId);
   });
@@ -2040,6 +2132,7 @@ function setView(v) {
 
 function renderWeekTabs() {
   const host = document.getElementById('weekTabs');
+  if (state.eventId === 'player') { renderPlayerPicker(host); return; }
   if (state.eventId === 'season') {
     // Season tab: no week picker — the bar becomes the All / Men's Night /
     // Snips source filter. Everything below is always Year-to-Date.
@@ -3162,10 +3255,388 @@ function closeScorecard() {
 }
 
 // =================================================================
+// PLAYER TAB — one player's 2026 story, compared to field and bracket
+// =================================================================
+let playerName = null;   // currently selected player (never remembered across loads)
+
+const PAR_TOTAL_ = COURSE.par.reduce((a,b) => a+b, 0);
+const SI_GROUPS = [
+  { key: 'hard', label: 'SI 1–6 · hardest', test: si => si <= 6 },
+  { key: 'mid',  label: 'SI 7–12',          test: si => si >= 7 && si <= 12 },
+  { key: 'easy', label: 'SI 13–18 · easiest', test: si => si >= 13 },
+];
+const DIST_ROWS = [
+  { key: 'albatrosses', label: 'Albatross', color: '#facc15' },
+  { key: 'eagles',      label: 'Eagle',     color: '#b48dd9' },
+  { key: 'birdies',     label: 'Birdie',    color: '#ff6b5e' },
+  { key: 'pars',        label: 'Par',       color: '#62d4a1' },
+  { key: 'bogeys',      label: 'Bogey',     color: '#f59e0b' },
+  { key: 'doubles',     label: 'Double+',   color: '#8a4a4e' },
+];
+
+// ---------- small helpers ----------
+const pSigned = (n, dp) => { const v = Math.round(n * Math.pow(10, dp)) / Math.pow(10, dp); if (Math.abs(v) < 1e-9) return 'E'; return (v > 0 ? '+' : '') + v.toFixed(dp); };
+const pSignedInt = n => n === 0 ? 'E' : (n > 0 ? '+' + n : String(n));
+const pCls = n => n < -1e-9 ? 'under' : (n > 1e-9 ? 'over' : 'even');
+const netScoresOf = r => r.scores.map((s,i) => s - strokesOnHole(r.hc, COURSE.si[i]));
+const holeVal = (r, i, mode) => mode === 'net' ? r.scores[i] - strokesOnHole(r.hc, COURSE.si[i]) : r.scores[i];
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+function mean(arr) { return arr.length ? arr.reduce((a,b)=>a+b,0) / arr.length : NaN; }
+function stdev(arr) { if (arr.length < 2) return 0; const m = mean(arr); return Math.sqrt(arr.reduce((s,x)=>s+(x-m)*(x-m),0) / (arr.length-1)); }
+
+// Every round in the current (pooled, filtered) WEEKS, tagged with its week.
+function allPlayerRounds() {
+  const out = [];
+  WEEKS.forEach(w => w.rounds.forEach(r => out.push({ week: w, round: r })));
+  return out;
+}
+function roundsFor(name) { return allPlayerRounds().filter(x => x.round.name === name); }
+
+// Average strokes over par on hole i across a set of {week, round} entries.
+function overParAt(entries, i, mode) {
+  if (!entries.length) return NaN;
+  return mean(entries.map(e => holeVal(e.round, i, mode) - COURSE.par[i]));
+}
+// Average strokes over par across all holes matching `holeFilter(i)`.
+function overParWhere(entries, holeFilter, mode) {
+  const vals = [];
+  entries.forEach(e => COURSE.par.forEach((p,i) => { if (holeFilter(i)) vals.push(holeVal(e.round, i, mode) - p); }));
+  return mean(vals);
+}
+function distOf(entries, mode) {
+  const sd = { albatrosses:0, eagles:0, birdies:0, pars:0, bogeys:0, doubles:0, total: entries.length * 18 };
+  entries.forEach(e => { const d = scorecardDist(e.round.scores, e.round.hc, mode); for (const k of DIST_ROWS.map(r=>r.key)) sd[k] += d[k]; });
+  return sd;
+}
+function parLabel(d) { return d <= -3 ? 'albatross' : d === -2 ? 'eagle' : d === -1 ? 'birdie' : d === 0 ? 'par' : d === 1 ? 'bogey' : d === 2 ? 'double' : d === 3 ? 'triple' : 'quad+'; }
+
+// ---------- picker (lives in the week bar) ----------
+function renderPlayerPicker(host) {
+  const srcOpts = [['all', 'All Rounds'], ['mensNight', "Men’s Night"], ['snips', 'Weekend Snips']];
+  const names = [...YTD].sort((a,b) => a.name.localeCompare(b.name));
+  host.innerHTML =
+    srcOpts.map(([k, lbl]) => `<button class="week-tab${k === seasonFilter ? ' active ytd' : ''}" data-src="${k}">${lbl}</button>`).join('') +
+    `<select class="week-select player-select" id="playerSelect">
+       <option value="">Choose a player…</option>
+       ${names.map(p => `<option value="${esc(p.name)}"${p.name === playerName ? ' selected' : ''}>${esc(p.name)} · ${p.rounds} rd${p.rounds===1?'':'s'}</option>`).join('')}
+     </select>`;
+  host.querySelectorAll('.week-tab').forEach(btn => btn.addEventListener('click', () => {
+    if (btn.dataset.src === seasonFilter) return;
+    seasonFilter = btn.dataset.src;
+    recomputeAll(); state.view = ALL_VIEWS[0]; renderAll();
+  }));
+  document.getElementById('playerSelect').addEventListener('change', e => {
+    playerName = e.target.value || null;
+    renderPlayerPage();
+    if (playerName) { const sect = document.getElementById('playerSection'); if (sect) sect.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  });
+  document.getElementById('weekCount').textContent = WEEKS.length;
+  document.getElementById('uniquePlayers').textContent = YTD.length;
+}
+
+// ---------- page ----------
+function renderPlayerPage() {
+  const host = document.getElementById('playerBody');
+  if (!host) return;
+  const srcLabel = seasonFilter === 'all' ? 'all 2026 rounds' : (seasonFilter === 'mensNight' ? "Men’s Night rounds" : 'Weekend Snips rounds');
+
+  if (!playerName) {
+    const top = [...YTD].sort((a,b) => b.rounds - a.rounds || a.name.localeCompare(b.name)).slice(0, 16);
+    host.innerHTML = `
+      <div class="panel player-empty">
+        <div class="player-empty-title">Pick a player to see their 2026 story</div>
+        <div class="player-empty-sub">Use the picker above, or tap a regular:</div>
+        <div class="player-chips">${top.map(p => `<button class="player-chip" data-name="${esc(p.name)}">${esc(p.name)}<span>${p.rounds}</span></button>`).join('')}</div>
+      </div>`;
+    host.querySelectorAll('.player-chip').forEach(b => b.addEventListener('click', () => {
+      playerName = b.dataset.name;
+      const sel = document.getElementById('playerSelect'); if (sel) sel.value = playerName;
+      renderPlayerPage();
+    }));
+    return;
+  }
+
+  const mine = roundsFor(playerName);
+  const agg = YTD.find(p => p.name === playerName);
+  if (!mine.length || !agg) {
+    host.innerHTML = `<div class="panel player-empty"><div class="player-empty-title">${esc(playerName)}</div><div class="player-empty-sub">No ${srcLabel} on record. Try a different filter above.</div></div>`;
+    return;
+  }
+
+  const field = allPlayerRounds();
+  const bracketRounds = field.filter(x => x.round.bracket === agg.bracket);
+  const bracketName = { low: 'Low (0–7)', mid: 'Mid (8–15)', high: 'High (16+)' }[agg.bracket];
+  const nMN = mine.filter(x => x.week.source === 'mensNight').length;
+  const nSN = mine.filter(x => x.week.source === 'snips').length;
+  const grossList = mine.map(x => x.round.gross), netList = mine.map(x => x.round.net);
+  const fieldAvgG = mean(field.map(x => x.round.gross)), fieldAvgN = mean(field.map(x => x.round.net));
+  const brAvgG = mean(bracketRounds.map(x => x.round.gross)), brAvgN = mean(bracketRounds.map(x => x.round.net));
+  const myDist = distOf(mine, 'gross'), myDistN = distOf(mine, 'net');
+  const fieldDist = distOf(field, 'gross'), brDist = distOf(bracketRounds, 'gross');
+  const fieldDistN = distOf(field, 'net'), brDistN = distOf(bracketRounds, 'net');
+  const pctOf = (d, k) => d.total ? d[k] / d.total * 100 : 0;
+  const birdiesPlus = r => r.birdies + r.eagles + r.albatrosses;
+  const srcTag = w => w.source === 'mensNight' ? "Men’s Night" : 'Snips';
+  const shortLabel = w => w.label.replace(/^(Men’s Night|Snips) · /, '');
+
+  // ----- 1. season card -----
+  const kpi = (lbl, val, sub) => `<div class="pk"><div class="pk-lbl">${lbl}</div><div class="pk-val">${val}</div>${sub ? `<div class="pk-sub">${sub}</div>` : ''}</div>`;
+  const cmp = (mineV, brV, fieldV, dp) => `you ${mineV.toFixed(dp)} · ${bracketName.split(' ')[0]} ${brV.toFixed(dp)} · field ${fieldV.toFixed(dp)}`;
+  const bestG = [...mine].sort((a,b) => a.round.gross - b.round.gross || b.week.date.localeCompare(a.week.date))[0];
+  const bestN = [...mine].sort((a,b) => a.round.net - b.round.net)[0];
+  const worstG = [...mine].sort((a,b) => b.round.gross - a.round.gross)[0];
+  const sec1 = `
+    <div class="panel player-hero">
+      <div class="player-hero-head">
+        <div>
+          <div class="player-hero-name">${esc(playerName)}</div>
+          <div class="player-hero-meta">HC ${agg.hc} · ${bracketName} bracket · ${mine.length} round${mine.length===1?'':'s'} (${nMN} Men’s Night · ${nSN} Snips)</div>
+        </div>
+        <div class="player-hero-vs"><span class="pk-lbl">Season vs par</span><span class="pk-big ${pCls(agg.avgGross - PAR_TOTAL_)}">${pSigned(agg.avgGross - PAR_TOTAL_, 1)}</span><span class="pk-lbl">gross · net ${pSigned(agg.avgNet - PAR_TOTAL_, 1)}</span></div>
+      </div>
+      <div class="pk-grid">
+        ${kpi('Avg gross', agg.avgGross.toFixed(1), cmp(agg.avgGross, brAvgG, fieldAvgG, 1))}
+        ${kpi('Avg net', agg.avgNet.toFixed(1), cmp(agg.avgNet, brAvgN, fieldAvgN, 1))}
+        ${kpi('Best gross', bestG.round.gross, `${bestG.week.date} · ${srcTag(bestG.week)}`)}
+        ${kpi('Best net', bestN.round.net, `${bestN.week.date} · ${srcTag(bestN.week)}`)}
+        ${kpi('Front · Back', `${agg.avgFront.toFixed(1)} · ${agg.avgBack.toFixed(1)}`, `${pSigned(agg.avgFront - 36, 1)} · ${pSigned(agg.avgBack - 35, 1)} vs par`)}
+        ${kpi('Birdies or better', myDist.birdies + myDist.eagles + myDist.albatrosses, `${(pctOf(myDist,'birdies')+pctOf(myDist,'eagles')+pctOf(myDist,'albatrosses')).toFixed(1)}% of holes · field ${(pctOf(fieldDist,'birdies')+pctOf(fieldDist,'eagles')+pctOf(fieldDist,'albatrosses')).toFixed(1)}%`)}
+        ${kpi('Par rate', pctOf(myDist,'pars').toFixed(1) + '%', `bracket ${pctOf(brDist,'pars').toFixed(1)}% · field ${pctOf(fieldDist,'pars').toFixed(1)}%`)}
+        ${kpi('Double+ rate', pctOf(myDist,'doubles').toFixed(1) + '%', `bracket ${pctOf(brDist,'doubles').toFixed(1)}% · field ${pctOf(fieldDist,'doubles').toFixed(1)}%`)}
+        ${kpi('Spread', `${bestG.round.gross}–${worstG.round.gross}`, `std dev ${stdev(grossList).toFixed(1)} strokes`)}
+      </div>
+    </div>`;
+
+  // ----- 2. trend chart (inline SVG) -----
+  const sec2 = renderPlayerTrend(mine, fieldAvgG);
+
+  // ----- 3. hole by hole -----
+  const holeRows = COURSE.par.map((p,i) => ({
+    hole: i+1, par: p, si: COURSE.si[i],
+    g: overParAt(mine, i, 'gross'), n: overParAt(mine, i, 'net'),
+    fg: overParAt(field, i, 'gross'), bg: overParAt(bracketRounds, i, 'gross'),
+    gAvg: mean(mine.map(x => x.round.scores[i])), nAvg: mean(mine.map(x => holeVal(x.round, i, 'net'))),
+  }));
+  const maxAbs = Math.max(0.5, ...holeRows.map(h => Math.max(Math.abs(h.g), Math.abs(h.n), Math.abs(h.fg))));
+  const bar = (v) => { const w = Math.min(50, Math.abs(v) / maxAbs * 50); return `<div class="pb-track"><div class="pb-zero"></div><div class="pb-fill ${v < 0 ? 'neg' : 'pos'}" style="width:${w}%;background:${v < 0 ? '#62d4a1' : '#ff8e84'}"></div></div>`; };
+  const sec3 = `
+    <div class="section-head"><span class="num">P.03</span><h2>Hole by Hole</h2><span class="sub">Your average vs par on every hole — gross and net — beside the field</span></div>
+    <div class="panel" style="padding:18px 20px;">
+      <div class="player-scroll"><table class="holes-table player-holes">
+        <thead><tr><th>Hole</th><th>Par·SI</th><th>Gross avg</th><th>vs par</th><th>Net avg</th><th>vs par</th><th>Field</th><th>${bracketName.split(' ')[0]}</th><th>You − field</th></tr></thead>
+        <tbody>${holeRows.map(h => `<tr>
+          <td class="hole-num">${h.hole}</td>
+          <td class="hole-par-si">P${h.par} · SI${h.si}</td>
+          <td class="hole-avg">${h.gAvg.toFixed(2)}</td>
+          <td><div class="pb-cell">${bar(h.g)}<span class="hole-delta ${h.g < 0 ? 'under' : ''}">${pSigned(h.g, 2)}</span></div></td>
+          <td class="hole-avg">${h.nAvg.toFixed(2)}</td>
+          <td><div class="pb-cell">${bar(h.n)}<span class="hole-delta ${h.n < 0 ? 'under' : ''}">${pSigned(h.n, 2)}</span></div></td>
+          <td class="hole-delta ${h.fg < 0 ? 'under' : ''}">${pSigned(h.fg, 2)}</td>
+          <td class="hole-delta ${h.bg < 0 ? 'under' : ''}">${pSigned(h.bg, 2)}</td>
+          <td class="hole-delta ${h.g - h.fg < -1e-9 ? 'under' : 'over-field'}">${pSigned(h.g - h.fg, 2)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      <div class="player-note">Bars show strokes over (red) or under (green) par. "You − field" negative means you beat the field average on that hole.</div>
+    </div>`;
+
+  // ----- 4. par 3 / 4 / 5 -----
+  const parTypes = [3,4,5].map(pv => {
+    const holes = COURSE.par.map((p,i) => p === pv ? i+1 : null).filter(Boolean);
+    const f = i => COURSE.par[i] === pv;
+    return { pv, holes, g: overParWhere(mine, f, 'gross'), n: overParWhere(mine, f, 'net'), fg: overParWhere(field, f, 'gross'), bg: overParWhere(bracketRounds, f, 'gross'), fn: overParWhere(field, f, 'net'), bn: overParWhere(bracketRounds, f, 'net') };
+  });
+  const cmpRow = (lbl, v, color) => `<div class="pc-row"><div class="pc-lbl">${lbl}</div><div class="pc-track"><div class="pc-fill" style="width:${Math.min(100, Math.max(0, v) / 1.5 * 100)}%;background:${color}"></div></div><div class="pc-val ${pCls(v)}">${pSigned(v, 2)}</div></div>`;
+  const sec4 = `
+    <div class="section-head"><span class="num">P.04</span><h2>Par 3s · Par 4s · Par 5s</h2><span class="sub">Average strokes over par by hole type</span></div>
+    <div class="player-panel-grid"><div class="dist-grid par-type-grid">${parTypes.map(t => `
+      <div class="dist-card">
+        <div class="dist-card-title">Par ${t.pv}s</div>
+        <div class="dist-card-sub">holes ${t.holes.join(', ')} · ${t.holes.length * mine.length} played</div>
+        <div class="pc-big"><span class="${pCls(t.g)}">${pSigned(t.g, 2)}</span><span class="pc-big-lbl">gross · net ${pSigned(t.n, 2)}</span></div>
+        ${cmpRow('You · gross', t.g, '#ff8e84')}
+        ${cmpRow('You · net', t.n, '#62d4a1')}
+        ${cmpRow(bracketName.split(' ')[0] + ' · gross', t.bg, 'rgba(255,255,255,0.45)')}
+        ${cmpRow('Field · gross', t.fg, 'rgba(255,255,255,0.25)')}
+      </div>`).join('')}
+    </div></div>`;
+
+  // ----- 5. how I make my score -----
+  const distCard = (title, mineD, brD, fdD) => {
+    const maxN = Math.max(...DIST_ROWS.map(r => mineD[r.key]), 1);
+    return `<div class="dist-card">
+      <div class="dist-card-title">${title}</div>
+      <div class="dist-card-sub">${mineD.total} holes · you vs ${bracketName.split(' ')[0]} vs field</div>
+      <div class="dist-rows">${DIST_ROWS.map(r => `
+        <div class="dist-row player-dist-row">
+          <div class="dist-row-label">${r.label}</div>
+          <div class="dist-row-track"><div class="dist-row-fill${mineD[r.key] ? ' nonzero' : ''}" style="width:${mineD[r.key] / maxN * 100}%;background:${r.color}"></div></div>
+          <div class="dist-row-val">${mineD[r.key]}<span>${pctOf(mineD, r.key).toFixed(1)}%</span></div>
+          <div class="dist-row-cmp">${pctOf(brD, r.key).toFixed(1)}% · ${pctOf(fdD, r.key).toFixed(1)}%</div>
+        </div>`).join('')}</div>
+    </div>`;
+  };
+  const sec5 = `
+    <div class="section-head"><span class="num">P.05</span><h2>How ${esc(playerName.split(' ')[0])} Makes a Score</h2><span class="sub">Share of holes by result — the grey column is bracket % · field %</span></div>
+    <div class="player-panel-grid"><div class="dist-grid player-dist-grid">${distCard('Gross', myDist, brDist, fieldDist)}${distCard('Net', myDistN, brDistN, fieldDistN)}</div></div>`;
+
+  // ----- 6. best & worst rounds -----
+  const bestBirdies = [...mine].sort((a,b) => birdiesPlus(b.round) - birdiesPlus(a.round) || a.round.gross - b.round.gross)[0];
+  const mostPars = [...mine].sort((a,b) => b.round.pars - a.round.pars || a.round.gross - b.round.gross)[0];
+  const mostBogeys = [...mine].sort((a,b) => b.round.bogeys - a.round.bogeys || b.round.gross - a.round.gross)[0];
+  const mostDoubles = [...mine].sort((a,b) => b.round.doubles - a.round.doubles || b.round.gross - a.round.gross)[0];
+  const tripleCount = r => r.scores.filter((s,i) => s - COURSE.par[i] >= 3).length;
+  const roundCard = (cls, title, e, big, sub) => `
+    <div class="insight-card ${cls} player-round-card" data-rid="${e.week.id}">
+      <div class="insight-title">${title}</div>
+      <div class="prc-big">${big}</div>
+      <div class="insight-body">${sub}<br><span class="prc-when">${e.week.date} · ${srcTag(e.week)} · ${shortLabel(e.week)}</span></div>
+      <div class="prc-tap">tap for scorecard</div>
+    </div>`;
+  const sec6 = `
+    <div class="section-head"><span class="num">P.06</span><h2>Best &amp; Worst Rounds</h2><span class="sub">Tap any card to open that scorecard</span></div>
+    <div class="insights-grid">
+      ${roundCard('green', 'Best gross', bestG, bestG.round.gross, `${pSignedInt(bestG.round.gross - PAR_TOTAL_)} vs par · net ${bestG.round.net} · HC ${bestG.round.hc}`)}
+      ${roundCard('green', 'Best net', bestN, bestN.round.net, `${pSignedInt(bestN.round.net - PAR_TOTAL_)} vs par · gross ${bestN.round.gross} · HC ${bestN.round.hc}`)}
+      ${roundCard('green', 'Most birdies or better', bestBirdies, birdiesPlus(bestBirdies.round), `${bestBirdies.round.birdies} birdie${bestBirdies.round.birdies===1?'':'s'}${bestBirdies.round.eagles ? `, ${bestBirdies.round.eagles} eagle${bestBirdies.round.eagles===1?'':'s'}` : ''} · gross ${bestBirdies.round.gross}`)}
+      ${roundCard('green', 'Most pars', mostPars, mostPars.round.pars, `${(mostPars.round.pars/18*100).toFixed(0)}% of holes · gross ${mostPars.round.gross}`)}
+      ${roundCard('red', 'Most bogeys', mostBogeys, mostBogeys.round.bogeys, `gross ${mostBogeys.round.gross} · ${mostBogeys.round.doubles} double+`)}
+      ${roundCard('red', 'Most doubles or worse', mostDoubles, mostDoubles.round.doubles, `${tripleCount(mostDoubles.round)} triple+ · gross ${mostDoubles.round.gross}`)}
+    </div>
+    <div id="playerRoundCard"></div>`;
+
+  // ----- 7. by stroke index & front/back -----
+  const siRows = SI_GROUPS.map(g => ({ ...g, me: overParWhere(mine, i => g.test(COURSE.si[i]), 'gross'), meN: overParWhere(mine, i => g.test(COURSE.si[i]), 'net'), br: overParWhere(bracketRounds, i => g.test(COURSE.si[i]), 'gross'), fd: overParWhere(field, i => g.test(COURSE.si[i]), 'gross') }));
+  const fbRows = [
+    { label: 'Front 9', me: agg.avgFront - 36, meN: mean(mine.map(x => netScoresOf(x.round).slice(0,9).reduce((a,b)=>a+b,0))) - 36, br: mean(bracketRounds.map(x => x.round.front)) - 36, fd: mean(field.map(x => x.round.front)) - 36 },
+    { label: 'Back 9',  me: agg.avgBack - 35,  meN: mean(mine.map(x => netScoresOf(x.round).slice(9).reduce((a,b)=>a+b,0))) - 35,  br: mean(bracketRounds.map(x => x.round.back)) - 35,  fd: mean(field.map(x => x.round.back)) - 35 },
+  ];
+  const cmpTable = (rows, unit) => `<div class="player-scroll"><table class="holes-table player-cmp"><thead><tr><th></th><th>You gross</th><th>You net</th><th>${bracketName.split(' ')[0]}</th><th>Field</th><th>You − field</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td class="hole-par-si" style="text-align:left">${r.label}</td>
+      <td class="hole-delta ${r.me < 0 ? 'under' : ''}">${pSigned(r.me, 2)}</td>
+      <td class="hole-delta ${r.meN < 0 ? 'under' : ''}">${pSigned(r.meN, 2)}</td>
+      <td class="hole-delta ${r.br < 0 ? 'under' : ''}">${pSigned(r.br, 2)}</td>
+      <td class="hole-delta ${r.fd < 0 ? 'under' : ''}">${pSigned(r.fd, 2)}</td>
+      <td class="hole-delta ${r.me - r.fd < -1e-9 ? 'under' : 'over-field'}">${pSigned(r.me - r.fd, 2)}</td></tr>`).join('')}
+  </tbody></table></div><div class="player-note">${unit}</div>`;
+  const sec7 = `
+    <div class="section-head"><span class="num">P.07</span><h2>Hard Holes vs Easy Holes</h2><span class="sub">Strokes over par by stroke-index group, and front vs back</span></div>
+    <div class="grid-2">
+      <div class="panel player-cmp-panel" style="padding:18px 20px;">${cmpTable(siRows, 'Average strokes over par per hole in each SI group.')}</div>
+      <div class="panel player-cmp-panel" style="padding:18px 20px;">${cmpTable(fbRows, 'Average strokes over par per nine (front par 36, back par 35).')}</div>
+    </div>`;
+
+  // ----- 8. personal headlines -----
+  const hardest = [...holeRows].sort((a,b) => b.g - a.g)[0], easiest = [...holeRows].sort((a,b) => a.g - b.g)[0];
+  const beatsField = [...holeRows].sort((a,b) => (a.g - a.fg) - (b.g - b.fg))[0], fieldBeats = [...holeRows].sort((a,b) => (b.g - b.fg) - (a.g - a.fg))[0];
+  let bestStretch = { s: Infinity, i: 0 };
+  for (let i = 0; i <= 15; i++) { const v = (holeRows[i].g + holeRows[i+1].g + holeRows[i+2].g) / 3; if (v < bestStretch.s) bestStretch = { s: v, i }; }
+  let streak = { len: 0, e: null };
+  mine.forEach(e => { let run = 0; e.round.scores.forEach((s,i) => { if (s - COURSE.par[i] <= 0) { run++; if (run > streak.len) streak = { len: run, e }; } else run = 0; }); });
+  const half = Math.floor(mine.length / 2);
+  const firstHalf = mean(grossList.slice(0, Math.max(1, half))), secondHalf = mean(grossList.slice(Math.max(1, half)));
+  const trendDelta = mine.length >= 4 ? secondHalf - firstHalf : null;
+  const clutch = (() => { // par-3 tee shots: % of par 3s at par or better
+    const vals = []; mine.forEach(e => COURSE.par.forEach((p,i) => { if (p === 3) vals.push(e.round.scores[i] - p <= 0 ? 1 : 0); }));
+    return vals.length ? mean(vals) * 100 : NaN;
+  })();
+  const headlines = [
+    { cls: 'red', title: 'Your hardest hole', body: `<strong>Hole ${hardest.hole}</strong> (par ${hardest.par}, SI ${hardest.si}) costs you <strong>${pSigned(hardest.g, 2)}</strong> a round — field is ${pSigned(hardest.fg, 2)} there.` },
+    { cls: 'green', title: 'Your easiest hole', body: `<strong>Hole ${easiest.hole}</strong> (par ${easiest.par}, SI ${easiest.si}) — you average <strong>${pSigned(easiest.g, 2)}</strong>, field ${pSigned(easiest.fg, 2)}.` },
+    { cls: 'green', title: 'Where you beat the field', body: `<strong>Hole ${beatsField.hole}</strong>: you ${pSigned(beatsField.g, 2)} vs field ${pSigned(beatsField.fg, 2)} — <strong>${Math.abs(beatsField.g - beatsField.fg).toFixed(2)} strokes better</strong>.` },
+    { cls: 'red', title: 'Where the field beats you', body: `<strong>Hole ${fieldBeats.hole}</strong>: you ${pSigned(fieldBeats.g, 2)} vs field ${pSigned(fieldBeats.fg, 2)} — <strong>${Math.abs(fieldBeats.g - fieldBeats.fg).toFixed(2)} strokes worse</strong>.` },
+    { cls: '', title: 'Best 3-hole stretch', body: `Holes <strong>${bestStretch.i+1}–${bestStretch.i+3}</strong> are your sweet spot — averaging <strong>${pSigned(bestStretch.s, 2)}</strong> per hole.` },
+    { cls: '', title: 'Longest par-or-better streak', body: streak.e ? `<strong>${streak.len} holes</strong> in a row at par or better — ${streak.e.week.date} (${srcTag(streak.e.week)}, gross ${streak.e.round.gross}).` : 'No par-or-better holes yet.' },
+    { cls: trendDelta === null ? '' : (trendDelta < 0 ? 'green' : 'red'), title: 'Season trend', body: trendDelta === null ? `Need 4+ rounds for a trend — <strong>${mine.length}</strong> so far.` : `Second half of your season averages <strong>${secondHalf.toFixed(1)}</strong> vs <strong>${firstHalf.toFixed(1)}</strong> early on — ${trendDelta < 0 ? `<strong>${Math.abs(trendDelta).toFixed(1)} strokes better</strong>` : `${trendDelta.toFixed(1)} strokes worse`}.` },
+    { cls: '', title: 'Par-3 tee shots', body: isNaN(clutch) ? '' : `You walk off a par 3 at <strong>par or better ${clutch.toFixed(0)}%</strong> of the time; your par-3 average is ${pSigned(parTypes[0].g, 2)}.` },
+  ];
+  const sec8 = `
+    <div class="section-head"><span class="num">P.08</span><h2>${esc(playerName.split(' ')[0])}’s Headlines</h2><span class="sub">What your 2026 numbers say</span></div>
+    <div class="insights-grid">${headlines.map(h => `<div class="insight-card ${h.cls}"><div class="insight-title">${h.title}</div><div class="insight-body">${h.body}</div></div>`).join('')}</div>`;
+
+  // ----- 9. every round -----
+  const sec9 = `
+    <div class="section-head"><span class="num">P.09</span><h2>Every Round</h2><span class="sub">Tap a row for the scorecard</span></div>
+    <div class="panel" style="padding:18px 20px;"><div class="player-scroll"><table class="holes-table player-rounds">
+      <thead><tr><th>Date</th><th>Event</th><th>HC</th><th>Gross</th><th>vs par</th><th>Net</th><th>vs par</th><th>Front</th><th>Back</th><th>Birdie+</th><th>Par</th><th>Bogey</th><th>Dbl+</th></tr></thead>
+      <tbody>${mine.map(e => `<tr class="player-round-row" data-rid="${e.week.id}">
+        <td>${e.week.date}</td><td style="text-align:left">${srcTag(e.week)} · ${shortLabel(e.week)}</td><td>${e.round.hc}</td>
+        <td class="hole-avg">${e.round.gross}</td><td class="hole-delta ${e.round.gp < 0 ? 'under' : ''}">${pSignedInt(e.round.gp)}</td>
+        <td class="hole-avg">${e.round.net}</td><td class="hole-delta ${e.round.np < 0 ? 'under' : ''}">${pSignedInt(e.round.np)}</td>
+        <td>${e.round.front}</td><td>${e.round.back}</td><td>${birdiesPlus(e.round)}</td><td>${e.round.pars}</td><td>${e.round.bogeys}</td><td>${e.round.doubles}</td>
+      </tr>`).join('')}</tbody>
+    </table></div></div>`;
+
+  host.innerHTML = sec1 + sec2 + sec3 + sec4 + sec5 + sec6 + sec7 + sec8 + sec9;
+
+  // wire scorecard taps
+  const openRound = rid => {
+    const e = mine.find(x => String(x.week.id) === String(rid));
+    const slot = document.getElementById('playerRoundCard');
+    if (!e || !slot) return;
+    if (slot.dataset.rid === String(rid)) { slot.innerHTML = ''; slot.dataset.rid = ''; return; }
+    slot.dataset.rid = String(rid);
+    slot.innerHTML = renderPlayerScorecard(e);
+    slot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+  host.querySelectorAll('.player-round-card, .player-round-row').forEach(el => el.addEventListener('click', () => openRound(el.dataset.rid)));
+  host.querySelectorAll('.trend-dot').forEach(el => el.addEventListener('click', () => openRound(el.dataset.rid)));
+}
+
+// A single round's scorecard (gross + net rows), same cell styling as standings.
+function renderPlayerScorecard(e) {
+  const r = e.round;
+  const strokes = COURSE.si.map(si => strokesOnHole(r.hc, si));
+  const net = r.scores.map((s,i) => s - strokes[i]);
+  const cell = (s, i) => `<td class="score-cell ${scoreClass(s, COURSE.par[i])}">${s}${strokes[i] > 0 && s === r.scores[i] ? '<span class="stroke-dot"></span>' : ''}</td>`;
+  const nineHdr = (from) => `<tr><th></th>${COURSE.par.slice(from, from+9).map((_,k) => `<th>${from+k+1}</th>`).join('')}<th>${from ? 'In' : 'Out'}</th></tr>`;
+  const parRow = (from) => `<tr><th>Par</th>${COURSE.par.slice(from, from+9).map(p => `<td>${p}</td>`).join('')}<td>${from ? 35 : 36}</td></tr>`;
+  const siRow = (from) => `<tr><th>SI</th>${COURSE.si.slice(from, from+9).map(s => `<td style="opacity:.6">${s}</td>`).join('')}<td></td></tr>`;
+  const scoreRow = (lbl, arr, from, isGross) => `<tr><th>${lbl}</th>${arr.slice(from, from+9).map((s,k) => isGross ? cell(s, from+k) : `<td class="score-cell ${scoreClass(s, COURSE.par[from+k])}">${s}</td>`).join('')}<td><strong>${arr.slice(from, from+9).reduce((a,b)=>a+b,0)}</strong></td></tr>`;
+  const nine = from => `<table class="scorecard-table player-sc"><thead>${nineHdr(from)}</thead><tbody>${parRow(from)}${siRow(from)}${scoreRow('Gross', r.scores, from, true)}${scoreRow('Net', net, from, false)}</tbody></table>`;
+  return `<div class="panel player-sc-wrap">
+    <div class="scorecard-head"><div class="scorecard-name">${esc(r.name)} <span class="hc">${e.week.date} · ${e.week.label} · HC ${r.hc}</span></div><div class="pk-val">${r.gross} <span class="pk-sub" style="display:inline">(${pSignedInt(r.gp)}) · net ${r.net} (${pSignedInt(r.np)})</span></div></div>
+    <div class="player-scroll">${nine(0)}</div><div class="player-scroll" style="margin-top:10px">${nine(9)}</div>
+  </div>`;
+}
+
+// Gross / net by round, with par and the field average as reference lines.
+function renderPlayerTrend(mine, fieldAvgG) {
+  const n = mine.length;
+  const W = 760, H = 260, L = 44, R = 16, T = 18, B = 46;
+  const vals = mine.flatMap(e => [e.round.gross, e.round.net]).concat([PAR_TOTAL_, fieldAvgG]);
+  let lo = Math.floor(Math.min(...vals) / 5) * 5 - 2, hi = Math.ceil(Math.max(...vals) / 5) * 5 + 2;
+  const x = i => n === 1 ? (L + (W - L - R) / 2) : L + (W - L - R) * i / (n - 1);
+  const y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+  const path = key => mine.map((e,i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(e.round[key]).toFixed(1)}`).join(' ');
+  const ticks = []; for (let v = lo; v <= hi; v += 5) ticks.push(v);
+  const lbl = e => { const d = String(e.week.date || '').replace(/,?\s*\d{4}$/, ''); return d.length > 7 ? d.replace(/^(\w{3})\w*/, '$1') : d; };
+  const every = n > 10 ? Math.ceil(n / 8) : 1;
+  return `
+    <div class="section-head"><span class="num">P.02</span><h2>Round by Round</h2><span class="sub">Gross and net for every round, in date order</span></div>
+    <div class="panel" style="padding:16px 12px 10px;">
+      <div class="chart-legend"><div class="legend-item"><span class="legend-swatch" style="background:#ff8e84"></span>Gross</div><div class="legend-item"><span class="legend-swatch" style="background:#62d4a1"></span>Net</div><div class="legend-item"><span class="legend-swatch" style="background:rgba(255,255,255,0.35);height:2px"></span>Field avg gross ${fieldAvgG.toFixed(1)}</div><div class="legend-item"><span class="legend-swatch" style="background:transparent;border-top:2px dashed rgba(255,255,255,0.6);height:0"></span>Par 71</div></div>
+      <svg class="player-trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+        ${ticks.map(v => `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,0.08)"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="rgba(255,255,255,0.7)" font-family="JetBrains Mono, monospace">${v}</text>`).join('')}
+        <line x1="${L}" x2="${W-R}" y1="${y(PAR_TOTAL_)}" y2="${y(PAR_TOTAL_)}" stroke="rgba(255,255,255,0.6)" stroke-dasharray="4 4"/>
+        <line x1="${L}" x2="${W-R}" y1="${y(fieldAvgG)}" y2="${y(fieldAvgG)}" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>
+        <path d="${path('gross')}" fill="none" stroke="#ff8e84" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="${path('net')}" fill="none" stroke="#62d4a1" stroke-width="2.5" stroke-linejoin="round"/>
+        ${mine.map((e,i) => `
+          <circle class="trend-dot" data-rid="${e.week.id}" cx="${x(i)}" cy="${y(e.round.gross)}" r="5" fill="#ff8e84" stroke="#091529" stroke-width="1.5"><title>${e.week.date} · gross ${e.round.gross}</title></circle>
+          <circle class="trend-dot" data-rid="${e.week.id}" cx="${x(i)}" cy="${y(e.round.net)}" r="5" fill="#62d4a1" stroke="#091529" stroke-width="1.5"><title>${e.week.date} · net ${e.round.net}</title></circle>
+          <text x="${x(i)}" y="${y(e.round.gross) - 9}" text-anchor="middle" font-size="10" fill="#ff8e84" font-family="JetBrains Mono, monospace">${e.round.gross}</text>
+          ${i % every === 0 || i === n - 1 ? `<text x="${x(i)}" y="${H - 26}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.7)" font-family="DM Sans, sans-serif">${lbl(e)}</text><text x="${x(i)}" y="${H - 13}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.45)" font-family="DM Sans, sans-serif">${e.week.source === 'mensNight' ? 'MN' : 'Snips'}</text>` : ''}
+        `).join('')}
+      </svg>
+    </div>`;
+}
+
+// =================================================================
 // RENDER ALL
 // =================================================================
 function renderAll() {
   renderWeekTabs();
+  if (state.eventId === 'player') { renderPlayerPage(); return; }
   renderKpis();
   renderBracketProfiles();
   renderInsights();
@@ -3485,7 +3956,7 @@ function renderStoredWeeks() {
   const wrap = document.getElementById('storedWeeksWrap');
   const list = document.getElementById('storedWeeksList');
   if (!wrap || !list) return;
-  if (!WEEKS.length || state.eventId === 'season') { wrap.style.display = 'none'; return; }
+  if (!WEEKS.length || POOLED_EVENTS[state.eventId]) { wrap.style.display = 'none'; return; }
   wrap.style.display = '';
 
   list.innerHTML = WEEKS.map(w => {
@@ -3605,7 +4076,7 @@ document.getElementById('parseAddBtn').addEventListener('click', async () => {
   }
   if (!raw.trim()) { showParseResult('Paste box is empty.', 'error'); return; }
   if (!isAdmin()) { showParseResult('Please sign in as admin first.', 'error'); return; }
-  if (state.eventId === 'season') { showParseResult('Switch to Men\u2019s Night or Weekend Snips to add data.', 'error'); return; }
+  if (POOLED_EVENTS[state.eventId]) { showParseResult('Switch to Men\u2019s Night or Weekend Snips to add data.', 'error'); return; }
 
   const overwriting = adminOverwriteId != null;
   const targetId = overwriting ? adminOverwriteId : nextWeekId();
