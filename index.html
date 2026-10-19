@@ -6,7 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v7.9   Scorecard key on phones: two roomy columns (no overlap on the
+  v7.9   Hole-chart chips read "vs HC" / "vs ’26" on every screen
+         (’26 instead of 2026); under-par holes show "−0.14" not "+-0.14".
+         Scorecard key on phones: two roomy columns (no overlap on the
          Albatross ring); Snips cards no longer repeat the date.
          Activity tab: "Clear activity log" button (admin only) wipes
          every logged event and the visitor list, with a confirm.
@@ -3219,7 +3221,7 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
   const sgn = d => d === 0 ? '=' : (d > 0 ? '+' : '\u2212') + Math.abs(d);
   // Any easier (positive) = green, any harder (negative) = red, equal = plain ink.
   const dFill = d => d < 0 ? 'var(--up)' : d > 0 ? 'var(--down)' : 'var(--fg)';
-  const siTag = isMobile ? 'HC' : 'vs HC', yrTag = isMobile ? '\u201926' : 'vs 2026';
+  const siTag = 'vs HC', yrTag = 'vs \u201926';
   const extraChars = (siTag.length + 5) + (cpi ? (yrTag.length + 5) : 0);
   const piW = isMobile ? 0 : Math.ceil(fPI * 0.6 * (piLbl.length + 4 + extraChars)) + 10;   // desktop: room for the label right of the longest bar
   const pad = { l: 2, r: 12 + piW, t: isMobile ? 40 : 36, b: 12 };
@@ -3264,7 +3266,7 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
 
     // over-par value INSIDE the bar — at its right end when there's
     // room, otherwise just past a very short bar.
-    const valStr = `+${val.toFixed(2)}`;
+    const valStr = `${val < 0 ? '\u2212' : '+'}${Math.abs(val).toFixed(2)}`;
     const fitsInside = barW > fVal * 3.4;
     const valX = fitsInside ? axisX + barW - 10 : axisX + barW + 8;
     const valAnchor = fitsInside ? 'end' : 'start';
