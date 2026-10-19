@@ -6,6 +6,11 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v6.4   Every scorecard ends with a gross key: notation glyph, count
+         and % for albatross, eagle, birdie, par, bogey, double+, and a
+         gold "Hole in one" entry when there is one. Hole-in-one text
+         and rings pulse wherever they appear (banner, headline card,
+         Ringer Board cell, key row).
   v6.3   Phones: slimmer page gutters; scorecards and the Ringer Board
          fit a sideways phone with zero horizontal scroll; in portrait a
          "turn your phone sideways" hint appears above wide cards.
@@ -737,6 +742,37 @@
   .round-card-table .ringer-cell { position: relative; }
   .scorecard-inline .player-scroll { overflow-x: auto; }
   .ringer-panel { padding: 22px 24px; }
+  /* ===== KEY ROW (under every scorecard) ===== */
+  .round-key { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 12px 10px; align-items: center; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule); position: relative; }
+  .rk-item { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .rk-glyph { flex-shrink: 0; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; }
+  .rk-g { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--ink); }
+  .rk-glyph.birdie .rk-g    { box-shadow: 0 0 0 1.6px var(--ring-red); }
+  .rk-glyph.eagle .rk-g     { box-shadow: 0 0 0 1.6px var(--ring-red), 0 0 0 3.2px var(--bg), 0 0 0 4.8px var(--ring-red); }
+  .rk-glyph.albatross .rk-g { box-shadow: 0 0 0 1.6px var(--ring-red), 0 0 0 3.2px var(--bg), 0 0 0 4.8px var(--ring-red), 0 0 0 6.4px var(--bg), 0 0 0 8px var(--ring-red); }
+  .rk-glyph.ace .rk-g       { box-shadow: 0 0 0 1.6px var(--ace), 0 0 0 3.2px var(--bg), 0 0 0 4.8px var(--ace), 0 0 0 6.4px var(--bg), 0 0 0 8px var(--ace); color: var(--ace); }
+  .rk-glyph.par .rk-g       { box-shadow: none; }
+  .rk-glyph.bogey .rk-g     { border-radius: 2px; box-shadow: 0 0 0 1.6px var(--ink); }
+  .rk-glyph.double .rk-g    { border-radius: 2px; box-shadow: 0 0 0 1.6px var(--ink), 0 0 0 3.2px var(--bg), 0 0 0 4.8px var(--ink); }
+  .rk-lbl { font-size: var(--t-xs); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; line-height: 1.1; }
+  .rk-val { font-family: 'Fraunces', serif; font-size: 20px; line-height: 1.15; }
+  .rk-val span { font-family: 'JetBrains Mono', monospace; font-size: var(--t-sm); font-weight: 600; margin-left: 2px; }
+  .rk-item.rk-ace .rk-lbl, .rk-item.rk-ace .rk-val { color: var(--ace); }
+  .rk-note { position: absolute; right: 0; top: -9px; background: var(--paper); padding: 0 8px; font-size: var(--t-xs); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; }
+  .scorecard-inline .rk-note { background: var(--paper); }
+  /* ===== HOLE-IN-ONE PULSE — a milestone, wherever it appears ===== */
+  @keyframes acePulse {
+    0%, 100% { transform: scale(1); text-shadow: 0 0 0 rgba(250,204,21,0); }
+    50%      { transform: scale(1.06); text-shadow: 0 0 14px rgba(250,204,21,0.75), 0 0 2px rgba(250,204,21,0.9); }
+  }
+  @keyframes aceRingPulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(250,204,21,0)); }
+    50%      { transform: scale(1.12); filter: drop-shadow(0 0 6px rgba(250,204,21,0.9)); }
+  }
+  .ace-pulse, .rk-item.rk-ace .rk-lbl { display: inline-block; transform-origin: left center; animation: acePulse 1.6s ease-in-out infinite; }
+  .ace-mark, .rk-glyph.ace .rk-g, .ringer-cell.ace .ringer-v { animation: aceRingPulse 1.6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .ace-pulse, .rk-item.rk-ace .rk-lbl, .ace-mark, .rk-glyph.ace .rk-g, .ringer-cell.ace .ringer-v { animation: none !important; } }
+  @media (max-width: 640px) { .round-key { grid-template-columns: repeat(3, 1fr); gap: 10px 6px; } .rk-val { font-size: 17px; } .rk-glyph { width: 30px; } }
   /* ===== PHONES ===== */
   .rotate-hint { display: none; }
   /* Portrait phone: tighter page gutters; wide tables scroll a little and say so. */
@@ -1470,7 +1506,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v6.3</div>
+    <div class="splash-version">v6.4</div>
   </div>
 </div>
 
@@ -1505,7 +1541,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v6.3</div>
+  <div class="masthead-version">v6.4</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -2848,7 +2884,7 @@ function renderInsights() {
     ? items.flatMap(a => (a.weeks || []).map(w => ({ week: { date: (WEEKS.find(x => x.id === w.id) || {}).date || '', source: (WEEKS.find(x => x.id === w.id) || {}).source }, round: w.round })))
     : items.map(r => ({ week: { date: state.view.date || '', source: WEEKS.find(x => x.id === state.view.id)?.source }, round: r }));
   const aces = findAces(aceEntries);
-  const aceCard = aces.length ? { cls: 'ace', title: `Hole in one${aces.length > 1 ? 's' : ''}`,
+  const aceCard = aces.length ? { cls: 'ace', title: `<span class="ace-pulse">Hole in one${aces.length > 1 ? 's' : ''}</span>`,
     body: aces.map(a => `<strong>${a.e.round.name}</strong> aced <strong>Hole ${a.hole}</strong>${a.e.week.date ? ` on ${a.e.week.date}` : ''}`).join('<br>') } : null;
 
   const items_ = [
@@ -3415,22 +3451,7 @@ function openScorecard(name) {
               : `net ${round.net} · G.Pts ${round.gp} · N.Pts ${round.np}`}</span></div>
         </div>
         ${renderRoundCardTables(round.scores, round.hc)}
-        <div class="scorecard-summary">
-          ${(() => {
-            const sMode = sectionMode.standings;
-            const sd = scorecardDist(round.scores, round.hc, sMode);
-            const pctR = (n) => (n / 18 * 100).toFixed(1);
-            const tag = sMode === 'net' ? ' (net)' : '';
-            return `
-              <div class="summary-item"><div class="lbl">Albatross${tag}</div><div class="val" style="color:var(--alb-text)">${sd.albatrosses}<span class="val-pct">${pctR(sd.albatrosses)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Eagle${tag}</div><div class="val" style="color:#b48dd9">${sd.eagles}<span class="val-pct">${pctR(sd.eagles)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Birdie${tag}</div><div class="val" style="color:#ff6b5e">${sd.birdies}<span class="val-pct">${pctR(sd.birdies)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Par${tag}</div><div class="val" style="color:var(--par-text)">${sd.pars}<span class="val-pct">${pctR(sd.pars)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Bogey${tag}</div><div class="val" style="color:#f59e0b">${sd.bogeys}<span class="val-pct">${pctR(sd.bogeys)}%</span></div></div>
-              <div class="summary-item"><div class="lbl">Double+${tag}</div><div class="val" style="color:var(--dbl-text)">${sd.doubles}<span class="val-pct">${pctR(sd.doubles)}%</span></div></div>
-            `;
-          })()}
-        </div>
+        ${renderRoundKey(round.scores)}
       </div>
     `;
   });
@@ -3818,7 +3839,7 @@ function renderAceBanner(aces, srcTag, withName) {
   return `<div class="ace-banner">
     <div class="ace-mark">1</div>
     <div class="ace-body">
-      <div class="ace-title">Hole in one${aces.length > 1 ? 's' : ''}!</div>
+      <div class="ace-title ace-pulse">Hole in one${aces.length > 1 ? 's' : ''}!</div>
       <div class="ace-list">${aces.map(a => `<span class="ace-item">${withName ? `<strong>${esc(a.e.round.name)}</strong> · ` : ''}Hole ${a.hole} (par ${a.par}) · ${fmtLeagueDate(a.e.week.date)} · ${srcTag(a.e.week)}</span>`).join('')}</div>
     </div>
   </div>`;
@@ -3848,6 +3869,21 @@ function renderRoundCardTables(scores, hc, opts) {
     </tbody></table>`;
   };
   return `<div class="rotate-hint">Turn your phone sideways to see the whole card</div><div class="player-scroll">${nine(0)}</div><div class="player-scroll" style="margin-top:8px">${nine(9)}</div>`;
+}
+
+// Key row under a scorecard: notation glyph · label · count · % of holes.
+// Always GROSS. "Hole in one" only appears when there is one.
+function renderRoundKey(scores) {
+  const n = scores.length || 18;
+  let a=0,e=0,b=0,p=0,bo=0,d=0,h1=0;
+  scores.forEach((v, i) => { const dd = v - COURSE.par[i]; if (v === 1) h1++; if (dd <= -3) a++; else if (dd === -2) e++; else if (dd === -1) b++; else if (dd === 0) p++; else if (dd === 1) bo++; else d++; });
+  const pct = x => (x / n * 100).toFixed(1) + '%';
+  const item = (cls, label, count, extra) => `<div class="rk-item${extra || ''}"><span class="rk-glyph ${cls}"><span class="rk-g">${count}</span></span><div class="rk-text"><div class="rk-lbl">${label}</div><div class="rk-val">${count} <span>${pct(count)}</span></div></div></div>`;
+  return `<div class="round-key">
+    ${h1 ? item('ace', 'Hole in one', h1, ' rk-ace') : ''}
+    ${item('albatross', 'Albatross', a)}${item('eagle', 'Eagle', e)}${item('birdie', 'Birdie', b)}${item('par', 'Par', p)}${item('bogey', 'Bogey', bo)}${item('double', 'Double+', d)}
+    <div class="rk-note">Key · gross</div>
+  </div>`;
 }
 
 // Ringer board: best score on every hole across the season, gross and net,
@@ -3895,6 +3931,7 @@ function renderPlayerScorecard(e) {
   return `<div class="panel player-sc-wrap">
     <div class="ringer-head"><div><div class="ringer-title">${esc(r.name)}</div><div class="player-hero-meta" style="margin-top:4px">${fmtLeagueDate(e.week.date)} · ${e.week.label} · HC ${r.hc}</div></div><div class="ringer-total"><span class="pk-big ${pCls(r.gp)}">${r.gross}</span><span class="pk-lbl">${pSignedInt(r.gp)} vs par · net ${r.net} (${pSignedInt(r.np)})</span></div></div>
     ${renderRoundCardTables(r.scores, r.hc)}
+    ${renderRoundKey(r.scores)}
   </div>`;
 }
 
