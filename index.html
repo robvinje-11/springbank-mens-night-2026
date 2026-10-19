@@ -6,6 +6,11 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v7.7   Every Round: tapping a round opens its scorecard inline, right
+         under that row (caret + highlight); Expand all / Collapse all
+         buttons above the list; Best & Worst cards and trend dots open
+         the round in the list. Player hole chart labels the rank as
+         "<First>'s Playing Index" (PI on phones).
   v7.6   Filter pills pulse more prominently (2px border to full navy
          / white). Hole-in-one headline says which event: Men's Night ·
          Week N, or Snips weekend, plus the date.
@@ -793,6 +798,15 @@
   .player-round-row { cursor: pointer; }
   .player-round-row:hover td { background: rgba(var(--fg-rgb),0.05); }
   .player-sc-wrap { margin-top: 14px; }
+  .player-round-detail > td { padding: 0 0 6px !important; background: rgba(var(--fg-rgb),0.03); white-space: normal; }
+  .player-round-detail .player-sc-wrap { margin: 6px 0 8px; box-shadow: none; }
+  .rr-sticky { position: sticky; left: 0; box-sizing: border-box; max-width: 100%; }
+  .player-round-row.open td { background: rgba(var(--fg-rgb),0.07); font-weight: 700; }
+  .rr-caret { display: inline-block; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 7px solid currentColor; opacity: 0.55; margin-right: 7px; transition: transform .18s ease; vertical-align: middle; }
+  .player-round-row.open .rr-caret { transform: rotate(90deg); opacity: 1; }
+  .rounds-tools { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .sf-btn.sf-tool { animation: none; border-width: 1.5px; opacity: 0.9; }
+  .sf-btn.sf-tool:disabled { opacity: 0.4; cursor: default; }
   .player-sc { min-width: 520px; }
   .player-trend { width: 100%; height: auto; display: block; }
   .ace-banner { display: flex; align-items: center; gap: 18px; margin: -24px 0 44px; padding: 18px 22px; border: 1.5px solid var(--ace); border-radius: 3px; background: var(--ace-bg); }
@@ -1592,7 +1606,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v7.6</div>
+    <div class="splash-version">v7.7</div>
   </div>
 </div>
 
@@ -1627,7 +1641,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v7.6</div>
+  <div class="masthead-version">v7.7</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -2436,7 +2450,7 @@ function switchEvent(newId) {
   if (newId === 'activity' && !isAdmin()) return;
   if (typeof closeScorecard === 'function') closeScorecard();
   state.eventId = newId;
-  if (typeof playerName !== 'undefined') { playerName = null; roundsFilter = 'all'; }   // Player tab never remembers a pick
+  if (typeof playerName !== 'undefined') { playerName = null; roundsFilter = 'all'; if (typeof expandedRounds !== 'undefined') expandedRounds.clear(); }   // Player tab never remembers a pick
   recomputeAll();
   state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
   adminOverwriteId = null;          // week ids differ per event — reset overwrite mode
@@ -3177,7 +3191,8 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
   const widestChars = Math.max(...labels.map(labelChars));
   const labelW = Math.ceil(widestChars * charW + fHole) + 6;
   const fPI = isMobile ? 15 : 13;
-  const piLbl = isMobile ? 'PI' : 'Playing Index';
+  // On a player's chart the label is personal: "Rob’s Playing Index" ("Rob’s PI" on phones).
+  const piLbl = (compareAvgs ? `${seriesLabel}\u2019s ` : '') + (isMobile ? 'PI' : 'Playing Index');
   const piW = Math.ceil(fPI * 0.6 * ((cpi ? 9 : 0) + piLbl.length + 4)) + 10;   // room for the label right of the longest bar
   const pad = { l: 2, r: 12 + piW, t: isMobile ? 40 : 36, b: 12 };
   const gap = 14;                  // small break between the nines
@@ -3626,6 +3641,7 @@ function closeScorecard() {
 // =================================================================
 let playerName = null;   // currently selected player (never remembered across loads)
 let roundsFilter = 'all'; // Every Round table: 'all' | 'mensNight' | 'snips'
+const expandedRounds = new Set(); // Every Round: ids of rounds whose scorecard is open inline
 let playerChartMode = 'gross'; // Player tab hole chart: 'gross' | 'net'
 
 const PAR_TOTAL_ = COURSE.par.reduce((a,b) => a+b, 0);
@@ -3695,7 +3711,7 @@ function renderPlayerPicker(host) {
     recomputeAll(); state.view = ALL_VIEWS[0]; renderAll();
   }));
   document.getElementById('playerSelect').addEventListener('change', e => {
-    playerName = e.target.value || null; roundsFilter = 'all';
+    playerName = e.target.value || null; roundsFilter = 'all'; expandedRounds.clear();
     renderPlayerPage();
     if (playerName) { const sect = document.getElementById('playerSection'); if (sect) sect.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   });
@@ -3718,7 +3734,7 @@ function renderPlayerPage() {
         <div class="player-chips">${top.map(p => `<button class="player-chip" data-name="${esc(p.name)}">${esc(p.name)}<span>${p.rounds}</span></button>`).join('')}</div>
       </div>`;
     host.querySelectorAll('.player-chip').forEach(b => b.addEventListener('click', () => {
-      playerName = b.dataset.name;
+      playerName = b.dataset.name; expandedRounds.clear();
       const sel = document.getElementById('playerSelect'); if (sel) sel.value = playerName;
       renderPlayerPage();
     }));
@@ -3889,8 +3905,7 @@ function renderPlayerPage() {
       ${roundCard('red', 'Worst gross', worstGross, worstGross.round.gross, `${pSignedInt(worstGross.round.gross - PAR_TOTAL_)} vs par · net ${worstGross.round.net} · ${worstGross.round.doubles} double+`)}
       ${roundCard('red', 'Most bogeys', mostBogeys, mostBogeys.round.bogeys, `gross ${mostBogeys.round.gross} · ${mostBogeys.round.doubles} double+`)}
       ${roundCard('red', 'Most doubles or worse', mostDoubles, mostDoubles.round.doubles, `${tripleCount(mostDoubles.round)} triple+ · gross ${mostDoubles.round.gross}`)}
-    </div>
-    <div id="playerRoundCard"></div>`;
+    </div>`;
 
   // ----- 7. by stroke index & front/back -----
   const siRows = SI_GROUPS.map(g => ({ ...g, me: overParWhere(mine, i => g.test(COURSE.si[i]), 'gross'), meN: overParWhere(mine, i => g.test(COURSE.si[i]), 'net'), br: overParWhere(bracketRounds, i => g.test(COURSE.si[i]), 'gross'), fd: overParWhere(field, i => g.test(COURSE.si[i]), 'gross') }));
@@ -3946,17 +3961,20 @@ function renderPlayerPage() {
   const rows = roundsFilter === 'all' ? rowsAll : rowsAll.filter(e => e.week.source === roundsFilter);
   const evLabel = w => w.source === 'mensNight' ? `Men\u2019s Night · ${shortLabel(w)}` : 'Snips';
   const pill = (k, lbl) => `<button class="sf-btn${roundsFilter === k ? ' active' : ''}" data-rf="${k}">${lbl}</button>`;
+  // Rounds that were expanded stay expanded across re-renders (filter taps).
+  const isOpen = e => expandedRounds.has(String(e.week.id));
   const sec9 = `
-    <div class="section-head"><span class="num">P.11</span><h2>Every Round</h2><span class="sub">In date order · tap a row for the scorecard</span></div>
-    <div class="section-filter" id="roundsFilterBar"><span class="sf-label">Event</span>${pill('all','All')}${pill('mensNight',"Men\u2019s Night")}${pill('snips','Snips')}<span class="sf-label" style="margin-left:auto">${rows.length} round${rows.length===1?'':'s'}</span></div>
+    <div class="section-head"><span class="num">P.11</span><h2>Every Round</h2><span class="sub">In date order · tap a row to open its scorecard right below</span></div>
+    <div class="section-filter" id="roundsFilterBar"><span class="sf-label">Event</span>${pill('all','All')}${pill('mensNight',"Men’s Night")}${pill('snips','Snips')}
+      <span class="rounds-tools"><button class="sf-btn sf-tool" data-rx="expand"${rows.length ? '' : ' disabled'}>Expand all</button><button class="sf-btn sf-tool" data-rx="collapse"${rows.some(isOpen) ? '' : ' disabled'}>Collapse all</button><span class="sf-label">${rows.length} round${rows.length===1?'':'s'}</span></span></div>
     <div class="panel" style="padding:18px 20px;"><div class="player-scroll"><table class="holes-table player-rounds">
       <thead><tr><th>#</th><th>Date</th><th>Event</th><th>HC</th><th>Gross</th><th>vs par</th><th>Net</th><th>vs par</th><th>Front</th><th>Back</th><th>Birdie+</th><th>Par</th><th>Bogey</th><th>Dbl+</th></tr></thead>
-      <tbody>${rows.length ? rows.map((e, i) => `<tr class="player-round-row" data-rid="${e.week.id}">
-        <td>${i + 1}</td><td style="text-align:left;white-space:nowrap">${fmtLeagueDate(e.week.date)}</td><td style="text-align:left">${evLabel(e.week)}</td><td>${e.round.hc}</td>
+      <tbody>${rows.length ? rows.map((e, i) => `<tr class="player-round-row${isOpen(e) ? ' open' : ''}" data-rid="${e.week.id}" aria-expanded="${isOpen(e)}">
+        <td><span class="rr-caret"></span>${i + 1}</td><td style="text-align:left;white-space:nowrap">${fmtLeagueDate(e.week.date)}</td><td style="text-align:left">${evLabel(e.week)}</td><td>${e.round.hc}</td>
         <td class="hole-avg">${e.round.gross}</td><td class="hole-delta ${e.round.gp < 0 ? 'under' : ''}">${pSignedInt(e.round.gp)}</td>
         <td class="hole-avg">${e.round.net}</td><td class="hole-delta ${e.round.np < 0 ? 'under' : ''}">${pSignedInt(e.round.np)}</td>
         <td>${e.round.front}</td><td>${e.round.back}</td><td>${birdiesPlus(e.round)}</td><td>${e.round.pars}</td><td>${e.round.bogeys}</td><td>${e.round.doubles}</td>
-      </tr>`).join('') : `<tr><td colspan="14" style="padding:22px;font-style:italic">No ${roundsFilter === 'mensNight' ? 'Men\u2019s Night' : 'Snips'} rounds for this player.</td></tr>`}</tbody>
+      </tr><tr class="player-round-detail" data-rid="${e.week.id}"${isOpen(e) ? '' : ' hidden'}><td colspan="14">${isOpen(e) ? `<div class="rr-sticky">${renderPlayerScorecard(e)}</div>` : ''}</td></tr>`).join('') : `<tr><td colspan="14" style="padding:22px;font-style:italic">No ${roundsFilter === 'mensNight' ? 'Men’s Night' : 'Snips'} rounds for this player.</td></tr>`}</tbody>
     </table></div></div>`;
 
   const secR = renderRingerBoard(mine, srcTag);
@@ -3973,17 +3991,45 @@ function renderPlayerPage() {
     const y = window.scrollY; renderPlayerPage(); window.scrollTo(0, y);
   }));
 
-  // wire scorecard taps
+  // Scorecards open INLINE, directly under the round's row in Every Round.
+  // The rounds table can be wider than a phone screen; the card sits in a
+  // sticky wrapper sized to the visible width so it never scrolls sideways
+  // with the table (its own Front/Back tables handle their own scroll).
+  fitRoundStickies();
+  const setRoundOpen = (rid, open, scroll) => {
+    rid = String(rid);
+    const e = mine.find(x => String(x.week.id) === rid);
+    const row = host.querySelector(`.player-round-row[data-rid="${rid}"]`);
+    const det = host.querySelector(`.player-round-detail[data-rid="${rid}"]`);
+    if (!e || !row || !det) return;
+    if (open) {
+      expandedRounds.add(rid);
+      if (!det.firstElementChild.innerHTML) det.firstElementChild.innerHTML = `<div class="rr-sticky">${renderPlayerScorecard(e)}</div>`;
+      det.hidden = false; row.classList.add('open'); row.setAttribute('aria-expanded', 'true');
+      fitRoundStickies();
+      if (scroll) row.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      expandedRounds.delete(rid);
+      det.hidden = true; row.classList.remove('open'); row.setAttribute('aria-expanded', 'false');
+    }
+    const col = host.querySelector('[data-rx="collapse"]'); if (col) col.disabled = !host.querySelector('.player-round-row.open');
+  };
+  const toggleRound = rid => setRoundOpen(rid, !expandedRounds.has(String(rid)), false);
+  // A round tapped elsewhere (Best & Worst card, trend dot) opens it in the
+  // list and scrolls there. If the filter hides it, switch to All first.
   const openRound = rid => {
     const e = mine.find(x => String(x.week.id) === String(rid));
-    const slot = document.getElementById('playerRoundCard');
-    if (!e || !slot) return;
-    if (slot.dataset.rid === String(rid)) { slot.innerHTML = ''; slot.dataset.rid = ''; return; }
-    slot.dataset.rid = String(rid);
-    slot.innerHTML = renderPlayerScorecard(e);
-    slot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (!e) return;
+    if (roundsFilter !== 'all' && e.week.source !== roundsFilter) { roundsFilter = 'all'; expandedRounds.add(String(rid)); renderPlayerPage(); const row = host.querySelector(`.player-round-row[data-rid="${rid}"]`); if (row) row.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    setRoundOpen(rid, true, true);
   };
-  host.querySelectorAll('.player-round-card, .player-round-row').forEach(el => el.addEventListener('click', () => openRound(el.dataset.rid)));
+  host.querySelectorAll('.player-round-row').forEach(el => el.addEventListener('click', () => toggleRound(el.dataset.rid)));
+  host.querySelectorAll('.player-round-card').forEach(el => el.addEventListener('click', () => openRound(el.dataset.rid)));
+  host.querySelectorAll('#roundsFilterBar [data-rx]').forEach(b => b.addEventListener('click', () => {
+    const all = rows.map(e => String(e.week.id));
+    if (b.dataset.rx === 'expand') all.forEach(id => setRoundOpen(id, true, false));
+    else all.forEach(id => setRoundOpen(id, false, false));
+  }));
   host.querySelectorAll('#roundsFilterBar [data-rf]').forEach(b => b.addEventListener('click', () => {
     if (b.dataset.rf === roundsFilter) return;
     roundsFilter = b.dataset.rf;
@@ -4107,6 +4153,14 @@ function renderPlayerScorecard(e) {
     ${renderRoundKey(r.scores)}
   </div>`;
 }
+
+function fitRoundStickies() {
+  document.querySelectorAll('#playerBody .rr-sticky').forEach(el => {
+    const sc = el.closest('.player-scroll');
+    if (sc) el.style.width = sc.clientWidth + 'px';
+  });
+}
+window.addEventListener('resize', fitRoundStickies);
 
 // Gross / net by round, with par and the field average as reference lines.
 function renderPlayerTrend(mine, fieldAvgG) {
@@ -4302,7 +4356,8 @@ function wireActivityHooks() {
     if (t.classList.contains('trend-dot')) return track('scorecard', 'trend:' + playerName);
     if (t.id === 'shareBtn') return track('share', 'share');
     if (t.id === 'themeBtn') return track('theme', document.documentElement.getAttribute('data-theme') === 'dark' ? 'to-light' : 'to-dark');
-    if (t.tagName === 'TR' && t.classList.contains('player-round-row')) return track('scorecard', 'round:' + playerName, { rid: t.dataset.rid });
+    if (t.tagName === 'TR' && t.classList.contains('player-round-detail')) return;
+    if (t.tagName === 'TR' && t.classList.contains('player-round-row')) return track('scorecard', 'round:' + playerName, { rid: t.dataset.rid, open: !t.classList.contains('open') });
     if (t.tagName === 'TR' && t.dataset.name && t.closest('#playerTableBody')) return track('scorecard', 'standings:' + t.dataset.name);
     if (t.tagName === 'A' && t.href && !t.href.startsWith(location.origin)) return track('link', t.href);
   }, true);
