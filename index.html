@@ -6,7 +6,7 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v7.7   Every Round: tapping a round opens its scorecard inline, right
+  v7.8   Every Round: tapping a round opens its scorecard inline, right
          under that row (caret + highlight); Expand all / Collapse all
          buttons above the list; Best & Worst cards and trend dots open
          the round in the list. Player hole chart labels the rank as
@@ -1606,7 +1606,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v7.7</div>
+    <div class="splash-version">v7.8</div>
   </div>
 </div>
 
@@ -1641,7 +1641,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v7.7</div>
+  <div class="masthead-version">v7.8</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -1779,7 +1779,7 @@
   <div class="panel">
     <div class="chart-legend" id="holeChartLegend">
       <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--ink)"></span> Par line</div>
-      <div style="flex-basis:100%;line-height:1.5;"><strong style="font-family:'JetBrains Mono',monospace">PI</strong> = Playing Index — how the hole actually ranked in this view (1 = hardest). Compare with SI, the card’s rating. <span style="color:var(--up);font-weight:700">Red</span> played much harder than its SI, <span style="color:var(--down);font-weight:700">green</span> much easier.</div>
+      <div style="flex-basis:100%;line-height:1.5;"><strong style="font-family:'JetBrains Mono',monospace">PI</strong> = Playing Index — how the hole actually ranked in this view (1 = hardest). <strong>vs SI</strong> is PI minus the card’s stroke index: <span style="color:var(--up);font-weight:700">negative / red</span> = played harder than rated, <span style="color:var(--down);font-weight:700">positive / green</span> = easier.</div>
     </div>
     <div class="hole-chart"><svg id="holeChart" viewBox="0 0 640 720" preserveAspectRatio="xMidYMid meet"></svg></div>
   </div>
@@ -3181,8 +3181,9 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
   const fHole = isMobile ? 17 : 14;   // hole-label font
   const fAxis = isMobile ? 16 : 14;   // axis-scale font
   const fVal  = isMobile ? 18 : 15;   // over-par value font
-  const rowH  = isMobile ? 52 : 42;   // row height
-  const barH  = isMobile ? 40 : 32;   // bar thickness
+  // Phones: the PI line sits UNDER the bar (full-width bars), so rows are taller.
+  const rowH  = isMobile ? 64 : 42;   // row height
+  const barH  = isMobile ? 30 : 32;   // bar thickness
   const charW = fHole * 0.6;          // monospace char width estimate
 
   // Widest label, e.g. "10 P3·SI18" — column auto-fits it.
@@ -3193,7 +3194,14 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
   const fPI = isMobile ? 15 : 13;
   // On a player's chart the label is personal: "Rob’s Playing Index" ("Rob’s PI" on phones).
   const piLbl = (compareAvgs ? `${seriesLabel}\u2019s ` : '') + (isMobile ? 'PI' : 'Playing Index');
-  const piW = Math.ceil(fPI * 0.6 * ((cpi ? 9 : 0) + piLbl.length + 4)) + 10;   // room for the label right of the longest bar
+  // Right of the rank: "+/-" vs the card's SI, and (player chart) vs the 2026 season's PI.
+  // Sign = PI minus the reference: negative = played harder than rated/than the field, positive = easier.
+  const sgn = d => d === 0 ? '=' : (d > 0 ? '+' : '\u2212') + Math.abs(d);
+  // Any easier (positive) = green, any harder (negative) = red, equal = plain ink.
+  const dFill = d => d < 0 ? 'var(--up)' : d > 0 ? 'var(--down)' : 'var(--fg)';
+  const siTag = isMobile ? 'SI' : 'vs SI', yrTag = isMobile ? '\u201926' : 'vs 2026';
+  const extraChars = (siTag.length + 5) + (cpi ? (yrTag.length + 5) : 0);
+  const piW = isMobile ? 0 : Math.ceil(fPI * 0.6 * (piLbl.length + 4 + extraChars)) + 10;   // desktop: room for the label right of the longest bar
   const pad = { l: 2, r: 12 + piW, t: isMobile ? 40 : 36, b: 12 };
   const gap = 14;                  // small break between the nines
   const H = pad.t + 18 * rowH + pad.b + gap;
@@ -3238,11 +3246,14 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
     html += `<text x="${valX}" y="${midY}" dominant-baseline="central" text-anchor="${valAnchor}" font-family="JetBrains Mono" font-size="${fVal}" font-weight="700" fill="var(--fg)">${valStr}</text>`;
 
     // Playing Index — just right of the bar (or of the outside value). Tinted when it disagrees with SI.
-    const piX = (fitsInside ? axisX + barW : valX + fVal * 0.6 * valStr.length) + 12;
+    const piX = isMobile ? axisX + 2 : (fitsInside ? axisX + barW : valX + fVal * 0.6 * valStr.length) + 12;
+    const piY = isMobile ? y + barH + 4 + fPI * 0.7 : midY;
     // Tint: vs the card's SI on the main tabs; vs the season's PI on a player chart.
-    const diff = cpi ? pi[i] - cpi[i] : pi[i] - COURSE.si[i];
-    const piFill = diff <= -4 ? 'var(--up)' : diff >= 4 ? 'var(--down)' : 'var(--fg)';
-    html += `<text x="${piX}" y="${midY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fPI}" font-weight="700" fill="${piFill}" opacity="0.95"><title>Playing Index ${pi[i]} · card SI ${COURSE.si[i]}${cpi ? ` · ${compareLabel} PI ${cpi[i]}` : ''}</title>${piLbl} ${pi[i]}${cpi ? `<tspan dx="${fPI * 0.6}" font-size="${fPI - 1}" font-weight="600" fill="var(--fg)" opacity="0.6">· ${compareLabel} ${cpi[i]}</tspan>` : ''}</text>`;
+    // The rank itself stays in plain ink; the +/- figures carry the colour.
+    const piFill = 'var(--fg)';
+    const dSI = pi[i] - COURSE.si[i], dYr = cpi ? pi[i] - cpi[i] : null;
+    const sub = (tag, d) => `<tspan dx="${fPI * 0.6}" font-size="${fPI - 1}" font-weight="600" fill="var(--fg)" opacity="0.6">· ${tag}</tspan><tspan dx="${fPI * 0.35}" font-size="${fPI - 1}" font-weight="700" fill="${dFill(d)}">${sgn(d)}</tspan>`;
+    html += `<text x="${piX}" y="${piY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fPI}" font-weight="700" fill="${piFill}" opacity="0.95"><title>Playing Index ${pi[i]} · card SI ${COURSE.si[i]} (${sgn(dSI)})${cpi ? ` · ${compareLabel} PI ${cpi[i]} (${sgn(dYr)})` : ''} — negative = played harder than rated</title>${piLbl} ${pi[i]}${sub(siTag, dSI)}${cpi ? sub(yrTag, dYr) : ''}</text>`;
   }
 
   svg.innerHTML = html;
@@ -3834,7 +3845,7 @@ function renderPlayerPage() {
     <div class="section-head"><span class="num">P.05</span><h2>Hole by Hole — Your Average vs Par</h2><span class="sub">Your ${pcMode} strokes over par on every hole — your Playing Index beside the 2026 field’s</span></div>
     <div class="section-filter" id="playerChartModeBar"><span class="sf-label">Score</span><button class="sf-btn${pcMode==='gross'?' active':''}" data-pcm="gross">Gross</button><button class="sf-btn${pcMode==='net'?' active':''}" data-pcm="net">Net</button></div>
     <div class="panel" style="padding:16px 12px 10px;">
-      <div class="chart-legend" style="display:block;line-height:1.5;"><span class="legend-item" style="display:inline-flex;margin-right:14px;"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--ink)"></span> Par line</span><span><strong style="font-family:'JetBrains Mono',monospace">PI</strong> = Playing Index — how the hole ranked for you (1 = hardest); <strong>2026</strong> = how it ranked for the whole field in this view. <span style="color:var(--up);font-weight:700">Red</span> plays much harder for you than for the field, <span style="color:var(--down);font-weight:700">green</span> much easier. SI is the card’s rating.</span></div>
+      <div class="chart-legend" style="display:block;line-height:1.5;"><span class="legend-item" style="display:inline-flex;margin-right:14px;"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--ink)"></span> Par line</span><span><strong style="font-family:'JetBrains Mono',monospace">PI</strong> = Playing Index — how the hole ranked for you (1 = hardest). <strong>vs SI</strong> is your PI minus the card’s stroke index; <strong>vs 2026</strong> is your PI minus the whole field’s PI in this view. <span style="color:var(--up);font-weight:700">Red</span> = you played it harder than the card’s SI (or than the field), <span style="color:var(--down);font-weight:700">green</span> = easier.</span></div>
       <svg class="hole-chart" id="playerHoleChart" preserveAspectRatio="xMidYMin meet"></svg>
     </div>`;
 
