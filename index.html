@@ -6,7 +6,10 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v7.9   Admin sign-in: "Forgot password?" emails a Firebase reset link
+  v7.9   Footer says "Signed in as admin" while you're signed in (the
+         visitor name only applies when signed out). Phones: Course Speaks
+         tables and the week tabs scroll inside their panels so the page
+         never scrolls sideways. Admin sign-in: "Forgot password?" emails a Firebase reset link
          to the admin address. Phones: a "Turn your phone sideways" reminder (animated phone)
          on the first visit and after 12+ hours away; dismisses on tap
          or when the phone is turned. "Playing Index" spelled out on phones too (chart widens a touch
@@ -922,6 +925,13 @@
   }
   /* Any phone/tablet width: no 48px gutters, slimmer panels. */
   @media (max-width: 1024px) {
+    html, body { overflow-x: hidden; max-width: 100%; }
+    .week-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 100%; padding-bottom: 2px; }
+    .week-tabs::-webkit-scrollbar { display: none; }
+    .week-tab { flex-shrink: 0; }
+    #hardestTable th, #hardestTable td, #easiestTable th, #easiestTable td { padding: 8px 6px; }
+    #hardestTable, #easiestTable { font-size: var(--t-md); }
+    #hardestTable .hole-num, #easiestTable .hole-num { font-size: 16px; }
     main { padding: 20px 14px 48px; }
     header.masthead, .week-bar { padding-left: 14px; padding-right: 14px; }
     .panel, .ringer-panel, .player-panel-grid { padding: 14px 12px; }
@@ -1888,11 +1898,11 @@
     <div class="holes-table-wrap">
       <div>
         <div class="dist-card-title" style="margin-bottom:12px;">Where strokes were lost</div>
-        <table class="holes-table" id="hardestTable"></table>
+        <div class="player-scroll"><table class="holes-table" id="hardestTable"></table></div>
       </div>
       <div>
         <div class="dist-card-title" style="margin-bottom:12px;">Where strokes were saved</div>
-        <table class="holes-table" id="easiestTable"></table>
+        <div class="player-scroll"><table class="holes-table" id="easiestTable"></table></div>
       </div>
     </div>
     <div class="player-note" style="margin-top:14px;"><strong>PI = Playing Index</strong> — the hole’s rank by how it actually played in this view (1 = hardest). <strong>vs HC</strong> is PI minus the card’s hole handicap: <span style="color:var(--up);font-weight:700">negative</span> = played harder than rated, <span style="color:var(--down);font-weight:700">positive</span> = easier.
@@ -3439,7 +3449,7 @@ function renderHolesTables() {
   const head = `<thead><tr><th>Hole</th><th>Par·HC</th><th>Avg</th><th>+/-</th><th>${piH}</th><th>vs HC</th>${ytdMode() ? '' : '<th>Dbl+</th>'}</tr></thead>`;
   const row = h => `<tr>
     <td class="hole-num">${h.hole}</td>
-    <td class="hole-par-si">P${h.par} · HC${h.si}</td>
+    <td class="hole-par-si" style="white-space:nowrap">P${h.par}·HC${h.si}</td>
     <td class="hole-avg">${h.avg.toFixed(2)}</td>
     <td class="hole-delta ${h.delta < 0 ? 'under' : ''}">${h.delta>=0?'+':''}${h.delta.toFixed(2)}</td>
     <td class="hole-avg">${h.pi}</td>
@@ -4466,7 +4476,9 @@ setInterval(() => { try { if (localStorage.getItem('sbl-rotate-seen')) localStor
 function hideEntryGate() { const g = document.getElementById('entryGate'); if (g) g.style.display = 'none'; document.body.classList.remove('gated'); }
 function updateVisitorFooter() {
   const el = document.getElementById('visitorFooter'); if (!el) return;
-  el.innerHTML = visitor ? `Viewing as <strong>${esc(visitor.name)}</strong> · <a href="#" id="changeNameLink">Not you? Change name</a>` : '';
+  el.innerHTML = isAdmin()
+    ? `Signed in as <strong>admin</strong> · ${esc(ADMIN_EMAIL)} · your browsing isn’t logged`
+    : visitor ? `Viewing as <strong>${esc(visitor.name)}</strong> · <a href="#" id="changeNameLink">Not you? Change name</a>` : '';
   const a = document.getElementById('changeNameLink'); if (a) a.addEventListener('click', e => { e.preventDefault(); showEntryGate(true); });
 }
 
@@ -5216,6 +5228,7 @@ async function initFirebase() {
     renderStoredWeeks();
     if (!isAdmin() && state.eventId === 'activity') switchEvent('season');
     if (isAdmin()) hideEntryGate(); else showEntryGate(false);
+    if (typeof updateVisitorFooter === 'function') updateVisitorFooter();
     if (!currentUser) startActivity();   // signed out of admin → fall back to an anonymous visitor session
     // Scroll to the admin panel only on a real sign-in click — i.e. after
     // the initial restore has happened, and we went from logged-out to in.
