@@ -6,6 +6,11 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v6.0   Dates parsed robustly (mixed formats like "Jun 7th", "May 23",
+         "Jun 13th, 2026" all sort correctly); pooled rounds, trend
+         chart, ringer tie-breaks and season trend now in true date
+         order. Every Round table sorted by date with an All / Men's
+         Night / Snips filter, numbered rows and one date format.
   v5.9   Readability: one navy ink for all light-mode text (no faded
          captions), secondary type ~1.5px larger, and every secondary
          element at semibold. Ringed Ringer cells get room so the
@@ -1401,7 +1406,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v5.9</div>
+    <div class="splash-version">v6.0</div>
   </div>
 </div>
 
@@ -1436,7 +1441,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v5.9</div>
+  <div class="masthead-version">v6.0</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -2022,6 +2027,25 @@ const PLAYER_ALIASES = {
   "Steven Ironside":  "Steve Ironside",
   "Bruce Mccartney":  "Bruce McCartney",
 };
+// Dates arrive in mixed shapes ("Jun 7th", "May 23", "Jun 13th, 2026",
+// "May 9, 2026", "Sat · May 9"). Normalise to a timestamp; a missing year
+// means the current season.
+const MONTHS_ = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,sept:8,oct:9,nov:10,dec:11 };
+function parseLeagueDate(str) {
+  const m = String(str || '').match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?/i);
+  if (!m) return NaN;
+  const y = m[3] ? parseInt(m[3], 10) : (typeof SEASON_YEAR !== 'undefined' ? SEASON_YEAR : new Date().getFullYear());
+  return new Date(y, MONTHS_[m[1].toLowerCase()], parseInt(m[2], 10)).getTime();
+}
+const SEASON_YEAR = 2026;
+const DOW_ = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON_ = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// "Sun · Jun 7, 2026" — one consistent display form.
+function fmtLeagueDate(str, opts) {
+  const t = parseLeagueDate(str); if (isNaN(t)) return String(str || '');
+  const d = new Date(t); opts = opts || {};
+  const core = `${MON_[d.getMonth()]} ${d.getDate()}${opts.year === false ? '' : ', ' + d.getFullYear()}`;
+  return opts.dow === false ? core : `${DOW_[d.getDay()]} · ${core}`;
+}
 function canonicalName(name) {
   const n = String(name || '').trim();
   return PLAYER_ALIASES[n] || n;
@@ -2109,7 +2133,7 @@ function rebuildSeasonWeeks() {
       date: w.date, players: w.players, savedAt: w.savedAt, source: evId,
     }));
   });
-  const t = d => { const n = Date.parse(d); return isNaN(n) ? 0 : n; };
+  const t = d => { const n = parseLeagueDate(d); return isNaN(n) ? 0 : n; };
   WEEKS = pooled.sort((a,b) => (t(a.date) - t(b.date)) || (a.id - b.id));
   WEEKS.forEach(w => {
     w.rounds = buildWeekRounds(w.players).map(r => ({
@@ -2207,7 +2231,7 @@ function switchEvent(newId) {
   if (!EVENTS[newId]) return;
   if (typeof closeScorecard === 'function') closeScorecard();
   state.eventId = newId;
-  if (typeof playerName !== 'undefined') playerName = null;   // Player tab never remembers a pick
+  if (typeof playerName !== 'undefined') { playerName = null; roundsFilter = 'all'; }   // Player tab never remembers a pick
   recomputeAll();
   state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
   adminOverwriteId = null;          // week ids differ per event — reset overwrite mode
@@ -3451,6 +3475,7 @@ function closeScorecard() {
 // PLAYER TAB — one player's 2026 story, compared to field and bracket
 // =================================================================
 let playerName = null;   // currently selected player (never remembered across loads)
+let roundsFilter = 'all'; // Every Round table: 'all' | 'mensNight' | 'snips'
 
 const PAR_TOTAL_ = COURSE.par.reduce((a,b) => a+b, 0);
 const SI_GROUPS = [
@@ -3519,7 +3544,7 @@ function renderPlayerPicker(host) {
     recomputeAll(); state.view = ALL_VIEWS[0]; renderAll();
   }));
   document.getElementById('playerSelect').addEventListener('change', e => {
-    playerName = e.target.value || null;
+    playerName = e.target.value || null; roundsFilter = 'all';
     renderPlayerPage();
     if (playerName) { const sect = document.getElementById('playerSection'); if (sect) sect.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   });
@@ -3575,7 +3600,7 @@ function renderPlayerPage() {
   // ----- 1. season card -----
   const kpi = (lbl, val, sub) => `<div class="pk"><div class="pk-lbl">${lbl}</div><div class="pk-val">${val}</div>${sub ? `<div class="pk-sub">${sub}</div>` : ''}</div>`;
   const cmp = (mineV, brV, fieldV, dp) => `you ${mineV.toFixed(dp)} · ${bracketName.split(' ')[0]} ${brV.toFixed(dp)} · field ${fieldV.toFixed(dp)}`;
-  const bestG = [...mine].sort((a,b) => a.round.gross - b.round.gross || b.week.date.localeCompare(a.week.date))[0];
+  const bestG = [...mine].sort((a,b) => a.round.gross - b.round.gross || parseLeagueDate(b.week.date) - parseLeagueDate(a.week.date))[0];
   const bestN = [...mine].sort((a,b) => a.round.net - b.round.net)[0];
   const worstG = [...mine].sort((a,b) => b.round.gross - a.round.gross)[0];
   const sec1 = `
@@ -3590,8 +3615,8 @@ function renderPlayerPage() {
       <div class="pk-grid">
         ${kpi('Avg gross', agg.avgGross.toFixed(1), cmp(agg.avgGross, brAvgG, fieldAvgG, 1))}
         ${kpi('Avg net', agg.avgNet.toFixed(1), cmp(agg.avgNet, brAvgN, fieldAvgN, 1))}
-        ${kpi('Best gross', bestG.round.gross, `${bestG.week.date} · ${srcTag(bestG.week)}`)}
-        ${kpi('Best net', bestN.round.net, `${bestN.week.date} · ${srcTag(bestN.week)}`)}
+        ${kpi('Best gross', bestG.round.gross, `${fmtLeagueDate(bestG.week.date)} · ${srcTag(bestG.week)}`)}
+        ${kpi('Best net', bestN.round.net, `${fmtLeagueDate(bestN.week.date)} · ${srcTag(bestN.week)}`)}
         ${kpi('Front · Back', `${agg.avgFront.toFixed(1)} · ${agg.avgBack.toFixed(1)}`, `${pSigned(agg.avgFront - 36, 1)} · ${pSigned(agg.avgBack - 35, 1)} vs par`)}
         ${kpi('Birdies or better', myDist.birdies + myDist.eagles + myDist.albatrosses, `${(pctOf(myDist,'birdies')+pctOf(myDist,'eagles')+pctOf(myDist,'albatrosses')).toFixed(1)}% of holes · field ${(pctOf(fieldDist,'birdies')+pctOf(fieldDist,'eagles')+pctOf(fieldDist,'albatrosses')).toFixed(1)}%`)}
         ${kpi('Par rate', pctOf(myDist,'pars').toFixed(1) + '%', `bracket ${pctOf(brDist,'pars').toFixed(1)}% · field ${pctOf(fieldDist,'pars').toFixed(1)}%`)}
@@ -3678,7 +3703,7 @@ function renderPlayerPage() {
   const mostPars = [...mine].sort((a,b) => b.round.pars - a.round.pars || a.round.gross - b.round.gross)[0];
   const mostBogeys = [...mine].sort((a,b) => b.round.bogeys - a.round.bogeys || b.round.gross - a.round.gross)[0];
   const mostDoubles = [...mine].sort((a,b) => b.round.doubles - a.round.doubles || b.round.gross - a.round.gross)[0];
-  const worstGross = [...mine].sort((a,b) => b.round.gross - a.round.gross || b.week.date.localeCompare(a.week.date))[0];
+  const worstGross = [...mine].sort((a,b) => b.round.gross - a.round.gross || parseLeagueDate(b.week.date) - parseLeagueDate(a.week.date))[0];
   const nines = mine.flatMap(e => [{ e, side: 'Front', score: e.round.front, par: 36 }, { e, side: 'Back', score: e.round.back, par: 35 }]);
   const bestNine = [...nines].sort((a,b) => (a.score - a.par) - (b.score - b.par) || a.score - b.score)[0];
   const tripleCount = r => r.scores.filter((s,i) => s - COURSE.par[i] >= 3).length;
@@ -3686,7 +3711,7 @@ function renderPlayerPage() {
     <div class="insight-card ${cls} player-round-card" data-rid="${e.week.id}">
       <div class="insight-title">${title}</div>
       <div class="prc-big">${big}</div>
-      <div class="insight-body">${sub}<br><span class="prc-when">${e.week.date} · ${srcTag(e.week)} · ${shortLabel(e.week)}</span></div>
+      <div class="insight-body">${sub}<br><span class="prc-when">${fmtLeagueDate(e.week.date)} · ${srcTag(e.week)}${e.week.source === 'mensNight' ? ' · ' + shortLabel(e.week) : ''}</span></div>
       <div class="prc-tap">tap for scorecard</div>
     </div>`;
   const sec6 = `
@@ -3744,7 +3769,7 @@ function renderPlayerPage() {
     { cls: 'green', title: 'Where you beat the field', body: `<strong>Hole ${beatsField.hole}</strong>: you ${pSigned(beatsField.g, 2)} vs field ${pSigned(beatsField.fg, 2)} — <strong>${Math.abs(beatsField.g - beatsField.fg).toFixed(2)} strokes better</strong>.` },
     { cls: 'red', title: 'Where the field beats you', body: `<strong>Hole ${fieldBeats.hole}</strong>: you ${pSigned(fieldBeats.g, 2)} vs field ${pSigned(fieldBeats.fg, 2)} — <strong>${Math.abs(fieldBeats.g - fieldBeats.fg).toFixed(2)} strokes worse</strong>.` },
     { cls: '', title: 'Best 3-hole stretch', body: `Holes <strong>${bestStretch.i+1}–${bestStretch.i+3}</strong> are your sweet spot — averaging <strong>${pSigned(bestStretch.s, 2)}</strong> per hole.` },
-    { cls: '', title: 'Longest par-or-better streak', body: streak.e ? `<strong>${streak.len} holes</strong> in a row at par or better — ${streak.e.week.date} (${srcTag(streak.e.week)}, gross ${streak.e.round.gross}).` : 'No par-or-better holes yet.' },
+    { cls: '', title: 'Longest par-or-better streak', body: streak.e ? `<strong>${streak.len} holes</strong> in a row at par or better — ${fmtLeagueDate(streak.e.week.date)} (${srcTag(streak.e.week)}, gross ${streak.e.round.gross}).` : 'No par-or-better holes yet.' },
     { cls: trendDelta === null ? '' : (trendDelta < 0 ? 'green' : 'red'), title: 'Season trend', body: trendDelta === null ? `Need 4+ rounds for a trend — <strong>${mine.length}</strong> so far.` : `Second half of your season averages <strong>${secondHalf.toFixed(1)}</strong> vs <strong>${firstHalf.toFixed(1)}</strong> early on — ${trendDelta < 0 ? `<strong>${Math.abs(trendDelta).toFixed(1)} strokes better</strong>` : `${trendDelta.toFixed(1)} strokes worse`}.` },
     { cls: '', title: 'Par-3 tee shots', body: isNaN(clutch) ? '' : `You walk off a par 3 at <strong>par or better ${clutch.toFixed(0)}%</strong> of the time; your par-3 average is ${pSigned(parTypes[0].g, 2)}.` },
   ];
@@ -3752,17 +3777,22 @@ function renderPlayerPage() {
     <div class="section-head"><span class="num">P.09</span><h2>${esc(playerName.split(' ')[0])}’s Headlines</h2><span class="sub">What your 2026 numbers say</span></div>
     <div class="insights-grid">${headlines.map(h => `<div class="insight-card ${h.cls}"><div class="insight-title">${h.title}</div><div class="insight-body">${h.body}</div></div>`).join('')}</div>`;
 
-  // ----- 9. every round -----
+  // ----- 9. every round (date order, own event filter) -----
+  const rowsAll = [...mine].sort((a, b) => parseLeagueDate(a.week.date) - parseLeagueDate(b.week.date));
+  const rows = roundsFilter === 'all' ? rowsAll : rowsAll.filter(e => e.week.source === roundsFilter);
+  const evLabel = w => w.source === 'mensNight' ? `Men\u2019s Night · ${shortLabel(w)}` : 'Snips';
+  const pill = (k, lbl) => `<button class="sf-btn${roundsFilter === k ? ' active' : ''}" data-rf="${k}">${lbl}</button>`;
   const sec9 = `
-    <div class="section-head"><span class="num">P.10</span><h2>Every Round</h2><span class="sub">Tap a row for the scorecard</span></div>
+    <div class="section-head"><span class="num">P.10</span><h2>Every Round</h2><span class="sub">In date order · tap a row for the scorecard</span></div>
+    <div class="section-filter" id="roundsFilterBar"><span class="sf-label">Event</span>${pill('all','All')}${pill('mensNight',"Men\u2019s Night")}${pill('snips','Snips')}<span class="sf-label" style="margin-left:auto">${rows.length} round${rows.length===1?'':'s'}</span></div>
     <div class="panel" style="padding:18px 20px;"><div class="player-scroll"><table class="holes-table player-rounds">
-      <thead><tr><th>Date</th><th>Event</th><th>HC</th><th>Gross</th><th>vs par</th><th>Net</th><th>vs par</th><th>Front</th><th>Back</th><th>Birdie+</th><th>Par</th><th>Bogey</th><th>Dbl+</th></tr></thead>
-      <tbody>${mine.map(e => `<tr class="player-round-row" data-rid="${e.week.id}">
-        <td>${e.week.date}</td><td style="text-align:left">${srcTag(e.week)} · ${shortLabel(e.week)}</td><td>${e.round.hc}</td>
+      <thead><tr><th>#</th><th>Date</th><th>Event</th><th>HC</th><th>Gross</th><th>vs par</th><th>Net</th><th>vs par</th><th>Front</th><th>Back</th><th>Birdie+</th><th>Par</th><th>Bogey</th><th>Dbl+</th></tr></thead>
+      <tbody>${rows.length ? rows.map((e, i) => `<tr class="player-round-row" data-rid="${e.week.id}">
+        <td>${i + 1}</td><td style="text-align:left;white-space:nowrap">${fmtLeagueDate(e.week.date)}</td><td style="text-align:left">${evLabel(e.week)}</td><td>${e.round.hc}</td>
         <td class="hole-avg">${e.round.gross}</td><td class="hole-delta ${e.round.gp < 0 ? 'under' : ''}">${pSignedInt(e.round.gp)}</td>
         <td class="hole-avg">${e.round.net}</td><td class="hole-delta ${e.round.np < 0 ? 'under' : ''}">${pSignedInt(e.round.np)}</td>
         <td>${e.round.front}</td><td>${e.round.back}</td><td>${birdiesPlus(e.round)}</td><td>${e.round.pars}</td><td>${e.round.bogeys}</td><td>${e.round.doubles}</td>
-      </tr>`).join('')}</tbody>
+      </tr>`).join('') : `<tr><td colspan="14" style="padding:22px;font-style:italic">No ${roundsFilter === 'mensNight' ? 'Men\u2019s Night' : 'Snips'} rounds for this player.</td></tr>`}</tbody>
     </table></div></div>`;
 
   const secR = renderRingerBoard(mine, srcTag);
@@ -3780,6 +3810,11 @@ function renderPlayerPage() {
     slot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
   host.querySelectorAll('.player-round-card, .player-round-row').forEach(el => el.addEventListener('click', () => openRound(el.dataset.rid)));
+  host.querySelectorAll('#roundsFilterBar [data-rf]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.rf === roundsFilter) return;
+    roundsFilter = b.dataset.rf;
+    const y = window.scrollY; renderPlayerPage(); window.scrollTo(0, y);
+  }));
   host.querySelectorAll('.trend-dot').forEach(el => el.addEventListener('click', () => openRound(el.dataset.rid)));
 }
 
@@ -3787,7 +3822,7 @@ function renderPlayerPage() {
 function findAces(entries) {
   const out = [];
   entries.forEach(e => e.round.scores.forEach((s, i) => { if (s === 1) out.push({ e, hole: i + 1, par: COURSE.par[i] }); }));
-  return out.sort((a, b) => Date.parse(a.e.week.date) - Date.parse(b.e.week.date));
+  return out.sort((a, b) => parseLeagueDate(a.e.week.date) - parseLeagueDate(b.e.week.date));
 }
 function renderAceBanner(aces, srcTag, withName) {
   if (!aces.length) return '';
@@ -3795,7 +3830,7 @@ function renderAceBanner(aces, srcTag, withName) {
     <div class="ace-mark">1</div>
     <div class="ace-body">
       <div class="ace-title">Hole in one${aces.length > 1 ? 's' : ''}!</div>
-      <div class="ace-list">${aces.map(a => `<span class="ace-item">${withName ? `<strong>${esc(a.e.round.name)}</strong> · ` : ''}Hole ${a.hole} (par ${a.par}) · ${a.e.week.date} · ${srcTag(a.e.week)}</span>`).join('')}</div>
+      <div class="ace-list">${aces.map(a => `<span class="ace-item">${withName ? `<strong>${esc(a.e.round.name)}</strong> · ` : ''}Hole ${a.hole} (par ${a.par}) · ${fmtLeagueDate(a.e.week.date)} · ${srcTag(a.e.week)}</span>`).join('')}</div>
     </div>
   </div>`;
 }
@@ -3807,7 +3842,7 @@ function renderRingerBoard(mine, srcTag) {
     let b = null;
     mine.forEach(e => {
       const v = holeVal(e.round, i, mode);
-      if (b === null || v < b.v || (v === b.v && Date.parse(e.week.date) < Date.parse(b.e.week.date))) b = { v, e };
+      if (b === null || v < b.v || (v === b.v && parseLeagueDate(e.week.date) < parseLeagueDate(b.e.week.date))) b = { v, e };
     });
     // how many rounds tied this best
     const ties = mine.filter(e => holeVal(e.round, i, mode) === b.v).length;
@@ -3817,9 +3852,9 @@ function renderRingerBoard(mine, srcTag) {
   const sum = (arr, a, b) => arr.slice(a, b).reduce((s, x) => s + x.v, 0);
   const realBestG = Math.min(...mine.map(x => x.round.gross)), realBestN = Math.min(...mine.map(x => x.round.net));
   const tot = { g: sum(g,0,18), n: sum(n,0,18) };
-  const dateShort = d => String(d || '').replace(/,?\s*\d{4}$/, '').replace(/^(\w{3})\w+/, '$1').replace(/(\d+)(st|nd|rd|th)\b/, '$1');
+  const dateShort = d => fmtLeagueDate(d, { dow: false, year: false });
   const card = (arr, label, total, realBest) => {
-    const cell = (h, i) => `<td class="score-cell ringer-cell ${scoreClass(h.v, COURSE.par[i])}${h.v === 1 ? ' ace' : ''}" title="Hole ${i+1} · ${h.v} on ${h.e.week.date} (${srcTag(h.e.week)})${h.ties > 1 ? ` · matched ${h.ties}×` : ''}"><span class="ringer-v">${h.v}</span><span class="ringer-when">${dateShort(h.e.week.date)}</span></td>`;
+    const cell = (h, i) => `<td class="score-cell ringer-cell ${scoreClass(h.v, COURSE.par[i])}${h.v === 1 ? ' ace' : ''}" title="Hole ${i+1} · ${h.v} on ${fmtLeagueDate(h.e.week.date)} (${srcTag(h.e.week)})${h.ties > 1 ? ` · matched ${h.ties}×` : ''}"><span class="ringer-v">${h.v}</span><span class="ringer-when">${dateShort(h.e.week.date)}</span></td>`;
     const nine = (from) => `<table class="scorecard-table ringer-table"><thead><tr><th class="ringer-lbl">${from ? 'Back' : 'Front'}</th>${COURSE.par.slice(from, from+9).map((_,k) => `<th>${from+k+1}</th>`).join('')}<th>${from ? 'In' : 'Out'}</th><th>${from ? 'Tot' : ''}</th></tr></thead><tbody>
       <tr><th>Par</th>${COURSE.par.slice(from, from+9).map(p => `<td>${p}</td>`).join('')}<td>${from ? 35 : 36}</td><td>${from ? 71 : ''}</td></tr>
       <tr><th>Best</th>${arr.slice(from, from+9).map((h,k) => cell(h, from+k)).join('')}<td><strong>${sum(arr, from, from+9)}</strong></td><td>${from ? `<strong>${total}</strong>` : ''}</td></tr>
@@ -3850,7 +3885,7 @@ function renderPlayerScorecard(e) {
   const scoreRow = (lbl, arr, from, isGross) => `<tr><th>${lbl}</th>${arr.slice(from, from+9).map((s,k) => isGross ? cell(s, from+k) : `<td class="score-cell ${scoreClass(s, COURSE.par[from+k])}">${s}</td>`).join('')}<td><strong>${arr.slice(from, from+9).reduce((a,b)=>a+b,0)}</strong></td></tr>`;
   const nine = from => `<table class="scorecard-table player-sc"><thead>${nineHdr(from)}</thead><tbody>${parRow(from)}${siRow(from)}${scoreRow('Gross', r.scores, from, true)}${scoreRow('Net', net, from, false)}</tbody></table>`;
   return `<div class="panel player-sc-wrap">
-    <div class="scorecard-head"><div class="scorecard-name">${esc(r.name)} <span class="hc">${e.week.date} · ${e.week.label} · HC ${r.hc}</span></div><div class="pk-val">${r.gross} <span class="pk-sub" style="display:inline">(${pSignedInt(r.gp)}) · net ${r.net} (${pSignedInt(r.np)})</span></div></div>
+    <div class="scorecard-head"><div class="scorecard-name">${esc(r.name)} <span class="hc">${fmtLeagueDate(e.week.date)} · ${e.week.label} · HC ${r.hc}</span></div><div class="pk-val">${r.gross} <span class="pk-sub" style="display:inline">(${pSignedInt(r.gp)}) · net ${r.net} (${pSignedInt(r.np)})</span></div></div>
     <div class="player-scroll">${nine(0)}</div><div class="player-scroll" style="margin-top:10px">${nine(9)}</div>
   </div>`;
 }
@@ -3865,7 +3900,7 @@ function renderPlayerTrend(mine, fieldAvgG) {
   const y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
   const path = key => mine.map((e,i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(e.round[key]).toFixed(1)}`).join(' ');
   const ticks = []; for (let v = lo; v <= hi; v += 5) ticks.push(v);
-  const lbl = e => { const d = String(e.week.date || '').replace(/,?\s*\d{4}$/, ''); return d.length > 7 ? d.replace(/^(\w{3})\w*/, '$1') : d; };
+  const lbl = e => fmtLeagueDate(e.week.date, { dow: false, year: false });
   const every = n > 10 ? Math.ceil(n / 8) : 1;
   return `
     <div class="section-head"><span class="num">P.03</span><h2>Round by Round</h2><span class="sub">Gross and net for every round, in date order</span></div>
@@ -3878,8 +3913,8 @@ function renderPlayerTrend(mine, fieldAvgG) {
         <path d="${path('gross')}" fill="none" stroke="#ff8e84" stroke-width="2.5" stroke-linejoin="round"/>
         <path d="${path('net')}" fill="none" stroke="#62d4a1" stroke-width="2.5" stroke-linejoin="round"/>
         ${mine.map((e,i) => `
-          <circle class="trend-dot" data-rid="${e.week.id}" cx="${x(i)}" cy="${y(e.round.gross)}" r="5" fill="#ff8e84" stroke="var(--bg)" stroke-width="1.5"><title>${e.week.date} · gross ${e.round.gross}</title></circle>
-          <circle class="trend-dot" data-rid="${e.week.id}" cx="${x(i)}" cy="${y(e.round.net)}" r="5" fill="#62d4a1" stroke="var(--bg)" stroke-width="1.5"><title>${e.week.date} · net ${e.round.net}</title></circle>
+          <circle class="trend-dot" data-rid="${e.week.id}" cx="${x(i)}" cy="${y(e.round.gross)}" r="5" fill="#ff8e84" stroke="var(--bg)" stroke-width="1.5"><title>${fmtLeagueDate(e.week.date)} · gross ${e.round.gross}</title></circle>
+          <circle class="trend-dot" data-rid="${e.week.id}" cx="${x(i)}" cy="${y(e.round.net)}" r="5" fill="#62d4a1" stroke="var(--bg)" stroke-width="1.5"><title>${fmtLeagueDate(e.week.date)} · net ${e.round.net}</title></circle>
           <text x="${x(i)}" y="${y(e.round.gross) - 9}" text-anchor="middle" font-size="10" fill="#ff8e84" font-family="JetBrains Mono, monospace">${e.round.gross}</text>
           ${i % every === 0 || i === n - 1 ? `<text x="${x(i)}" y="${H - 26}" text-anchor="middle" font-size="10" fill="rgba(var(--fg-rgb),0.7)" font-family="DM Sans, sans-serif">${lbl(e)}</text><text x="${x(i)}" y="${H - 13}" text-anchor="middle" font-size="9" fill="rgba(var(--fg-rgb),0.45)" font-family="DM Sans, sans-serif">${e.week.source === 'mensNight' ? 'MN' : 'Snips'}</text>` : ''}
         `).join('')}
