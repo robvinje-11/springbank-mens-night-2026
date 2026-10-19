@@ -6,6 +6,11 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v4.9   Weekend Snips now accepts the Robbie Golf Live "Copy scorecard"
+         text directly — paste it as-is. Auto-detected alongside the
+         tab-separated export; handles groups that start on the back
+         nine and plus handicaps; pre-fills the day label and date from
+         the scorecard header when those boxes are empty.
   v4.8   Weekend Snips now accepts the tab-separated scorecard CSV
          from the Springbank Links scoring tool — paste the entire
          export (groups, headers, Gross/Net rows, and "N hcp" lines
@@ -1124,7 +1129,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v4.8</div>
+    <div class="splash-version">v4.9</div>
   </div>
 </div>
 
@@ -1159,7 +1164,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v4.8</div>
+  <div class="masthead-version">v4.9</div>
   <div class="masthead-row">
     <div class="brand-block">
       <img class="brand-logo" alt="Springbank Links Golf Club"
@@ -1875,7 +1880,7 @@ function applyAdminEventChrome() {
     ? 'Paste a weekend round — Gross / Net per player'
     : 'Paste in the SmartGolf format — same as Week 1');
   set('adminPasteInstructions', isSnips
-    ? `Paste the full scorecard export from the Springbank Links scoring tool — tab-separated, with a <strong>Gross</strong> and <strong>Net</strong> row per player and the <code>N (Tee)  X.X idx / N hcp</code> handicap line that follows. Group headers, par row, and the footer are auto-skipped. vs-Par is calculated automatically (Gross/Net &minus; 71).`
+    ? `In Robbie Golf Live, open the round and tap <strong>Copy scorecard</strong>, then paste the whole thing here — nothing to edit. Label and date fill in from the scorecard header if you leave them blank. Groups that start on the back nine, plus handicaps, and the footer are all handled. (The older tab-separated Gross/Net export still works too.) vs-Par is calculated automatically (Gross/Net &minus; 71).`
     : `Paste the exact format SmartGolf gives you: <strong>handicap, name, 18 hole scores (one per line), then a totals line</strong> (Gross / Net / Gross Pts / Net Pts) for each player. Header rows are auto-skipped.`);
 
   const labelEl = document.getElementById('newWeekLabel');
@@ -3074,6 +3079,100 @@ function renderAll() {
 // Player handicap is the integer just before the "hcp" token; "+N"
 // becomes -N in the data model.
 // =================================================================
+// ── Weekend Snips: Robbie Golf Live "Copy scorecard" format ──────────────
+// The app's Copy scorecard button yields one long space-separated string:
+//   "... Group 1 Hole 1 2 ... 9 Fr9 HC ... Par ... 36 <Name> Tee II · 8 hcp
+//    g n g n ... (9 pairs) Fr9g Fr9n <Name2> ... Hole 10 ... Bk9 TOT ...
+//    <Name> Tee II · 8 hcp g n ... Bk9g Bk9n TOTg ±x TOTn ±y Group 2 ..."
+// Groups may start on the back nine (Bk9 block first). Gross/net are
+// interleaved per hole. "&middot;"/"&nbsp;" may arrive as entities or as
+// the real characters.
+function isSnipsCopyScorecard(raw) {
+  return /\bTee\s+[IVX]+\s*(?:·|&middot;)\s*\+?\d+\s*hcp\b/.test(raw) && !/\t/.test(raw);
+}
+
+function decodeSnipsEntities(s) {
+  return s
+    .replace(/&middot;/g, '·').replace(/&bull;/g, '•').replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&').replace(/ /g, ' ');
+}
+
+// Returns { label, date } derived from the header, e.g.
+// "Saturday, June 13, 2026" → label "Sat · Jun 13th", date "June 13, 2026".
+function snipsCopyScorecardDate(raw) {
+  const m = decodeSnipsEntities(raw).match(/\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+(\w+)\s+(\d{1,2}),\s+(\d{4})/);
+  if (!m) return null;
+  const [, dow, month, day, year] = m;
+  const d = parseInt(day, 10);
+  const suffix = (d % 10 === 1 && d !== 11) ? 'st' : (d % 10 === 2 && d !== 12) ? 'nd' : (d % 10 === 3 && d !== 13) ? 'rd' : 'th';
+  return {
+    label: `${dow.slice(0,3)} · ${month.slice(0,3)} ${d}${suffix}`,
+    date:  `${month} ${d}, ${year}`,
+  };
+}
+
+function parseSnipsCopyScorecard(raw) {
+  const PAR_TOTAL = COURSE.par.reduce((a,b) => a+b, 0); // 71
+  const text = decodeSnipsEntities(raw).replace(/\s+/g, ' ').trim();
+  const errors = [];
+  const byName = new Map();   // name → partial record
+  const order = [];
+
+  // name  tee  hcp  18 numbers (9 gross/net pairs)  nine-gross nine-net
+  // and, on the closing nine only: TOTgross ±x TOTnet ±y
+  const rowRe = /([A-Z][A-Za-z'.\-]+(?: [A-Z][A-Za-z'.\-]+)*) Tee ([IVX]+) · (\+?\d+) hcp((?: \d+){18}) (\d+) (\d+)(?: (\d+) ([+\-]?\d+|E) (\d+) ([+\-]?\d+|E))?/g;
+
+  const groups = text.split(/\bGroup \d+\b/).slice(1);
+  if (!groups.length) {
+    errors.push('No "Group N" headers found — is this the Copy scorecard text from Robbie Golf Live?');
+    return { players: [], errors };
+  }
+
+  groups.forEach((g, gi) => {
+    const blocks = g.split(/(?=Hole 1 |Hole 10 )/);
+    blocks.forEach(b => {
+      let side;
+      if (b.startsWith('Hole 1 ')) side = 'f';
+      else if (b.startsWith('Hole 10 ')) side = 'b';
+      else return;
+      let m;
+      rowRe.lastIndex = 0;
+      while ((m = rowRe.exec(b)) !== null) {
+        const [, name, tee, hcpTok, holes, nineG, nineN, totG, , totN] = m;
+        const nums = holes.trim().split(' ').map(Number);
+        let rec = byName.get(name);
+        if (!rec) {
+          const hc = hcpTok.startsWith('+') ? -parseInt(hcpTok.slice(1), 10) : parseInt(hcpTok, 10);
+          rec = { name, hc, tee };
+          byName.set(name, rec);
+          order.push(name);
+        }
+        rec[side + 'g'] = nums.filter((_, i) => i % 2 === 0);
+        rec[side + 'n'] = nums.filter((_, i) => i % 2 === 1);
+        rec[side + 'gTot'] = parseInt(nineG, 10);
+        rec[side + 'nTot'] = parseInt(nineN, 10);
+        if (totG !== undefined) { rec.gross = parseInt(totG, 10); rec.net = parseInt(totN, 10); }
+      }
+    });
+  });
+
+  const players = [];
+  order.forEach(name => {
+    const r = byName.get(name);
+    if (!r.fg || !r.bg) { errors.push(`${name}: only found ${r.fg ? 'front' : 'back'} nine — skipped.`); return; }
+    const grossScores = r.fg.concat(r.bg);
+    const sumG = grossScores.reduce((a,b) => a+b, 0);
+    const sumN = r.fn.concat(r.bn).reduce((a,b) => a+b, 0);
+    let gross = r.gross, net = r.net;
+    if (gross === undefined) { errors.push(`${name}: no TOT found, using hole sums.`); gross = sumG; net = sumN; }
+    if (sumG !== gross) errors.push(`⚠ ${name}: holes sum to ${sumG} but TOT says ${gross}. Saved anyway.`);
+    if (sumN !== net)   errors.push(`⚠ ${name}: net holes sum to ${sumN} but net TOT says ${net}. Saved anyway.`);
+    players.push([name, r.hc, grossScores, gross, net, gross - PAR_TOTAL, net - PAR_TOTAL]);
+  });
+
+  return { players, errors };
+}
+
 function parseSnipsScorecard(raw) {
   const PAR_TOTAL = COURSE.par.reduce((a,b) => a+b, 0); // 71
   const lines = raw.split(/\r?\n/);
@@ -3363,10 +3462,30 @@ function showParseResult(msg, kind) {
 }
 
 // Parse & Save — writes the week straight to Firestore (live for everyone)
+  // Weekend Snips: when a Robbie Golf Live "Copy scorecard" is pasted, pre-fill label + date.
+  document.getElementById('newWeekPaste').addEventListener('paste', () => {
+    setTimeout(() => {
+      if (state.eventId !== 'snips') return;
+      const raw = document.getElementById('newWeekPaste').value;
+      if (!isSnipsCopyScorecard(raw)) return;
+      const hdr = snipsCopyScorecardDate(raw);
+      if (!hdr) return;
+      const l = document.getElementById('newWeekLabel'), d = document.getElementById('newWeekDate');
+      if (!l.value.trim()) l.value = hdr.label;
+      if (!d.value.trim()) d.value = hdr.date;
+    }, 0);
+  });
 document.getElementById('parseAddBtn').addEventListener('click', async () => {
   const raw = document.getElementById('newWeekPaste').value;
-  const labelInput = document.getElementById('newWeekLabel').value.trim();
-  const dateInput = document.getElementById('newWeekDate').value.trim();
+  let labelInput = document.getElementById('newWeekLabel').value.trim();
+  let dateInput = document.getElementById('newWeekDate').value.trim();
+  if (state.eventId === 'snips' && isSnipsCopyScorecard(raw)) {
+    const hdr = snipsCopyScorecardDate(raw);
+    if (hdr) {
+      if (!labelInput) { labelInput = hdr.label; document.getElementById('newWeekLabel').value = hdr.label; }
+      if (!dateInput)  { dateInput  = hdr.date;  document.getElementById('newWeekDate').value  = hdr.date; }
+    }
+  }
   if (!raw.trim()) { showParseResult('Paste box is empty.', 'error'); return; }
   if (!isAdmin()) { showParseResult('Please sign in as admin first.', 'error'); return; }
 
@@ -3378,7 +3497,7 @@ document.getElementById('parseAddBtn').addEventListener('click', async () => {
   const date = dateInput || new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
 
   const { players, errors } = state.eventId === 'snips'
-    ? parseSnipsScorecard(raw)
+    ? (isSnipsCopyScorecard(raw) ? parseSnipsCopyScorecard(raw) : parseSnipsScorecard(raw))
     : parseSmartGolfPaste(raw, currentEvent().scoring);
   if (!players.length) {
     showParseResult(`<strong>No players parsed.</strong><br>${errors.join('<br>') || 'Check the paste format.'}`, 'error');
