@@ -6,7 +6,8 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v7.9   Phones: a "Turn your phone sideways" reminder (animated phone)
+  v7.9   Admin sign-in: "Forgot password?" emails a Firebase reset link
+         to the admin address. Phones: a "Turn your phone sideways" reminder (animated phone)
          on the first visit and after 12+ hours away; dismisses on tap
          or when the phone is turned. "Playing Index" spelled out on phones too (chart widens a touch
          for long names). Kevin Heise (Course GM) on the Welcome list. Standings
@@ -2016,7 +2017,8 @@
       style="width:100%;padding:11px 14px;margin-bottom:10px;background:var(--bg);border:1px solid var(--rule);color:var(--fg);border-radius:3px;font-family:'DM Sans',sans-serif;font-size:14px;box-sizing:border-box;">
     <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password"
       style="width:100%;padding:11px 14px;margin-bottom:6px;background:var(--bg);border:1px solid var(--rule);color:var(--fg);border-radius:3px;font-family:'DM Sans',sans-serif;font-size:14px;box-sizing:border-box;">
-    <div id="loginError" style="font-size:var(--t-md);color:#ff6b5e;min-height:18px;margin-bottom:14px;"></div>
+    <div id="loginError" style="font-size:var(--t-md);color:#ff6b5e;min-height:18px;margin-bottom:10px;"></div>
+    <div style="margin-bottom:14px;"><button type="button" id="loginResetBtn" style="background:none;border:0;padding:0;color:var(--fg);font-family:'DM Sans',sans-serif;font-weight:600;font-size:var(--t-sm);text-decoration:underline;cursor:pointer;">Forgot password? Email me a reset link</button></div>
     <div style="display:flex;gap:8px;">
       <button id="loginSubmitBtn" style="flex:1;padding:11px;background:var(--fg);color:var(--bg);border:none;border-radius:3px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:var(--t-lg);letter-spacing:0.05em;text-transform:uppercase;">Sign In</button>
       <button id="loginCancelBtn" style="padding:11px 16px;background:transparent;color:var(--fg);border:1px solid var(--rule);border-radius:3px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:var(--t-lg);">Cancel</button>
@@ -2091,6 +2093,27 @@ async function doLogin() {
     // onAuthStateChanged handles the rest
   } catch (e) {
     errEl.textContent = 'Sign-in failed — check your email and password.';
+  }
+}
+// Admin password reset: Firebase emails a reset link to the admin address.
+// Only the configured admin email is accepted here, so the button can't be
+// used to probe for other accounts; the link itself expires after an hour.
+async function doPasswordReset() {
+  const emailEl = document.getElementById('loginEmail');
+  const errEl = document.getElementById('loginError');
+  const email = (emailEl.value.trim() || ADMIN_EMAIL).toLowerCase();
+  if (email !== ADMIN_EMAIL.toLowerCase()) { errEl.textContent = `Reset links are only sent to the league admin (${ADMIN_EMAIL}).`; return; }
+  if (!auth) { errEl.textContent = 'Still connecting — try again in a moment.'; return; }
+  if (!window.confirm(`Email a password-reset link to ${ADMIN_EMAIL}?`)) return;
+  emailEl.value = ADMIN_EMAIL;
+  errEl.textContent = 'Sending…';
+  try {
+    await auth.sendPasswordResetEmail(ADMIN_EMAIL);
+    errEl.style.color = 'var(--down)';
+    errEl.textContent = `Reset link sent to ${ADMIN_EMAIL} — check your inbox (and junk), set a new password, then sign in here.`;
+    setTimeout(() => { errEl.style.color = ''; }, 15000);
+  } catch (e) {
+    errEl.textContent = 'Couldn’t send the reset email: ' + (e.message || e);
   }
 }
 async function adminSignOut() {
@@ -5247,6 +5270,7 @@ async function initFirebase() {
   // Login modal wiring
   document.getElementById('loginSubmitBtn').addEventListener('click', doLogin);
   document.getElementById('loginCancelBtn').addEventListener('click', closeLoginModal);
+  document.getElementById('loginResetBtn').addEventListener('click', doPasswordReset);
   document.getElementById('loginPassword').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
   });
