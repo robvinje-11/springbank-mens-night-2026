@@ -6,6 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v6.6   Player tab gets the same Hole by Hole bar chart as the main
+         tabs (with PI, gross/net toggle) as section P.05. Headlines
+         back to the original eight (Best 3-hole stretch restored).
   v6.5   Playing Index (PI): every hole ranked by how it actually played
          (1 = hardest), shown right of each bar on the Hole by Hole chart
          and as Your PI / Field PI columns on the player's hole table,
@@ -1512,7 +1515,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v6.5</div>
+    <div class="splash-version">v6.6</div>
   </div>
 </div>
 
@@ -1547,7 +1550,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v6.5</div>
+  <div class="masthead-version">v6.6</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -1684,7 +1687,7 @@
   <div class="panel">
     <div class="chart-legend" id="holeChartLegend">
       <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--ink)"></span> Par line</div>
-      <div class="legend-item"><strong style="font-family:'JetBrains Mono',monospace">PI</strong>&nbsp;= Playing Index — how the hole actually ranked in this view (1 = hardest). Compare with SI, the card’s rating. <span style="color:var(--up)">Red</span> played much harder than its SI, <span style="color:var(--down)">green</span> much easier.</div>
+      <div style="flex-basis:100%;line-height:1.5;"><strong style="font-family:'JetBrains Mono',monospace">PI</strong> = Playing Index — how the hole actually ranked in this view (1 = hardest). Compare with SI, the card’s rating. <span style="color:var(--up);font-weight:700">Red</span> played much harder than its SI, <span style="color:var(--down);font-weight:700">green</span> much easier.</div>
     </div>
     <div class="hole-chart"><svg id="holeChart" viewBox="0 0 640 720" preserveAspectRatio="xMidYMid meet"></svg></div>
   </div>
@@ -3030,6 +3033,7 @@ function renderMovers() {
 
 function renderHoleChart() {
   const svg = document.getElementById('holeChart');
+  if (!svg) return;
 
   const bracketLabels = { all: 'Field', low: 'Low', mid: 'Mid', high: 'High' };
   const bracket = sectionBracket.holeChart;
@@ -3037,9 +3041,16 @@ function renderHoleChart() {
   const chartMode = sectionMode.holeChart;
 
   const avgs = COURSE.par.map((_,i) => holeAvg(items, i, chartMode));
-  const over = avgs.map((v,i) => v - COURSE.par[i]);
   const seriesLabel = bracketLabels[bracket] || 'Field';
+  drawHoleBars(svg, avgs, seriesLabel);
+}
+
+// Draws the horizontal hole-by-hole bar chart (with Playing Index) into `svg`
+// from a set of 18 per-hole averages. Shared by the main tabs and the Player tab.
+function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
+  const over = avgs.map((v,i) => v - COURSE.par[i]);
   const pi = playingIndex(over);
+  const cpi = compareAvgs ? playingIndex(compareAvgs.map((v,i) => v - COURSE.par[i])) : null;
 
   // ---- Horizontal layout: 18 hole rows stacked top to bottom ----
   // The chart scales by viewport. On phones we use a narrower viewBox
@@ -3060,7 +3071,7 @@ function renderHoleChart() {
   const widestChars = Math.max(...labels.map(labelChars));
   const labelW = Math.ceil(widestChars * charW + fHole) + 6;
   const fPI = isMobile ? 15 : 13;
-  const piW = Math.ceil(fPI * 0.6 * 5) + 10;   // room for "PI 18" right of the longest bar
+  const piW = Math.ceil(fPI * 0.6 * (cpi ? 14 : 5)) + 10;   // room for "PI 18 · 2026 18" right of the longest bar
   const pad = { l: 2, r: 12 + piW, t: isMobile ? 40 : 36, b: 12 };
   const gap = 14;                  // small break between the nines
   const H = pad.t + 18 * rowH + pad.b + gap;
@@ -3087,7 +3098,7 @@ function renderHoleChart() {
     const val = over[i];
     const barW = Math.max(2, (val / maxOver) * plotW);
     const midY = y + barH/2;
-    const tooltip = `Hole ${i+1} · ${seriesLabel} avg ${avgs[i].toFixed(2)} (${val>=0?'+':''}${val.toFixed(2)}) · PI ${pi[i]} (SI ${COURSE.si[i]})`;
+    const tooltip = `Hole ${i+1} · ${seriesLabel} avg ${avgs[i].toFixed(2)} (${val>=0?'+':''}${val.toFixed(2)}) · PI ${pi[i]} (SI ${COURSE.si[i]})${cpi ? ` · ${compareLabel} PI ${cpi[i]}` : ''}`;
 
     // hole label, anchored hard to the card's left edge
     html += `<text x="${pad.l}" y="${midY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fHole}" font-weight="700" fill="var(--fg)">${labels[i]}</text>`;
@@ -3106,9 +3117,14 @@ function renderHoleChart() {
 
     // Playing Index — just right of the bar (or of the outside value). Tinted when it disagrees with SI.
     const piX = (fitsInside ? axisX + barW : valX + fVal * 0.6 * valStr.length) + 12;
-    const diff = pi[i] - COURSE.si[i];
+    // Tint: vs the card's SI on the main tabs; vs the season's PI on a player chart.
+    const diff = cpi ? pi[i] - cpi[i] : pi[i] - COURSE.si[i];
     const piFill = diff <= -4 ? 'var(--up)' : diff >= 4 ? 'var(--down)' : 'var(--fg)';
-    html += `<text x="${piX}" y="${midY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fPI}" font-weight="700" fill="${piFill}" opacity="0.95"><title>Playing Index ${pi[i]} · card SI ${COURSE.si[i]}</title>PI ${pi[i]}</text>`;
+    html += `<text x="${piX}" y="${midY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fPI}" font-weight="700" fill="${piFill}" opacity="0.95"><title>Playing Index ${pi[i]} · card SI ${COURSE.si[i]}${cpi ? ` · ${compareLabel} PI ${cpi[i]}` : ''}</title>PI ${pi[i]}</text>`;
+    if (cpi) {
+      const cx = piX + fPI * 0.6 * (`PI ${pi[i]}`.length) + 8;
+      html += `<text x="${cx}" y="${midY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fPI - 1}" font-weight="600" fill="var(--fg)" opacity="0.6">· ${compareLabel} ${cpi[i]}</text>`;
+    }
   }
 
   svg.innerHTML = html;
@@ -3502,6 +3518,7 @@ function closeScorecard() {
 // =================================================================
 let playerName = null;   // currently selected player (never remembered across loads)
 let roundsFilter = 'all'; // Every Round table: 'all' | 'mensNight' | 'snips'
+let playerChartMode = 'gross'; // Player tab hole chart: 'gross' | 'net'
 
 const PAR_TOTAL_ = COURSE.par.reduce((a,b) => a+b, 0);
 const SI_GROUPS = [
@@ -3687,6 +3704,16 @@ function renderPlayerPage() {
       <div class="player-note">Bars show strokes over (red) or under (green) par. "You − field" negative means you beat the field average on that hole. <strong>PI = Playing Index</strong> — how the hole actually ranked by gross average this season (1 = hardest); SI is the card’s rating. Your PI in <span style="color:var(--up)">red</span> played much harder for you than its SI, <span style="color:var(--down)">green</span> much easier.</div>
     </div>`;
 
+  // ----- 3b. hole chart (same as the main tabs, for this player) -----
+  const pcMode = playerChartMode;
+  const sec3b = `
+    <div class="section-head"><span class="num">P.05</span><h2>Hole by Hole — Your Average vs Par</h2><span class="sub">Your ${pcMode} strokes over par on every hole — your Playing Index beside the 2026 field’s</span></div>
+    <div class="section-filter" id="playerChartModeBar"><span class="sf-label">Score</span><button class="sf-btn${pcMode==='gross'?' active':''}" data-pcm="gross">Gross</button><button class="sf-btn${pcMode==='net'?' active':''}" data-pcm="net">Net</button></div>
+    <div class="panel" style="padding:16px 12px 10px;">
+      <div class="chart-legend" style="display:block;line-height:1.5;"><span class="legend-item" style="display:inline-flex;margin-right:14px;"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--ink)"></span> Par line</span><span><strong style="font-family:'JetBrains Mono',monospace">PI</strong> = Playing Index — how the hole ranked for you (1 = hardest); <strong>2026</strong> = how it ranked for the whole field in this view. <span style="color:var(--up);font-weight:700">Red</span> plays much harder for you than for the field, <span style="color:var(--down);font-weight:700">green</span> much easier. SI is the card’s rating.</span></div>
+      <svg class="hole-chart" id="playerHoleChart" preserveAspectRatio="xMidYMin meet"></svg>
+    </div>`;
+
   // ----- 4. par 3 / 4 / 5 -----
   const parTypes = [3,4,5].map(pv => {
     const holes = COURSE.par.map((p,i) => p === pv ? i+1 : null).filter(Boolean);
@@ -3695,7 +3722,7 @@ function renderPlayerPage() {
   });
   const cmpRow = (lbl, v, color) => `<div class="pc-row"><div class="pc-lbl">${lbl}</div><div class="pc-track"><div class="pc-fill" style="width:${Math.min(100, Math.max(0, v) / 1.5 * 100)}%;background:${color}"></div></div><div class="pc-val ${pCls(v)}">${pSigned(v, 2)}</div></div>`;
   const sec4 = `
-    <div class="section-head"><span class="num">P.05</span><h2>Par 3s · Par 4s · Par 5s</h2><span class="sub">Average strokes over par by hole type</span></div>
+    <div class="section-head"><span class="num">P.06</span><h2>Par 3s · Par 4s · Par 5s</h2><span class="sub">Average strokes over par by hole type</span></div>
     <div class="player-panel-grid"><div class="dist-grid par-type-grid">${parTypes.map(t => `
       <div class="dist-card">
         <div class="dist-card-title">Par ${t.pv}s</div>
@@ -3724,7 +3751,7 @@ function renderPlayerPage() {
     </div>`;
   };
   const sec5 = `
-    <div class="section-head"><span class="num">P.06</span><h2>How ${esc(playerName.split(' ')[0])} Makes a Score</h2><span class="sub">Share of holes by result — the grey column is bracket % · field %</span></div>
+    <div class="section-head"><span class="num">P.07</span><h2>How ${esc(playerName.split(' ')[0])} Makes a Score</h2><span class="sub">Share of holes by result — the grey column is bracket % · field %</span></div>
     <div class="player-panel-grid"><div class="dist-grid player-dist-grid">${distCard('Gross', myDist, brDist, fieldDist)}${distCard('Net', myDistN, brDistN, fieldDistN)}</div></div>`;
 
   // ----- 6. best & worst rounds -----
@@ -3744,7 +3771,7 @@ function renderPlayerPage() {
       <div class="prc-tap">tap for scorecard</div>
     </div>`;
   const sec6 = `
-    <div class="section-head"><span class="num">P.07</span><h2>Best &amp; Worst Rounds</h2><span class="sub">Tap any card to open that scorecard</span></div>
+    <div class="section-head"><span class="num">P.08</span><h2>Best &amp; Worst Rounds</h2><span class="sub">Tap any card to open that scorecard</span></div>
     <div class="insights-grid">
       ${roundCard('green', 'Best gross', bestG, bestG.round.gross, `${pSignedInt(bestG.round.gross - PAR_TOTAL_)} vs par · net ${bestG.round.net} · HC ${bestG.round.hc}`)}
       ${roundCard('green', 'Best net', bestN, bestN.round.net, `${pSignedInt(bestN.round.net - PAR_TOTAL_)} vs par · gross ${bestN.round.gross} · HC ${bestN.round.hc}`)}
@@ -3772,7 +3799,7 @@ function renderPlayerPage() {
       <td class="hole-delta ${r.me - r.fd < -1e-9 ? 'under' : 'over-field'}">${pSigned(r.me - r.fd, 2)}</td></tr>`).join('')}
   </tbody></table></div><div class="player-note">${unit}</div>`;
   const sec7 = `
-    <div class="section-head"><span class="num">P.08</span><h2>Hard Holes vs Easy Holes</h2><span class="sub">Strokes over par by stroke-index group, and front vs back</span></div>
+    <div class="section-head"><span class="num">P.09</span><h2>Hard Holes vs Easy Holes</h2><span class="sub">Strokes over par by stroke-index group, and front vs back</span></div>
     <div class="grid-2">
       <div class="panel player-cmp-panel" style="padding:18px 20px;">${cmpTable(siRows, 'Average strokes over par per hole in each SI group.')}</div>
       <div class="panel player-cmp-panel" style="padding:18px 20px;">${cmpTable(fbRows, 'Average strokes over par per nine (front par 36, back par 35).')}</div>
@@ -3799,16 +3826,11 @@ function renderPlayerPage() {
     { cls: 'red', title: 'Where the field beats you', body: `<strong>Hole ${fieldBeats.hole}</strong>: you ${pSigned(fieldBeats.g, 2)} vs field ${pSigned(fieldBeats.fg, 2)} — <strong>${Math.abs(fieldBeats.g - fieldBeats.fg).toFixed(2)} strokes worse</strong>.` },
     { cls: '', title: 'Longest par-or-better streak', body: streak.e ? `<strong>${streak.len} holes</strong> in a row at par or better — ${fmtLeagueDate(streak.e.week.date)} (${srcTag(streak.e.week)}, gross ${streak.e.round.gross}).` : 'No par-or-better holes yet.' },
     { cls: trendDelta === null ? '' : (trendDelta < 0 ? 'green' : 'red'), title: 'Season trend', body: trendDelta === null ? `Need 4+ rounds for a trend — <strong>${mine.length}</strong> so far.` : `Second half of your season averages <strong>${secondHalf.toFixed(1)}</strong> vs <strong>${firstHalf.toFixed(1)}</strong> early on — ${trendDelta < 0 ? `<strong>${Math.abs(trendDelta).toFixed(1)} strokes better</strong>` : `${trendDelta.toFixed(1)} strokes worse`}.` },
-    { cls: '', title: 'SI vs your Playing Index', body: (() => {
-        const diffs = holeRows.map((h, i) => ({ h, d: piMe[i] - h.si, pi: piMe[i] }));
-        const hard = [...diffs].sort((a, b) => a.d - b.d)[0], easy = [...diffs].sort((a, b) => b.d - a.d)[0];
-        if (!hard || hard.d >= 0) return 'Your holes rank about the way the card says they should.';
-        return `<strong>Hole ${hard.h.hole}</strong> is SI ${hard.h.si} on the card but your <strong>PI ${hard.pi}</strong> — it plays far harder for you than rated.${easy && easy.d > 0 ? ` Flip side: <strong>Hole ${easy.h.hole}</strong> (SI ${easy.h.si}) is only your PI ${easy.pi}.` : ''}`;
-      })() },
+    { cls: '', title: 'Best 3-hole stretch', body: `Holes <strong>${bestStretch.i+1}–${bestStretch.i+3}</strong> are your sweet spot — averaging <strong>${pSigned(bestStretch.s, 2)}</strong> per hole.` },
     { cls: '', title: 'Par-3 tee shots', body: isNaN(clutch) ? '' : `You walk off a par 3 at <strong>par or better ${clutch.toFixed(0)}%</strong> of the time; your par-3 average is ${pSigned(parTypes[0].g, 2)}.` },
   ];
   const sec8 = `
-    <div class="section-head"><span class="num">P.09</span><h2>${esc(playerName.split(' ')[0])}’s Headlines</h2><span class="sub">What your 2026 numbers say</span></div>
+    <div class="section-head"><span class="num">P.10</span><h2>${esc(playerName.split(' ')[0])}’s Headlines</h2><span class="sub">What your 2026 numbers say</span></div>
     <div class="insights-grid">${headlines.map(h => `<div class="insight-card ${h.cls}"><div class="insight-title">${h.title}</div><div class="insight-body">${h.body}</div></div>`).join('')}</div>`;
 
   // ----- 9. every round (date order, own event filter) -----
@@ -3817,7 +3839,7 @@ function renderPlayerPage() {
   const evLabel = w => w.source === 'mensNight' ? `Men\u2019s Night · ${shortLabel(w)}` : 'Snips';
   const pill = (k, lbl) => `<button class="sf-btn${roundsFilter === k ? ' active' : ''}" data-rf="${k}">${lbl}</button>`;
   const sec9 = `
-    <div class="section-head"><span class="num">P.10</span><h2>Every Round</h2><span class="sub">In date order · tap a row for the scorecard</span></div>
+    <div class="section-head"><span class="num">P.11</span><h2>Every Round</h2><span class="sub">In date order · tap a row for the scorecard</span></div>
     <div class="section-filter" id="roundsFilterBar"><span class="sf-label">Event</span>${pill('all','All')}${pill('mensNight',"Men\u2019s Night")}${pill('snips','Snips')}<span class="sf-label" style="margin-left:auto">${rows.length} round${rows.length===1?'':'s'}</span></div>
     <div class="panel" style="padding:18px 20px;"><div class="player-scroll"><table class="holes-table player-rounds">
       <thead><tr><th>#</th><th>Date</th><th>Event</th><th>HC</th><th>Gross</th><th>vs par</th><th>Net</th><th>vs par</th><th>Front</th><th>Back</th><th>Birdie+</th><th>Par</th><th>Bogey</th><th>Dbl+</th></tr></thead>
@@ -3831,7 +3853,17 @@ function renderPlayerPage() {
 
   const secR = renderRingerBoard(mine, srcTag);
   const secAce = renderAceBanner(findAces(mine), srcTag, false);
-  host.innerHTML = sec1 + secAce + secR + sec2 + sec3 + sec4 + sec5 + sec6 + sec7 + sec8 + sec9;
+  host.innerHTML = sec1 + secAce + secR + sec2 + sec3 + sec3b + sec4 + sec5 + sec6 + sec7 + sec8 + sec9;
+
+  // draw the player's hole chart from their own per-hole averages
+  drawHoleBars(document.getElementById('playerHoleChart'),
+    COURSE.par.map((_, i) => mean(mine.map(x => holeVal(x.round, i, playerChartMode)))), playerName.split(' ')[0],
+    COURSE.par.map((_, i) => mean(field.map(x => holeVal(x.round, i, playerChartMode)))), '2026');
+  host.querySelectorAll('#playerChartModeBar [data-pcm]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.pcm === playerChartMode) return;
+    playerChartMode = b.dataset.pcm;
+    const y = window.scrollY; renderPlayerPage(); window.scrollTo(0, y);
+  }));
 
   // wire scorecard taps
   const openRound = rid => {
@@ -4640,6 +4672,7 @@ async function initFirebase() {
       if (nowMobile !== __holeChartWasMobile) {
         __holeChartWasMobile = nowMobile;
         renderHoleChart();
+        if (state.eventId === 'player' && typeof renderPlayerPage === 'function') renderPlayerPage();
       }
     }, 180);
   });
