@@ -6,6 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v8.2   Members: re-renders once the season loads from the cloud (it
+         had matched against the 2-week seed data, so round counts and
+         auto-matches were wrong); import waits for the cloud data.
   v8.1   Welcome screen is players-only: the name must be picked from
          the 2026 roster (anyone who played a Men's Night or Snips
          round, plus club staff on the guest list). Typed-in names
@@ -1698,7 +1701,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v8.1</div>
+    <div class="splash-version">v8.2</div>
   </div>
 </div>
 
@@ -1733,7 +1736,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v8.1</div>
+  <div class="masthead-version">v8.2</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -4834,6 +4837,7 @@ async function loadMembers(force) {
 async function importMembers(text) {
   const rows = parseMemberList(text);
   const out = document.getElementById('membersImportResult');
+  if (!Array.isArray(CLOUD.mensNight) || !Array.isArray(CLOUD.snips)) { if (out) out.innerHTML = '<span style="color:var(--up)">Season data is still loading from the cloud — try again in a few seconds.</span>'; return; }
   if (!rows.length) { if (out) out.innerHTML = '<span style="color:var(--up)">Nothing recognised — paste the tab-separated list (Name, Sales Class, Phone, Mobile, Email).</span>'; return; }
   const roster = memberRoster();
   const existing = new Map(MEMBERS.list.map(m => [m.id, m]));
@@ -5498,6 +5502,8 @@ function onCloudUpdate() {
   applyEventChrome();
   renderAll();
   renderStoredWeeks();
+  // Members section matches against the roster — redo it with the real weeks
+  if (typeof renderMembers === 'function' && isAdmin() && MEMBERS.loadedAt) renderMembers();
 }
 
 async function initFirebase() {
