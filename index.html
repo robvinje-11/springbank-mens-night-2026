@@ -6,6 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v7.6   Filter pills pulse more prominently (2px border to full navy
+         / white). Hole-in-one headline says which event: Men's Night ·
+         Week N, or Snips weekend, plus the date.
   v7.5   Opens on the 2026 Season tab; every tab switch starts at the
          top of the page.
   v7.4   "Andy" shows as "Andy (Germany)" everywhere.
@@ -680,12 +683,15 @@
   @media (max-width: 640px) { .event-btn { flex: 1 1 40%; padding: 12px 8px; font-size: 17px; } }
   /* Gentle pulse on every un-selected tab and filter pill — a nudge that they're tappable. */
   @keyframes pillPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--fg-rgb),0.0); border-color: rgba(var(--fg-rgb),0.45); }
-    50%      { box-shadow: 0 0 0 4px rgba(var(--fg-rgb),0.10); border-color: rgba(var(--fg-rgb),0.85); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--fg-rgb),0.0); border-color: rgba(var(--fg-rgb),0.55); }
+    50%      { box-shadow: 0 0 0 5px rgba(var(--fg-rgb),0.18); border-color: var(--fg); }
   }
   .event-btn:not(.active),
   .week-tab:not(.active),
-  .sf-btn:not(.active) { animation: pillPulse 2.6s ease-in-out infinite; }
+  .sf-btn:not(.active) { border-width: 2px; animation: pillPulse 2.2s ease-in-out infinite; }
+  .sf-btn:not(.active) { padding: 6px 15px; }        /* keep pill size steady with the thicker border */
+  .week-tab:not(.active) { padding: 7px 17px; }
+  .event-btn:not(.active) { border-width: 2px; }
   .event-btn:not(.active):hover, .week-tab:not(.active):hover, .sf-btn:not(.active):hover { animation: none; }
   @media (prefers-reduced-motion: reduce) { .event-btn, .week-tab, .sf-btn { animation: none !important; } }
   body.event-activity main > section { display: none !important; }
@@ -1586,7 +1592,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v7.5</div>
+    <div class="splash-version">v7.6</div>
   </div>
 </div>
 
@@ -1621,7 +1627,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v7.5</div>
+  <div class="masthead-version">v7.6</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -2984,11 +2990,18 @@ function renderInsights() {
 
   // Aces in this view (gross 1). YTD items carry their weeks; week items are rounds.
   const aceEntries = ytdMode()
-    ? items.flatMap(a => (a.weeks || []).map(w => ({ week: { date: (WEEKS.find(x => x.id === w.id) || {}).date || '', source: (WEEKS.find(x => x.id === w.id) || {}).source }, round: w.round })))
-    : items.map(r => ({ week: { date: state.view.date || '', source: WEEKS.find(x => x.id === state.view.id)?.source }, round: r }));
+    ? items.flatMap(a => (a.weeks || []).map(w => { const wk = WEEKS.find(x => x.id === w.id) || {}; return { week: { date: wk.date || '', source: wk.source, label: wk.label || w.label || '' }, round: w.round }; }))
+    : items.map(r => { const wk = WEEKS.find(x => x.id === state.view.id) || {}; return { week: { date: state.view.date || '', source: wk.source, label: wk.label || '' }, round: r }; });
   const aces = findAces(aceEntries);
   const aceCard = aces.length ? { cls: 'ace', title: `<span class="ace-pulse">Hole in one${aces.length > 1 ? 's' : ''}</span>`,
-    body: aces.map(a => `<strong>${a.e.round.name}</strong> aced <strong>Hole ${a.hole}</strong>${a.e.week.date ? ` on ${a.e.week.date}` : ''}`).join('<br>') } : null;
+    body: aces.map(a => {
+      const w = a.e.week, d = w.date ? fmtLeagueDate(w.date, { dow: false }) : '';
+      // Which event: on the pooled Season/Player views the label is "Men's Night · Week 7" / "Snips · Sat · Jun 13th"
+      const src = w.source || (state.eventId === 'snips' ? 'snips' : state.eventId === 'mensNight' ? 'mensNight' : null);
+      const wkNum = (w.label || '').match(/Week\s*(\d+)/i);
+      const where = src === 'mensNight' ? `Men\u2019s Night${wkNum ? ` · Week ${wkNum[1]}` : ''}` : src === 'snips' ? 'Snips weekend' : '';
+      return `<strong>${a.e.round.name}</strong> aced <strong>Hole ${a.hole}</strong>${where ? ` — ${where}` : ''}${d ? ` · ${d}` : ''}`;
+    }).join('<br>') } : null;
 
   const items_ = [
     ...(aceCard ? [aceCard] : []),
