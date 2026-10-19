@@ -6,6 +6,7 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v6.7   "Playing Index" spelled out on desktop; "PI" on phones.
   v6.6   Player tab gets the same Hole by Hole bar chart as the main
          tabs (with PI, gross/net toggle) as section P.05. Headlines
          back to the original eight (Best 3-hole stretch restored).
@@ -705,6 +706,8 @@
   .player-holes td, .player-cmp td, .player-rounds td { white-space: nowrap; }
   .player-holes td:nth-child(4), .player-holes td:nth-child(7) { width: 16%; }
   .pi-cell { white-space: nowrap; }
+  .pi-abbr { display: none; }
+  @media (max-width: 1024px) { .pi-word { display: none; } .pi-abbr { display: inline; } }
   .player-holes th, .player-cmp th, .player-rounds th { font-size: var(--t-xs); }
   .player-note { font-size: var(--t-sm); color: var(--ink-soft); margin-top: 10px; font-style: italic; }
   .par-type-grid { grid-template-columns: repeat(3, 1fr); }
@@ -1515,7 +1518,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v6.6</div>
+    <div class="splash-version">v6.7</div>
   </div>
 </div>
 
@@ -1550,7 +1553,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v6.6</div>
+  <div class="masthead-version">v6.7</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -3071,7 +3074,8 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
   const widestChars = Math.max(...labels.map(labelChars));
   const labelW = Math.ceil(widestChars * charW + fHole) + 6;
   const fPI = isMobile ? 15 : 13;
-  const piW = Math.ceil(fPI * 0.6 * (cpi ? 14 : 5)) + 10;   // room for "PI 18 · 2026 18" right of the longest bar
+  const piLbl = isMobile ? 'PI' : 'Playing Index';
+  const piW = Math.ceil(fPI * 0.6 * ((cpi ? 9 : 0) + piLbl.length + 4)) + 10;   // room for the label right of the longest bar
   const pad = { l: 2, r: 12 + piW, t: isMobile ? 40 : 36, b: 12 };
   const gap = 14;                  // small break between the nines
   const H = pad.t + 18 * rowH + pad.b + gap;
@@ -3120,11 +3124,7 @@ function drawHoleBars(svg, avgs, seriesLabel, compareAvgs, compareLabel) {
     // Tint: vs the card's SI on the main tabs; vs the season's PI on a player chart.
     const diff = cpi ? pi[i] - cpi[i] : pi[i] - COURSE.si[i];
     const piFill = diff <= -4 ? 'var(--up)' : diff >= 4 ? 'var(--down)' : 'var(--fg)';
-    html += `<text x="${piX}" y="${midY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fPI}" font-weight="700" fill="${piFill}" opacity="0.95"><title>Playing Index ${pi[i]} · card SI ${COURSE.si[i]}${cpi ? ` · ${compareLabel} PI ${cpi[i]}` : ''}</title>PI ${pi[i]}</text>`;
-    if (cpi) {
-      const cx = piX + fPI * 0.6 * (`PI ${pi[i]}`.length) + 8;
-      html += `<text x="${cx}" y="${midY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fPI - 1}" font-weight="600" fill="var(--fg)" opacity="0.6">· ${compareLabel} ${cpi[i]}</text>`;
-    }
+    html += `<text x="${piX}" y="${midY}" dominant-baseline="central" text-anchor="start" font-family="JetBrains Mono" font-size="${fPI}" font-weight="700" fill="${piFill}" opacity="0.95"><title>Playing Index ${pi[i]} · card SI ${COURSE.si[i]}${cpi ? ` · ${compareLabel} PI ${cpi[i]}` : ''}</title>${piLbl} ${pi[i]}${cpi ? `<tspan dx="${fPI * 0.6}" font-size="${fPI - 1}" font-weight="600" fill="var(--fg)" opacity="0.6">· ${compareLabel} ${cpi[i]}</tspan>` : ''}</text>`;
   }
 
   svg.innerHTML = html;
@@ -3686,17 +3686,17 @@ function renderPlayerPage() {
     <div class="section-head"><span class="num">P.04</span><h2>Hole by Hole</h2><span class="sub">Your average vs par on every hole — gross and net — beside the field</span></div>
     <div class="panel" style="padding:18px 20px;">
       <div class="player-scroll"><table class="holes-table player-holes">
-        <thead><tr><th>Hole</th><th>Par·SI</th><th>Gross avg</th><th>vs par</th><th>Your PI</th><th>Net avg</th><th>vs par</th><th>Field</th><th>Field PI</th><th>${bracketName.split(' ')[0]}</th><th>You − field</th></tr></thead>
+        <thead><tr><th>Hole</th><th>Par·SI</th><th>Gross avg</th><th>vs par</th><th>Your <span class="pi-word">Playing Index</span><span class="pi-abbr">PI</span></th><th>Net avg</th><th>vs par</th><th>Field</th><th>Field <span class="pi-word">Playing Index</span><span class="pi-abbr">PI</span></th><th>${bracketName.split(' ')[0]}</th><th>You − field</th></tr></thead>
         <tbody>${holeRows.map((h, i) => `<tr>
           <td class="hole-num">${h.hole}</td>
           <td class="hole-par-si">P${h.par} · SI${h.si}</td>
           <td class="hole-avg">${h.gAvg.toFixed(2)}</td>
           <td><div class="pb-cell">${bar(h.g)}<span class="hole-delta ${h.g < 0 ? 'under' : ''}">${pSigned(h.g, 2)}</span></div></td>
-          <td class="hole-avg pi-cell ${piMe[i] - h.si <= -4 ? 'over' : piMe[i] - h.si >= 4 ? 'under' : ''}">PI ${piMe[i]}</td>
+          <td class="hole-avg pi-cell ${piMe[i] - h.si <= -4 ? 'over' : piMe[i] - h.si >= 4 ? 'under' : ''}"><span class="pi-word">Playing Index</span><span class="pi-abbr">PI</span> ${piMe[i]}</td>
           <td class="hole-avg">${h.nAvg.toFixed(2)}</td>
           <td><div class="pb-cell">${bar(h.n)}<span class="hole-delta ${h.n < 0 ? 'under' : ''}">${pSigned(h.n, 2)}</span></div></td>
           <td class="hole-delta ${h.fg < 0 ? 'under' : ''}">${pSigned(h.fg, 2)}</td>
-          <td class="hole-avg pi-cell">PI ${piField[i]}</td>
+          <td class="hole-avg pi-cell"><span class="pi-word">Playing Index</span><span class="pi-abbr">PI</span> ${piField[i]}</td>
           <td class="hole-delta ${h.bg < 0 ? 'under' : ''}">${pSigned(h.bg, 2)}</td>
           <td class="hole-delta ${h.g - h.fg < -1e-9 ? 'under' : 'over-field'}">${pSigned(h.g - h.fg, 2)}</td>
         </tr>`).join('')}</tbody>
