@@ -6,6 +6,10 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v7.2   Entry screen is one "find your name" box: the roster filters
+         as you type (start of first or last name, e.g. "ro" or "ro v"),
+         tap or arrow-keys + Enter to pick, keep typing to change your
+         mind. Full name typed by hand still works for guests.
   v7.1   Entry screen reworded: "Welcome!".
   v7.0   Visitors & Activity. First-time visitors enter first + last
          name (remembered on that device; "Not you?" link in the
@@ -689,9 +693,21 @@
   .gate-kicker { font-size: var(--t-xs); letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
   .gate-title { font-family: 'Fraunces', serif; font-style: italic; font-size: 32px; line-height: 1.05; margin-bottom: 8px; }
   .gate-sub { font-size: var(--t-lg); font-weight: 600; margin-bottom: 18px; }
-  .gate-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .gate-row input { width: 100%; padding: 12px 14px; font-size: 16px; font-family: 'DM Sans', sans-serif; font-weight: 600; color: var(--ink); background: var(--bg); border: 1px solid var(--rule); border-radius: 3px; }
-  .gate-row input:focus { outline: 2px solid var(--fg); outline-offset: 1px; }
+  .gate-search { position: relative; }
+  .gate-search input { width: 100%; padding: 13px 14px; font-size: 17px; font-family: 'DM Sans', sans-serif; font-weight: 600; color: var(--ink); background: var(--bg); border: 1px solid var(--rule); border-radius: 3px; }
+  .gate-search input:focus { outline: 2px solid var(--fg); outline-offset: 1px; }
+  .gate-list { margin-top: 6px; max-height: 232px; overflow-y: auto; border: 1px solid var(--rule); border-radius: 3px; background: var(--bg); display: none; }
+  .gate-list.open { display: block; }
+  .gate-item { padding: 10px 14px; font-size: 15px; font-weight: 600; cursor: pointer; border-bottom: 1px solid var(--rule-soft); display: flex; justify-content: space-between; gap: 10px; }
+  .gate-item:last-child { border-bottom: none; }
+  .gate-item mark { background: transparent; color: var(--up); font-weight: 800; }
+  .gate-item.active, .gate-item:hover { background: var(--fg); color: var(--bg); }
+  .gate-item.active mark, .gate-item:hover mark { color: var(--bg); text-decoration: underline; }
+  .gate-item-name { flex: 1 1 auto; min-width: 0; }
+  .gate-item .gate-item-note { font-size: var(--t-xs); opacity: 0.75; align-self: center; white-space: nowrap; }
+  .gate-empty { padding: 12px 14px; font-size: var(--t-sm); font-weight: 600; }
+  .gate-picked { margin-top: 8px; font-size: var(--t-sm); font-weight: 600; min-height: 18px; }
+  .gate-picked strong { color: var(--down); }
   .gate-error { min-height: 18px; margin: 8px 0 4px; font-size: var(--t-sm); font-weight: 600; color: var(--up); }
   .gate-btn { width: 100%; padding: 13px 18px; margin-top: 6px; background: var(--fg); color: var(--bg); border: none; border-radius: 3px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
   .gate-note { margin-top: 14px; font-size: var(--t-xs); font-weight: 600; opacity: 0.8; line-height: 1.5; }
@@ -700,7 +716,7 @@
   .dist-row.act-row { grid-template-columns: 150px 1fr 40px; }
   .act-lbl { font-size: var(--t-sm); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   @media (max-width: 640px) { .dist-row.act-row { grid-template-columns: 110px 1fr 34px; } }
-  @media (max-width: 480px) { .gate-row { grid-template-columns: 1fr; } .gate-card { padding: 24px 18px; } }
+  @media (max-width: 480px) { .gate-card { padding: 24px 18px; } .gate-list { max-height: 196px; } }
   /* Player tab: hide every normal section, show only the player page */
   body.event-player main > section { display: none !important; }
   body.event-player main > section#playerSection { display: block !important; }
@@ -1406,12 +1422,12 @@
   <div class="gate-card">
     <div class="gate-kicker">Springbank Links · 2026 Season</div>
     <div class="gate-title">Welcome!</div>
-    <div class="gate-sub">Tell us who you are — just once on this device — and the 2026 season is yours to explore.</div>
-    <div class="gate-row">
-      <input type="text" id="gateFirst" placeholder="First name" autocomplete="given-name" list="rosterList">
-      <input type="text" id="gateLast" placeholder="Last name" autocomplete="family-name">
+    <div class="gate-sub">Pick your name — just once on this device — and the 2026 season is yours to explore.</div>
+    <div class="gate-search">
+      <input type="text" id="gateName" placeholder="Start typing your name…" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="gateList">
+      <div class="gate-list" id="gateList" role="listbox"></div>
     </div>
-    <datalist id="rosterList"></datalist>
+    <div class="gate-picked" id="gatePicked"></div>
     <div class="gate-error" id="gateError"></div>
     <button class="gate-btn" id="gateGo">Open the dashboard</button>
     <div class="gate-note">Your name only helps the league see who’s enjoying the dashboard. Nothing else is collected, and viewing never changes any results.</div>
@@ -1566,7 +1582,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v7.1</div>
+    <div class="splash-version">v7.2</div>
   </div>
 </div>
 
@@ -1601,7 +1617,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v7.1</div>
+  <div class="masthead-version">v7.2</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -4136,32 +4152,82 @@ function rosterNames() {
   return [...names].sort();
 }
 
-// ---------- entry screen ----------
+// ---------- entry screen: one box, live-filtered roster ----------
+let gatePick = null;      // the roster name the visitor chose (or free-typed full name)
+let gateActive = -1;      // keyboard-highlighted row
+let gateMatches = [];
+function gateSplit(name) { const parts = name.trim().split(/\s+/); return { first: parts[0] || '', last: parts.slice(1).join(' ') || '' }; }
+function gateFilter(q) {
+  const names = rosterNames(); const t = q.trim().toLowerCase();
+  if (!t) return names;
+  const words = t.split(/\s+/);
+  // every typed word must start some word of the name (so "ro v" → Rob Vinje)
+  return names.filter(n => { const nw = n.toLowerCase().split(/\s+/); return words.every(w => nw.some(x => x.startsWith(w)) || n.toLowerCase().startsWith(w)); });
+}
+function gateHighlight(name, q) {
+  const t = q.trim().toLowerCase(); if (!t) return esc(name);
+  const words = t.split(/\s+/);
+  return name.split(/(\s+)/).map(part => { const pl = part.toLowerCase(); const w = words.find(w => pl.startsWith(w)); return w ? `<mark>${esc(part.slice(0, w.length))}</mark>${esc(part.slice(w.length))}` : esc(part); }).join('');
+}
+function renderGateList() {
+  const input = document.getElementById('gateName'), list = document.getElementById('gateList'); if (!input || !list) return;
+  const q = input.value;
+  gateMatches = gateFilter(q);
+  if (gateActive >= gateMatches.length) gateActive = gateMatches.length ? 0 : -1;
+  if (!gateMatches.length) {
+    const typed = titleCase(q); const ok = gateSplit(typed).last.length >= 2 && gateSplit(typed).first.length >= 2;
+    list.innerHTML = `<div class="gate-empty">No one on the roster matches “${esc(q.trim())}”.${ok ? ` Press <strong>Enter</strong> or the button to continue as <strong>${esc(typed)}</strong>.` : ' Type your full name to continue as a guest.'}</div>`;
+  } else {
+    list.innerHTML = gateMatches.slice(0, 60).map((n, i) => `<div class="gate-item${i === gateActive ? ' active' : ''}" role="option" data-name="${esc(n)}"><span class="gate-item-name">${gateHighlight(n, q)}</span>${n === gatePick ? '<span class="gate-item-note">✓ selected</span>' : ''}</div>`).join('') + (gateMatches.length > 60 ? `<div class="gate-empty">${gateMatches.length - 60} more — keep typing</div>` : '');
+  }
+  list.classList.add('open'); input.setAttribute('aria-expanded', 'true');
+  list.querySelectorAll('.gate-item').forEach(el => { el.addEventListener('mousedown', e => e.preventDefault()); el.addEventListener('click', () => gateChoose(el.dataset.name)); });
+  const act = list.querySelector('.gate-item.active'); if (act) act.scrollIntoView({ block: 'nearest' });
+}
+function gateChoose(name) {
+  gatePick = name;
+  const input = document.getElementById('gateName'); input.value = name;
+  document.getElementById('gateError').textContent = '';
+  document.getElementById('gatePicked').innerHTML = `Selected: <strong>${esc(name)}</strong> — not you? Just keep typing to search again.`;
+  renderGateList();
+  input.select();
+}
+function gateKey(e) {
+  if (e.key === 'ArrowDown') { e.preventDefault(); if (gateMatches.length) { gateActive = (gateActive + 1) % gateMatches.length; renderGateList(); } }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); if (gateMatches.length) { gateActive = (gateActive - 1 + gateMatches.length) % gateMatches.length; renderGateList(); } }
+  else if (e.key === 'Enter') { e.preventDefault(); if (gateMatches.length && gateActive >= 0 && document.getElementById('gateName').value !== gateMatches[gateActive]) gateChoose(gateMatches[gateActive]); else submitEntryGate(); }
+  else if (e.key === 'Escape') { document.getElementById('gateList').classList.remove('open'); }
+}
 function showEntryGate(force) {
   const gate = document.getElementById('entryGate'); if (!gate) return;
   if (!force && (visitor || isAdmin())) { gate.style.display = 'none'; return; }
-  const dl = document.getElementById('rosterList');
-  if (dl) dl.innerHTML = rosterNames().map(n => `<option value="${esc(n)}"></option>`).join('');
-  const f = document.getElementById('gateFirst'), l = document.getElementById('gateLast');
-  if (visitor) { f.value = visitor.first; l.value = visitor.last; }
+  const input = document.getElementById('gateName');
+  gatePick = visitor ? visitor.name : null; gateActive = -1;
+  input.value = visitor ? visitor.name : '';
   document.getElementById('gateError').textContent = '';
+  document.getElementById('gatePicked').innerHTML = visitor ? `Currently: <strong>${esc(visitor.name)}</strong>` : '';
   gate.style.display = 'flex';
   document.body.classList.add('gated');
-  setTimeout(() => f.focus(), 50);
+  renderGateList();
+  setTimeout(() => { input.focus(); if (visitor) input.select(); }, 50);
 }
-function hideEntryGate() { const g = document.getElementById('entryGate'); if (g) g.style.display = 'none'; document.body.classList.remove('gated'); }
 function submitEntryGate() {
-  const first = titleCase(document.getElementById('gateFirst').value), last = titleCase(document.getElementById('gateLast').value);
+  const typed = titleCase(document.getElementById('gateName').value);
   const err = document.getElementById('gateError');
-  if (first.length < 2 || last.length < 2) { err.textContent = 'Please enter your first and last name.'; return; }
+  // exact roster match wins; a single match wins; otherwise accept a typed full name
+  const exact = rosterNames().find(n => n.toLowerCase() === typed.toLowerCase());
+  const name = exact || (gateMatches.length === 1 ? gateMatches[0] : (gatePick && gatePick.toLowerCase() === typed.toLowerCase() ? gatePick : typed));
+  const { first, last } = gateSplit(name);
+  if (first.length < 2 || last.length < 2) { err.textContent = gateMatches.length > 1 ? 'Pick your name from the list, or type more of it.' : 'Please pick your name, or type your full name.'; return; }
   const existing = visitor && visitor.id ? visitor.id : uuid();
-  const renamed = visitor && visitor.name && visitor.name !== `${first} ${last}`;
-  saveVisitor({ id: existing, first, last, name: `${first} ${last}` });
+  const renamed = visitor && visitor.name && visitor.name !== name;
+  saveVisitor({ id: existing, first, last, name });
   hideEntryGate();
   upsertVisitor();
   track('visit', renamed ? 'renamed' : 'start');
   updateVisitorFooter();
 }
+function hideEntryGate() { const g = document.getElementById('entryGate'); if (g) g.style.display = 'none'; document.body.classList.remove('gated'); }
 function updateVisitorFooter() {
   const el = document.getElementById('visitorFooter'); if (!el) return;
   el.innerHTML = visitor ? `Viewing as <strong>${esc(visitor.name)}</strong> · <a href="#" id="changeNameLink">Not you? Change name</a>` : '';
@@ -4841,7 +4907,7 @@ let firstCloudRender = false;
 
 function onCloudUpdate() {
   recomputeAll();
-  const dl = document.getElementById('rosterList'); if (dl && document.getElementById('entryGate')?.style.display !== 'none') dl.innerHTML = rosterNames().map(n => `<option value="${esc(n)}"></option>`).join('');
+  if (document.getElementById('entryGate')?.style.display === 'flex' && typeof renderGateList === 'function') renderGateList();
   // Guard: if the current week view was deleted remotely, fall back
   if (state.view.kind === 'week' && !ALL_VIEWS.some(v => v.id === state.view.id)) {
     state.view = ALL_VIEWS[ALL_VIEWS.length - 2] || ALL_VIEWS[0];
@@ -4953,7 +5019,10 @@ async function initFirebase() {
   showEntryGate(false);
   updateVisitorFooter();
   document.getElementById('gateGo').addEventListener('click', submitEntryGate);
-  ['gateFirst', 'gateLast'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') submitEntryGate(); }));
+  const gateIn = document.getElementById('gateName');
+  gateIn.addEventListener('input', () => { gateActive = 0; if (gatePick && gateIn.value !== gatePick) { gatePick = null; document.getElementById('gatePicked').innerHTML = ''; } renderGateList(); });
+  gateIn.addEventListener('focus', renderGateList);
+  gateIn.addEventListener('keydown', gateKey);
   wireActivityHooks();
 
   // Render once with built-in seed data so the page isn't blank while
