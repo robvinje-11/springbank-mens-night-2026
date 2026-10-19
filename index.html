@@ -6,36 +6,37 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
-  v7.9   Admin "Members" section: paste the club member export, it is
+  v8.0   Version now bumps on every push (the v7.9 badge had covered
+         ten separate updates — sorry). No functional change from
+         v7.9.9 except the badge.
+  v7.9.9 Admin "Members" section: paste the club member export, it is
          matched to the player roster (nicknames handled), stored in
          Firestore `members` (admin-only rule), with mobile/email, a
          Player dropdown to fix matches, filters (Men's Night / Snips /
          not a player / no email), Copy emails, Open email (BCC), CSV,
          and a list of players with no member record.
-         Activity tab: live "Online now" panel — who is viewing right
+  v7.9.8 Activity tab: live "Online now" panel — who is viewing right
          now (green pulsing chips) and who was on in the last 30 min;
          visitors send a quiet once-a-minute heartbeat while the tab
-         is open. Footer says "Signed in as admin" while you're signed in (the
-         visitor name only applies when signed out). Phones: Course Speaks
-         tables and the week tabs scroll inside their panels so the page
-         never scrolls sideways. Admin sign-in: "Forgot password?" emails a Firebase reset link
-         to the admin address. Phones: a "Turn your phone sideways" reminder (animated phone)
-         on the first visit and after 12+ hours away; dismisses on tap
-         or when the phone is turned. "Playing Index" spelled out on phones too (chart widens a touch
-         for long names). Kevin Heise (Course GM) on the Welcome list. Standings
-         scorecards keep their header and key in view while the wide
-         table scrolls on phones. Picking your name (or signing out of
-         admin) always lands on the 2026 Season, at the top.
-         Hole-chart chips read "vs HC" / "vs ’26" on every screen
-         (’26 instead of 2026); under-par holes show "−0.14" not "+-0.14".
-         Scorecard key on phones: two roomy columns (no overlap on the
-         Albatross ring); Snips cards no longer repeat the date.
-         Activity tab: "Clear activity log" button (admin only) wipes
-         every logged event and the visitor list, with a confirm.
-         "SI" is now "HC" (hole handicap) everywhere. Hole-chart
+         is open.
+  v7.9.7 Footer says "Signed in as admin" while signed in. Phones:
+         Course Speaks tables and week tabs scroll inside their panels
+         so the page never scrolls sideways.
+  v7.9.6 Admin sign-in: "Forgot password?" emails a Firebase reset
+         link to the admin address.
+  v7.9.5 Phones: "Turn your phone sideways" reminder (animated phone)
+         on the first visit and after 12+ hours away.
+  v7.9.4 "Playing Index" spelled out on phones too. Kevin Heise on the
+         Welcome list. Standings scorecards keep header and key in view
+         on phones. Picking a name or signing out lands on 2026 Season.
+  v7.9.3 Hole-chart chips read "vs HC" / "vs ’26" everywhere; under-par
+         holes show "−0.14" not "+-0.14".
+  v7.9.2 Scorecard key on phones in two roomy columns; Snips cards no
+         longer repeat the date.
+  v7.9.1 Activity tab: "Clear activity log" (admin only, with confirm).
+  v7.9   "SI" is now "HC" (hole handicap) everywhere. Hole-chart
          comparisons are tinted chips (green easier / red harder); on
-         phones the PI line under each bar is larger with gridlines
-         stopping at the bars.
+         phones the PI line sits under each bar.
   v7.8   Hole charts: "+/-" beside every Playing Index — vs the card's
          hole handicap on all charts, plus vs 2026 (the field's PI) on
          the Player chart. Green = played easier, red = harder.
@@ -1693,7 +1694,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v7.9</div>
+    <div class="splash-version">v8.0</div>
   </div>
 </div>
 
@@ -1728,7 +1729,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v7.9</div>
+  <div class="masthead-version">v8.0</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
