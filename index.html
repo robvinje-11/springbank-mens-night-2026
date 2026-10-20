@@ -6,6 +6,10 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v8.8   Live refresh: Activity tab "Update live viewers" button (and
+         any time the admin opens a newer build) writes the release to
+         events/meta; every open viewer gets a 15-second "Dashboard
+         updated — Refresh now / Later" banner, then auto-refreshes.
   v8.7   Course Speaks: "lost" is PI 1–9 and "saved" is PI 18–10, so
          a hole can never appear in both tables (tied averages could).
   v8.6   Playing Index is always a unique 1–18: ties on average are
@@ -883,6 +887,10 @@
   .sf-btn.sf-tool { animation: none; border-width: 1.5px; opacity: 0.9; }
   .sf-btn.sf-tool:disabled { opacity: 0.4; cursor: default; }
   .sf-btn.sf-danger { animation: none; border-color: var(--up); color: var(--up); }
+  .refresh-banner { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 9500; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; max-width: calc(100% - 28px); padding: 12px 16px; background: var(--fg); color: var(--bg); border-radius: 6px; box-shadow: 0 12px 40px rgba(0,0,0,0.35); font-size: var(--t-md); animation: slideDown .3s ease; }
+  .refresh-banner .sf-btn { animation: none; }
+  .refresh-banner .sf-btn.active { background: var(--bg); color: var(--fg); border-color: var(--bg); }
+  .refresh-banner .sf-btn.sf-tool { color: var(--bg); border-color: rgba(255,255,255,0.5); }
   .online-panel { padding: 14px 18px; }
   .online-head { display: flex; align-items: center; gap: 8px; font-size: var(--t-lg); }
   .online-sub { font-size: var(--t-sm); font-weight: 600; opacity: 0.7; }
@@ -1718,7 +1726,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v8.7</div>
+    <div class="splash-version">v8.8</div>
   </div>
 </div>
 
@@ -1753,7 +1761,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v8.7</div>
+  <div class="masthead-version">v8.8</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -4520,6 +4528,33 @@ function submitEntryGate() {
   track('visit', renamed ? 'renamed' : 'start');
   updateVisitorFooter();
 }
+// ---------- live refresh (release channel) ----------
+const APP_VERSION = (document.querySelector('.masthead-version') || {}).textContent?.trim() || 'v0';
+const PAGE_LOADED_AT = Date.now();
+function isNewerVersion(a, b) {   // true if b is newer than a ("v8.7" vs "v8.10")
+  const pa = String(a).replace(/^v/, '').split('.').map(Number), pb = String(b).replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) { const x = pa[i] || 0, y = pb[i] || 0; if (y > x) return true; if (y < x) return false; }
+  return false;
+}
+let refreshTimer = null;
+function showRefreshBanner(ver) {
+  if (document.getElementById('refreshBanner')) return;
+  const el = document.createElement('div');
+  el.id = 'refreshBanner'; el.className = 'refresh-banner';
+  el.innerHTML = `<span><strong>Dashboard updated</strong> to ${esc(ver)} — refreshing in <span id="refreshCount">15</span>s</span><button class="sf-btn active" id="refreshNow">Refresh now</button><button class="sf-btn sf-tool" id="refreshLater">Later</button>`;
+  document.body.appendChild(el);
+  let n = 15;
+  const go = () => { clearInterval(refreshTimer); try { track('refresh', 'release:' + ver); } catch (e) {} location.reload(); };
+  refreshTimer = setInterval(() => { n--; const c = document.getElementById('refreshCount'); if (c) c.textContent = n; if (n <= 0) go(); }, 1000);
+  document.getElementById('refreshNow').onclick = go;
+  document.getElementById('refreshLater').onclick = () => { clearInterval(refreshTimer); el.remove(); };
+}
+// Admin: write the current build to the release channel so open viewers refresh.
+async function announceRelease() {
+  if (!isAdmin() || !db) return;
+  await db.collection('events').doc('meta').set({ version: APP_VERSION, ts: Date.now(), by: ADMIN_EMAIL }, { merge: true });
+}
+
 // ---------- rotate reminder (phones, portrait) ----------
 // Shown once per device on the first visit, and again after 12+ hours away.
 // Dismissed by the button, a tap outside the card, or turning the phone.
@@ -4686,7 +4721,7 @@ function drawActivity() {
   host.innerHTML = `
     <div class="section-filter"><span class="sf-label">Range</span>
       ${['7', '30', 'all'].map(r => `<button class="sf-btn${activityRange === r ? ' active' : ''}" data-ar="${r}">${r === 'all' ? 'All time' : 'Last ' + r + ' days'}</button>`).join('')}
-      <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap"><button class="sf-btn" id="activityRefresh">Refresh</button><button class="sf-btn sf-danger" id="activityClear" title="Delete every logged event and the visitor list">Clear activity log</button></span>
+      <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap"><button class="sf-btn" id="activityRefresh">Refresh</button><button class="sf-btn sf-tool" id="activityPush" title="Everyone with the dashboard open right now gets a 15-second refresh banner">Update live viewers</button><button class="sf-btn sf-danger" id="activityClear" title="Delete every logged event and the visitor list">Clear activity log</button></span>
     </div>
     <div class="panel online-panel" id="onlineNow" style="margin-bottom:18px"><div class="online-head"><span class="online-dot"></span><strong>Online now</strong> <span class="online-sub">checking…</span></div></div>
     <div class="panel player-hero" style="margin-bottom:28px">
@@ -4721,6 +4756,12 @@ function drawActivity() {
   host.querySelectorAll('[data-ar]').forEach(b => b.addEventListener('click', () => { activityRange = b.dataset.ar; drawActivity(); }));
   const rf = document.getElementById('activityRefresh'); if (rf) rf.addEventListener('click', () => { loadActivity(true).then(drawActivity); });
   const cl = document.getElementById('activityClear'); if (cl) cl.addEventListener('click', clearActivityLog);
+  const pu = document.getElementById('activityPush'); if (pu) pu.addEventListener('click', async () => {
+    if (!confirm(`Ask everyone who has the dashboard open to refresh to ${APP_VERSION}? They get a 15-second banner with a Refresh now / Later choice.`)) return;
+    pu.disabled = true; pu.textContent = 'Sent';
+    try { await db.collection('events').doc('meta').set({ version: APP_VERSION, ts: Date.now(), by: ADMIN_EMAIL, forced: true }, { merge: true }); } catch (e) { alert('Couldn’t send: ' + (e.message || e)); }
+    setTimeout(() => { pu.disabled = false; pu.textContent = 'Update live viewers'; }, 4000);
+  });
   startOnlineWatch();
 }
 
@@ -5634,6 +5675,15 @@ async function initFirebase() {
 
   // Visitors: anonymous sign-in so activity events can be written
   startActivity();
+
+  // Release channel: when the admin pushes an update (or a newer build is
+  // opened by the admin), every open viewer gets a small banner and a
+  // gentle auto-refresh so stale numbers don't linger on someone's phone.
+  db.collection('events').doc('meta').onSnapshot(snap => {
+    const d = snap.data(); if (!d || !d.version) return;
+    if (d.version !== APP_VERSION && (d.ts || 0) > PAGE_LOADED_AT - 60000) showRefreshBanner(d.version);
+    if (isAdmin() && d.version !== APP_VERSION && isNewerVersion(APP_VERSION, d.version)) announceRelease();   // admin opened a newer build
+  }, () => {});
 
   // Entry list: names only (no contact details), published by the admin from
   // the Members section. Public read like the score documents.
