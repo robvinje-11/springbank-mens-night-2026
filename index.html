@@ -6,6 +6,9 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v8.9   Footer: club kicker, two data-source cards (Men's Night —
+         SmartGolf; Weekend Snips — Robbie Golf Live) that link out
+         when a URL is set, and a one-line description.
   v8.8   Live refresh: Activity tab "Update live viewers" button (and
          any time the admin opens a newer build) writes the release to
          events/meta; every open viewer gets a 15-second "Dashboard
@@ -1543,9 +1546,21 @@
   }
 
   footer {
-    text-align: center; padding: 32px 48px; font-size: var(--t-md);
-    color: var(--muted); border-top: 1px solid var(--rule); font-style: italic;
+    text-align: center; padding: 36px 48px 40px; font-size: var(--t-md);
+    color: var(--muted); border-top: 1px solid var(--rule);
   }
+  .foot-kicker { font-size: var(--t-xs); letter-spacing: 0.22em; text-transform: uppercase; font-weight: 600; color: var(--fg); margin-bottom: 18px; }
+  .foot-sources { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+  .foot-source { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; min-width: 200px; padding: 12px 22px; border: 1.5px solid var(--rule); border-radius: 6px; background: var(--paper); color: var(--fg); text-decoration: none; transition: border-color .15s, transform .15s; }
+  .foot-source:hover { border-color: var(--fg); transform: translateY(-1px); }
+  .foot-source.no-link { pointer-events: none; }
+  .foot-src-ev { font-size: var(--t-2xs); letter-spacing: 0.2em; text-transform: uppercase; font-weight: 600; opacity: 0.7; }
+  .foot-src-from { font-size: var(--t-xs); font-style: italic; opacity: 0.7; }
+  .foot-src-name { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; line-height: 1.15; }
+  .foot-source:not(.no-link) .foot-src-name::after { content: ' ↗'; font-family: 'DM Sans', sans-serif; font-size: 12px; opacity: 0.6; }
+  .foot-meta { font-size: var(--t-sm); font-style: italic; margin-bottom: 6px; }
+  .visitor-footer { font-style: italic; margin-top: 6px; }
+  @media (max-width: 640px) { footer { padding: 28px 14px 32px; } .foot-source { min-width: 0; flex: 1 1 46%; padding: 10px 12px; } .foot-src-name { font-size: 17px; } }
 
   @media (max-width: 700px) {
     .meta { text-align: left; margin-top: 16px; }
@@ -1726,7 +1741,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v8.8</div>
+    <div class="splash-version">v8.9</div>
   </div>
 </div>
 
@@ -1761,7 +1776,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v8.8</div>
+  <div class="masthead-version">v8.9</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -2078,7 +2093,20 @@
 </main>
 
 <footer>
-  <div>Springbank Links League Dashboard · Par 71 · Multi-week tracker · Built for SmartGolf data</div>
+  <div class="foot-kicker">Springbank Links Golf Club · Men’s Night &amp; Weekend Snips · 2026 Season</div>
+  <div class="foot-sources" aria-label="Data sources">
+    <a class="foot-source" id="srcMensNight" href="#" target="_blank" rel="noopener">
+      <span class="foot-src-ev">Men’s Night</span>
+      <span class="foot-src-from">Scoring data from</span>
+      <span class="foot-src-name">SmartGolf</span>
+    </a>
+    <a class="foot-source" id="srcSnips" href="#" target="_blank" rel="noopener">
+      <span class="foot-src-ev">Weekend Snips</span>
+      <span class="foot-src-from">Scoring data from</span>
+      <span class="foot-src-name">Robbie Golf Live</span>
+    </a>
+  </div>
+  <div class="foot-meta">Par 71 · hole-by-hole results for every round · updated live from the league’s cloud database</div>
   <div class="visitor-footer" id="visitorFooter"></div>
   <div style="margin-top:14px;">
     <button id="adminToggleBtn" style="background:transparent;border:1px solid rgba(var(--fg-rgb),0.22);color:var(--fg);padding:6px 16px;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:var(--t-sm);letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;opacity:0.65;transition:opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.65">Admin</button>
@@ -4530,6 +4558,9 @@ function submitEntryGate() {
 }
 // ---------- live refresh (release channel) ----------
 const APP_VERSION = (document.querySelector('.masthead-version') || {}).textContent?.trim() || 'v0';
+// Footer data-source links. Leave a URL empty to show the card without a link.
+const DATA_SOURCES = { mensNight: { el: 'srcMensNight', url: '' }, snips: { el: 'srcSnips', url: '' } };
+Object.values(DATA_SOURCES).forEach(d => { const a = document.getElementById(d.el); if (!a) return; if (d.url) a.href = d.url; else { a.removeAttribute('href'); a.classList.add('no-link'); } });
 const PAGE_LOADED_AT = Date.now();
 function isNewerVersion(a, b) {   // true if b is newer than a ("v8.7" vs "v8.10")
   const pa = String(a).replace(/^v/, '').split('.').map(Number), pb = String(b).replace(/^v/, '').split('.').map(Number);
