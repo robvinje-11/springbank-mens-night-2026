@@ -6,6 +6,7 @@
   ====================================================================
   VERSION HISTORY
   ────────────────────────────────────────────────────────────────────
+  v8.9.2 Footer: Weekend Snips card links to Robbie Golf Live.
   v8.9.1 Footer: Men's Night card links to SmartGolf weekly results.
   v8.9   Footer: club kicker, two data-source cards (Men's Night —
          SmartGolf; Weekend Snips — Robbie Golf Live) that link out
@@ -1742,7 +1743,7 @@
       <div class="splash-rtv-sub">Business Solutions</div>
       <div class="splash-rtv-tag">Group Ltd.</div>
     </div>
-    <div class="splash-version">v8.9.1</div>
+    <div class="splash-version">v8.9.2</div>
   </div>
 </div>
 
@@ -1777,7 +1778,7 @@
 
 
 <header class="masthead">
-  <div class="masthead-version">v8.9.1</div>
+  <div class="masthead-version">v8.9.2</div>
   <button class="masthead-share" id="shareBtn" title="Share this dashboard" aria-label="Share this dashboard">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/></svg>
     <span>Share</span>
@@ -4560,7 +4561,7 @@ function submitEntryGate() {
 // ---------- live refresh (release channel) ----------
 const APP_VERSION = (document.querySelector('.masthead-version') || {}).textContent?.trim() || 'v0';
 // Footer data-source links. Leave a URL empty to show the card without a link.
-const DATA_SOURCES = { mensNight: { el: 'srcMensNight', url: 'https://smartgolf.online/weekly_results' }, snips: { el: 'srcSnips', url: '' } };
+const DATA_SOURCES = { mensNight: { el: 'srcMensNight', url: 'https://smartgolf.online/weekly_results' }, snips: { el: 'srcSnips', url: 'https://springbank-golf.vercel.app/' } };
 Object.values(DATA_SOURCES).forEach(d => { const a = document.getElementById(d.el); if (!a) return; if (d.url) a.href = d.url; else { a.removeAttribute('href'); a.classList.add('no-link'); } });
 const PAGE_LOADED_AT = Date.now();
 function isNewerVersion(a, b) {   // true if b is newer than a ("v8.7" vs "v8.10")
